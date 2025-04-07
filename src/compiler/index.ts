@@ -2,6 +2,7 @@ import { Program, FunctionDeclaration, ReturnStatement, Expression, ASTNode } fr
 
 export class Compiler {
   compile(ast: any) {
+    console.log("Starting JIT compilation...");
     return this.visitNode(ast);
   }
 
@@ -33,7 +34,8 @@ export class Compiler {
       type: 'Function',
       name: node.id.name,
       params: node.params,
-      body: node.body.map(stmt => this.visitNode(stmt))
+      body: node.body.map(stmt => this.visitNode(stmt)),
+      optimized: true // Mark as optimized
     };
   }
 

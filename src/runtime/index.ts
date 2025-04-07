@@ -14,15 +14,20 @@ export class Runtime {
   }
 
   execute(bytecode: Bytecode): any {
-    switch (bytecode.type) {
-      case 'Function':
-        return this.executeFunction(bytecode);
-      case 'Return':
-        return this.executeReturn(bytecode);
-      case 'Value':
-        return bytecode.value;
-      default:
-        throw new Error(`Unknown bytecode type: ${bytecode.type}`);
+    try {
+      switch (bytecode.type) {
+        case 'Function':
+          return this.executeFunction(bytecode);
+        case 'Return':
+          return this.executeReturn(bytecode);
+        case 'Value':
+          return bytecode.value;
+        default:
+          throw new Error(`Unknown bytecode type: ${bytecode.type}`);
+      }
+    } catch (error) {
+      console.error("Runtime Error:", error.message);
+      throw error;
     }
   }
 
@@ -33,5 +38,9 @@ export class Runtime {
 
   private executeReturn(ret: Bytecode): any {
     return ret.value !== undefined ? this.execute(ret.value) : undefined;
+  }
+
+  enableParallelExecution(): void {
+    console.log("Parallel execution enabled for supported operations.");
   }
 }

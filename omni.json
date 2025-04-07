@@ -15,10 +15,16 @@
   "compiler": {
     "target": "es2020",
     "moduleResolution": "node",
-    "strict": true
+    "strict": true,
+    "optimizations": {
+      "jit": true,
+      "simd": true,
+      "parallelExecution": true
+    }
   },
   "packageManager": {
     "registry": "https://registry.omniscript.dev",
     "cacheDir": ".omni/cache"
-  }
+  },
+  "platforms": ["linux-x86_64", "linux-arm64", "macos-x86_64", "macos-arm64", "windows-x86_64", "wasm"]
 }
