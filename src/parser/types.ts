@@ -124,7 +124,7 @@ export interface Statement extends ASTNode {
  * @property operator - For binary and unary expressions, this holds the operator used.
  * @property left - For binary or unary expressions, the operand on the left.
  * @property right - For binary expressions, the operand on the right.
- * @property value - For literal expressions, the actual value (string, number, or boolean).
+ * @property value - For literal expressions, the actual value (string, number, boolean, or null).
  * @property name - For identifier expressions, the variable or function name.
  * @property arguments - For call expressions, the list of argument expressions.
  * @property object - For member access expressions, the object being accessed.
@@ -146,9 +146,9 @@ export interface Expression extends ASTNode {
 	right?: Expression;
 	/**
 	 * The literal value of the expression.
-	 * Allowed types: string, number, or boolean.
+	 * Allowed types: string, number, boolean, or null.
 	 */
-	value?: string | number | boolean;
+	value?: string | number | boolean | null; // Updated to include null
 	/** Name for identifier expressions. */
 	name?: string;
 	/** Array of arguments for call expressions. */
@@ -217,4 +217,55 @@ export interface ASTError {
 	column: number;
 	/** Optional additional information about the error. */
 	details?: string;
+	/** Optional error code for categorizing the error. */
+	errorCode?: string;
+	/** Optional suggestions for fixing the error. */
+	suggestions?: string[];
+	/** Optional source of the error. */
+	source?: string;
+}
+
+/**
+ * Represents a function declaration in the AST.
+ * Supports generic type parameters and async functions.
+ */
+export interface FunctionDeclaration extends Statement {
+	type: 'FunctionDeclaration';
+	name: string;
+	generics?: GenericParameter[];
+	params: Parameter[];
+	returnType: TypeReference;
+	body: Statement[];
+	isAsync: boolean;
+}
+
+/**
+ * Represents a generic type parameter with optional constraints.
+ */
+export interface GenericParameter {
+	name: string;
+	constraint?: TypeReference;
+	default?: TypeReference;
+}
+
+/**
+ * Represents a parameter in a function declaration.
+ */
+export interface Parameter {
+	name: string;
+	type: TypeReference;
+	optional: boolean;
+	defaultValue?: Expression;
+}
+
+/**
+ * Represents a type reference which can be a simple type name
+ * or a complex generic type with type arguments.
+ */
+export interface TypeReference {
+	name: string;
+	typeArguments?: TypeReference[];
+	isArray?: boolean;
+	isUnion?: boolean;
+	unionTypes?: TypeReference[];
 }
