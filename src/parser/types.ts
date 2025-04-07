@@ -1,5 +1,9 @@
 /**
- * Enum representing the allowed kinds of expressions.
+ * Enum representing the allowed kinds of expressions in the AST.
+ * Use these values to discriminate expression nodes.
+ *
+ * @example
+ * if(node.kind === ExpressionKind.Literal) { ... }
  */
 export enum ExpressionKind {
 	Binary = "Binary",
@@ -13,8 +17,11 @@ export enum ExpressionKind {
 }
 
 /**
- * Enum representing common operators.
- * (Extend as needed.)
+ * Enum representing common operators in expressions.
+ * Extend this enum as new operators get supported.
+ *
+ * @example
+ * if(operator === Operator.Plus) { ... }
  */
 export enum Operator {
 	Plus = "+",
@@ -32,6 +39,12 @@ export enum Operator {
 
 /**
  * Represents a token produced by the lexer.
+ * Tokens serve as the basic units inserted into the parser.
+ *
+ * @property text - The exact text of the token.
+ * @property type - A numeric code identifying the token type.
+ * @property line - The line number in the source where the token occurs (1-indexed).
+ * @property column - The column position (0-indexed) where the token starts.
  */
 export interface Token {
 	/** The textual representation of the token. */
@@ -45,23 +58,33 @@ export interface Token {
 }
 
 /**
- * Represents an input to the parser.
+ * Represents an input stream for the parser.
+ * Provides facilities for looking ahead and retrieving tokens.
+ *
+ * @example
+ * const lookahead = parserInput.LA(1);
  */
 export interface ParserInput {
 	/**
 	 * Look ahead by the given offset.
-	 * @param offset Number of tokens to look ahead.
+	 * @param offset - The number of tokens to look ahead (1 returns the next token).
+	 * @returns The token type code at that offset.
 	 */
 	LA(offset: number): number;
 	/**
-	 * Get the token at the given offset.
-	 * @param offset Number of tokens to look ahead.
+	 * Get the token at the given lookahead offset.
+	 * @param offset - The number of tokens to look ahead.
+	 * @returns The Token object.
 	 */
 	LT(offset: number): Token;
 }
 
 /**
- * Base interface for all AST nodes.
+ * Base interface for all nodes in the Abstract Syntax Tree (AST).
+ *
+ * @property type - Discriminator for the node type.
+ * @property line - The line in the source code where the node begins.
+ * @property column - The column in the source code where the node begins.
  */
 export interface ASTNode {
 	/** A string identifying the type of AST node. */
@@ -73,7 +96,10 @@ export interface ASTNode {
 }
 
 /**
- * Represents the entire program AST.
+ * Represents the root of the AST, corresponding to an entire program.
+ *
+ * @property type - Always the literal 'Program'.
+ * @property body - An array of statement nodes composing the program.
  */
 export interface Program extends ASTNode {
 	/** Constant discriminant for a program node. */
@@ -83,7 +109,8 @@ export interface Program extends ASTNode {
 }
 
 /**
- * Represents a statement in the AST.
+ * Represents a statement node in the AST.
+ * A statement can be a variable declaration, function declaration, decorator, or expression.
  */
 export interface Statement extends ASTNode {
 	/** Discriminated type identifying the statement kind. */
@@ -91,7 +118,20 @@ export interface Statement extends ASTNode {
 }
 
 /**
- * Represents an expression in the AST.
+ * Represents an expression node in the AST.
+ *
+ * @property kind - Specifies the particular kind of expression (see ExpressionKind).
+ * @property operator - For binary and unary expressions, this holds the operator used.
+ * @property left - For binary or unary expressions, the operand on the left.
+ * @property right - For binary expressions, the operand on the right.
+ * @property value - For literal expressions, the actual value (string, number, or boolean).
+ * @property name - For identifier expressions, the variable or function name.
+ * @property arguments - For call expressions, the list of argument expressions.
+ * @property object - For member access expressions, the object being accessed.
+ * @property member - For member access expressions, the property name.
+ * @property elements - For array literals, the elements contained in the array.
+ * @property properties - For object literals, key-value pairs.
+ * @property callee - For call expressions, the function being called.
  */
 export interface Expression extends ASTNode {
 	/** Constant discriminant for an expression node. */
@@ -127,6 +167,10 @@ export interface Expression extends ASTNode {
 
 /**
  * Represents a variable declaration statement.
+ *
+ * @property name - The identifier for the variable being declared.
+ * @property varType - A string representation of the variable's type, if specified.
+ * @property initializer - The expression assigned to the variable, if any.
  */
 export interface VariableDeclaration extends Statement {
 	/** Constant discriminant for a variable declaration. */
@@ -141,6 +185,10 @@ export interface VariableDeclaration extends Statement {
 
 /**
  * Represents a decorator applied to a declaration.
+ * Decorators can modify or annotate classes, methods, or properties.
+ *
+ * @property name - The decorator's identifier name.
+ * @property arguments - Optional arguments passed to the decorator.
  */
 export interface Decorator extends Statement {
 	/** Constant discriminant for a decorator node. */
@@ -152,7 +200,13 @@ export interface Decorator extends Statement {
 }
 
 /**
- * Interface for AST errors or diagnostic messages.
+ * Interface for representing errors or diagnostic messages in the AST.
+ * Useful during parsing and type checking for reporting malformed syntax.
+ *
+ * @property message - A human-readable description of the error.
+ * @property line - The line number in the source where the error was detected.
+ * @property column - The column in the source where the error was detected.
+ * @property details - Optional additional context or data regarding the error.
  */
 export interface ASTError {
 	/** The error message describing the issue. */
