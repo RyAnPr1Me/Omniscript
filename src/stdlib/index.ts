@@ -6,6 +6,8 @@ export * from './datetime';
 export * from './math';
 export * from './threading';
 
+export { MathUtils as Math } from './math';
+
 import { SQLiteConnection, PostgresConnection } from './database/connections';
 
 export class Console {
