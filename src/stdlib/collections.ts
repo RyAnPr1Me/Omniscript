@@ -19,6 +19,20 @@ export class List<T> {
       this.lock.release();
     }
   }
+
+  async filter(predicate: (item: T) => boolean): Promise<List<T>> {
+    await this.lock.acquire();
+    try {
+      const filteredItems = this.items.filter(predicate);
+      const newList = new List<T>();
+      for (const item of filteredItems) {
+        await newList.push(item);
+      }
+      return newList;
+    } finally {
+      this.lock.release();
+    }
+  }
 }
 
 export class Map<K, V> {

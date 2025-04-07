@@ -53,6 +53,14 @@ async fn fetchUserData(id: number): Promise<User> {
   return response.json();
 }
 
+async fn updateUser(id: number, data: Partial<User>): Promise<void> {
+  await HTTP.put(`/api/users/${id}`, data);
+}
+
+async fn deleteUser(id: number): Promise<void> {
+  await HTTP.delete(`/api/users/${id}`);
+}
+
 // Error handling
 try {
   let user = await fetchUserData(123);

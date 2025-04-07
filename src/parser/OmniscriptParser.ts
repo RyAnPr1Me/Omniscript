@@ -35,6 +35,9 @@ export default class OmniscriptParser extends Parser {
   static readonly RBRACKET = 30;
   static readonly LBRACE = 31;
   static readonly RBRACE = 32;
+  static readonly ASYNC = 33; // Define ASYNC as a static property
+  static readonly AWAIT = 34; // Define AWAIT as a static property
+  static readonly FN = 35; // Define FN as a static property
 
   constructor(input: any) {
     super(input);
@@ -71,7 +74,10 @@ export default class OmniscriptParser extends Parser {
     if (this._input.LA(1) === OmniscriptParser.AT) {
       return this.decorator();
     }
-    
+    if (this._input.LA(1) === OmniscriptParser.ASYNC) {
+      this.match(OmniscriptParser.ASYNC);
+      return this.functionDeclaration(true);
+    }
     throw new Error(`Unexpected token: ${token.text} at line ${token.line}:${token.column}`);
   }
 
@@ -417,5 +423,27 @@ export default class OmniscriptParser extends Parser {
   private isUnaryOperator(type: number): boolean {
     const token = this._input.LT(1);
     return ['-', '!', '~'].includes(token.text);
+  }
+
+  functionDeclaration(isAsync: boolean = false): FunctionDeclaration {
+    const startToken = this._input.LT(1);
+    this.match(OmniscriptParser.FN);
+    const name = this.match(OmniscriptParser.IDENTIFIER).text;
+    this.match(OmniscriptParser.LPAREN);
+    const params = this.parameterList();
+    this.match(OmniscriptParser.RPAREN);
+    this.match(OmniscriptParser.COLON);
+    const returnType = this.type();
+    const body = this.block();
+    return {
+      type: 'FunctionDeclaration',
+      name,
+      params,
+      returnType,
+      body,
+      isAsync,
+      line: startToken.line,
+      column: startToken.column
+    };
   }
 }

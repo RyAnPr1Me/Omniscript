@@ -10,6 +10,21 @@ export class HTTP {
       headers: { 'Content-Type': 'application/json', ...headers }
     });
   }
+
+  static async put(url: string, body: any, headers?: Record<string, string>): Promise<Response> {
+    return fetch(url, {
+      method: 'PUT',
+      body: JSON.stringify(body),
+      headers: { 'Content-Type': 'application/json', ...headers }
+    });
+  }
+
+  static async delete(url: string, headers?: Record<string, string>): Promise<Response> {
+    return fetch(url, {
+      method: 'DELETE',
+      headers
+    });
+  }
 }
 
 export class WebSocket {
