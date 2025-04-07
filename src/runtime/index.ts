@@ -10,11 +10,13 @@ export class Runtime {
   private scope: Map<string, any>;
   private referenceCounts: Map<any, number>;
   private weakReferences: WeakMap<any, boolean>;
+  private debugMode: boolean;
 
   constructor() {
     this.scope = new Map();
     this.referenceCounts = new Map();
     this.weakReferences = new WeakMap();
+    this.debugMode = false;
   }
 
   execute(bytecode: Bytecode): any {
@@ -159,5 +161,51 @@ export class Runtime {
     }
 
     stack.delete(object);
+  }
+
+  // New: Create an actor from a function handling messages and state
+  createActor(actorFn: (message: any, state: any) => any, initialState: any): Actor {
+    return new Actor(actorFn, initialState);
+  }
+
+  // New: Schedule a coroutine (async task) with enhanced logging support.
+  async scheduleCoroutine(coroutine: () => Promise<any>): Promise<any> {
+    if (this.debugMode) {
+      console.log("Scheduling coroutine...");
+    }
+    const result = await coroutine();
+    if (this.debugMode) {
+      console.log("Coroutine completed:", result);
+    }
+    return result;
+  }
+
+  // New: Enable visual debugging/profiling.
+  enableDebugMode(): void {
+    this.debugMode = true;
+    console.log("Debug mode enabled.");
+  }
+}
+
+// New helper Actor class (could be moved to its own module if desired)
+export class Actor {
+  private mailbox: any[] = [];
+  private busy = false;
+
+  constructor(private actorFn: (message: any, state: any) => any, private state: any) {}
+
+  send(message: any): void {
+    this.mailbox.push(message);
+    this.schedule();
+  }
+
+  private async schedule(): Promise<void> {
+    if (this.busy) return;
+    this.busy = true;
+    while (this.mailbox.length > 0) {
+      const msg = this.mailbox.shift();
+      this.state = await this.actorFn(msg, this.state);
+    }
+    this.busy = false;
   }
 }
