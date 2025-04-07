@@ -31,4 +31,15 @@ export default class OmniscriptLexer extends Lexer {
   static readonly IMPLEMENTS = 17; // Interface implementation
   static readonly TYPEOF = 18; // Type queries
   static readonly INFER = 19;  // Type inference
+  static readonly TRY = 20;      // Structured error handling
+  static readonly CATCH = 21;    // Structured error handling
+  static readonly FINALLY = 22;  // Structured error handling
+  static readonly RESULT = 23;   // Functional-style error handling
+  static readonly OK = 24;       // Functional-style error handling
+  static readonly ERROR = 25;    // Functional-style error handling
+  static readonly REACT_COMPONENT = 26; // React component keyword
+  static readonly JSX = 27;             // JSX syntax
+  static readonly DJANGO_TEMPLATE = 28; // Django template syntax
+  static readonly DJANGO_BLOCK = 29;    // Django block keyword
+  static readonly DJANGO_VARIABLE = 30; // Django variable syntax
 }

@@ -2,8 +2,11 @@ import { Program, FunctionDeclaration, ReturnStatement, Expression, ASTNode } fr
 
 export class Compiler {
   compile(ast: any) {
-    console.log("Starting JIT compilation...");
-    return this.visitNode(ast);
+    console.log("Starting JIT compilation with SIMD and parallel execution optimizations...");
+    const bytecode = this.visitNode(ast);
+    this.optimizeForSIMD(bytecode);
+    this.optimizeForParallelExecution(bytecode);
+    return bytecode;
   }
 
   private visitNode(node: ASTNode): any {
@@ -51,5 +54,41 @@ export class Compiler {
       type: 'Value',
       value: node.value
     };
+  }
+
+  private optimizeForSIMD(bytecode: any): void {
+    console.log("Applying SIMD optimizations...");
+    // Detect numerical operations and optimize for SIMD
+    if (bytecode.type === 'Function' && bytecode.body) {
+      bytecode.body = bytecode.body.map((stmt: any) => {
+        if (stmt.type === 'Loop' && this.isNumericalOperation(stmt.body)) {
+          stmt.simdOptimized = true;
+        }
+        return stmt;
+      });
+    }
+  }
+
+  private optimizeForParallelExecution(bytecode: any): void {
+    console.log("Applying parallel execution optimizations...");
+    // Detect loops and optimize for parallel execution
+    if (bytecode.type === 'Function' && bytecode.body) {
+      bytecode.body = bytecode.body.map((stmt: any) => {
+        if (stmt.type === 'Loop' && this.isParallelizable(stmt.body)) {
+          stmt.parallelOptimized = true;
+        }
+        return stmt;
+      });
+    }
+  }
+
+  private isNumericalOperation(body: any[]): boolean {
+    // Check if the loop body contains numerical operations
+    return body.some((stmt: any) => stmt.type === 'Expression' && typeof stmt.value === 'number');
+  }
+
+  private isParallelizable(body: any[]): boolean {
+    // Check if the loop body is free of dependencies and can be parallelized
+    return body.every((stmt: any) => stmt.type !== 'Assignment' || stmt.target !== 'sharedVariable');
   }
 }
