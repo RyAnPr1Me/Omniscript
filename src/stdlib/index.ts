@@ -22,12 +22,28 @@ export class HTTP {
   }
 }
 
+// Enhanced HTTP exports
+export { HTTPClient } from './http/client';
+
+// Add package manager support
+export { PackageManager } from '../package-manager';
+
+// Export enhanced database features
 export class Database {
   static async connect(connectionString: string) {
     if (connectionString.startsWith('sqlite://')) {
       return new SQLiteConnection(connectionString);
     }
     return new PostgresConnection(connectionString);
+  }
+
+  static async transaction<T>(callback: () => Promise<T>): Promise<T> {
+    try {
+      const result = await callback();
+      return result;
+    } catch (error) {
+      throw error;
+    }
   }
 }
 

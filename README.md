@@ -1,16 +1,11 @@
 # Omniscript
 
-A unified programming language for full-stack web development. Write both frontend and backend logic in a single `.os` file.
-
-## Features
-
-- Full-stack development in a single file
-- Built-in HTTP server and routing
-- Native database ORM
-- Reactive UI components
-- Type inference with optional static typing
-- Async/await and coroutines
-- Comprehensive standard library
+A modern programming language for full-stack development with first-class support for:
+- Type safety and inference
+- Async/await and concurrency
+- Pattern matching
+- Generic types
+- Operator overloading
 
 ## Quick Start
 
@@ -19,18 +14,92 @@ A unified programming language for full-stack web development. Write both fronte
 curl -fsSL https://get.omniscript.dev | sh
 
 # Create a new project
-omni new myproject
+omni new myapp
 
-# Run the development server
-omni run
+# Run in development mode
+omni dev
 ```
+
+## Features
+
+### Type-safe Full Stack Development
+```typescript
+// Single file for both frontend and backend
+@component
+class UserList {
+  @state users: User[] = [];
+  
+  async loadUsers() {
+    // Auto-synchronized between client/server
+    this.users = await db.users.findAll();
+  }
+  
+  render() {
+    return <ul>
+      {this.users.map(user => <li>{user.name}</li>)}
+    </ul>;
+  }
+}
+```
+
+### Built-in Database ORM
+```typescript
+class User {
+  @id id: number;
+  @field name: string;
+  @relation posts: Post[];
+}
+
+// Type-safe queries
+const newUsers = await db.users
+  .where(u => u.posts.length > 0)
+  .orderBy(u => u.name)
+  .take(10);
+```
+
+### Pattern Matching
+```typescript
+match value {
+  0 => "zero",
+  n if n > 0 => "positive",
+  n if n < 0 => "negative",
+  _ => "unknown"
+}
+```
+
+### Standard Library
+- Collections (List, Map, Set)
+- HTTP Client/Server
+- Database Connections
+- Crypto Operations
+- DateTime Utilities
+- Math Functions
+- Threading Support
 
 ## Documentation
 
-- [Language Reference](docs/reference.md)
-- [Quick Start Guide](docs/quickstart.md)
-- [Example Apps](examples/)
+- [Language Guide](docs/guide.md)
+- [API Reference](docs/api/README.md)
+- [Best Practices](docs/best-practices.md)
+- [Examples](examples/README.md)
+
+## Package Manager
+
+```bash
+# Add package
+omni add package-name
+
+# Enable stdlib module
+omni enable stdlib/http
+
+# Install all dependencies
+omni install
+```
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ## License
 
-MIT License - See [LICENSE](LICENSE) for details
+MIT - See [LICENSE](LICENSE) for details

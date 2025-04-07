@@ -1,0 +1,24 @@
+{
+  "stdlib": {
+    "modules": [
+      "collections",
+      "io",
+      "network",
+      "crypto",
+      "datetime",
+      "math",
+      "threading",
+      "http"
+    ],
+    "plugins": []
+  },
+  "compiler": {
+    "target": "es2020",
+    "moduleResolution": "node",
+    "strict": true
+  },
+  "packageManager": {
+    "registry": "https://registry.omniscript.dev",
+    "cacheDir": ".omni/cache"
+  }
+}
