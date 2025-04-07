@@ -132,3 +132,6 @@ STRING: '"' (~["\r\n\\] | EscapeSequence)* '"';
 TEXT: ~[`\\$]+ | EscapeSequence;
 fragment EscapeSequence: '\\' [btnfr"'\\];
 WS: [ \t\r\n]+ -> skip;
+COMMENT: '//' ~[\r\n]* -> skip;
+MULTILINE_COMMENT: '/*' .*? '*/' -> skip;
+NESTED_COMMENT: '/*' .*? '*/' -> channel(HIDDEN);

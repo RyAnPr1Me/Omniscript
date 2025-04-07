@@ -26,8 +26,9 @@ export class Runtime {
           throw new Error(`Unknown bytecode type: ${bytecode.type}`);
       }
     } catch (error) {
-      console.error("Runtime Error:", error.message);
-      throw error;
+      const err = error as Error; // Explicitly cast to Error
+      console.error("Runtime Error:", err.message);
+      throw err;
     }
   }
 
