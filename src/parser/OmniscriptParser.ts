@@ -57,18 +57,122 @@ export default class OmniscriptParser extends Parser {
   static readonly STRING = 24;
   static readonly NUMBER = 25;
   static readonly TRUE = 26;
+
+  /**
+   * Core token definitions for the Omniscript parser.
+   * Each token represents a discrete lexical element in the language syntax.
+   * 
+   * Token Categories:
+   * ----------------
+   * Basic Syntax (1-9):      Core language building blocks
+   *   VAR, AT, COLON, etc.   - Basic syntax elements
+   * 
+   * Operators (10-23):       Mathematical and logical operations
+   *   PLUS, MINUS, etc.      - Arithmetic operators
+   *   AND, OR, etc.          - Logical operators
+   * 
+   * Literals (24-28):        Constant values
+   *   STRING, NUMBER         - Basic data types
+   *   TRUE, FALSE, NULL      - Special literals
+   * 
+   * Delimiters (29-32):      Code block and grouping symbols
+   *   LBRACKET/RBRACKET     - Array literals, indexing
+   *   LBRACE/RBRACE         - Object literals, blocks
+   * 
+   * Keywords (33-39):        Reserved language keywords
+   *   ASYNC/AWAIT           - Asynchronous programming
+   *   FN                    - Function declarations
+   *   MATCH/CASE           - Pattern matching
+   * 
+   * Types (40-46):          Advanced type system tokens
+   *   EXTENDS/PIPE         - Inheritance and unions  
+   *   GENERIC             - Generic type parameters
+   *   IMPLEMENTS          - Interface implementation
+   *   ABSTRACT           - Abstract classes/methods
+   *   TYPEOF            - Type queries
+   *   INFER             - Type inference
+   * 
+   * Control Flow (47-52):   Enhanced flow control
+   *   YIELD             - Generator functions
+   *   WITH              - Resource management
+   *   DO               - Expression blocks  
+   *   UNLESS           - Inverted if
+   *   UNTIL            - Inverted while
+   * 
+   * Pattern Matching (53-58): Pattern matching features
+   *   AS               - Pattern binding
+   *   WHEN             - Pattern guards
+   *   REST             - Rest patterns
+   *   IS               - Type testing
+   *   SOME             - Optional matching
+   *   NONE             - Optional matching
+   * 
+   * @example
+   * ```typescript
+   * // Pattern matching with type guards
+   * match value {
+   *   case x is Number when x > 0 => "positive",
+   *   case Some(x) => x,
+   *   case None => "nothing"
+   * }
+   * 
+   * // Enhanced control flow
+   * do {
+   *   let x = compute()
+   *   x * 2
+   * }
+   * 
+   * // Resource management
+   * with(file.open()) {
+   *   file.write()
+   * }
+   * ```
+   * 
+   * Developer Notes:
+   * - Token values are sequential for efficient lookup
+   * - Categories are grouped logically for maintainability
+   * - Add new tokens at the end of their category
+   * - Update grammar file when adding tokens
+   * - Pattern matching tokens support rich pattern expressions
+   * - Control flow tokens enable more expressive code structure
+   * - Type system tokens allow for advanced type relationships
+   */
+
+  /** Boolean literal false */
   static readonly FALSE = 27;
+  
+  /** Null literal */
   static readonly NULL = 28;
+  
+  /** Left square bracket [ */
   static readonly LBRACKET = 29;
+  
+  /** Right square bracket ] */
   static readonly RBRACKET = 30;
+  
+  /** Left curly brace { */
   static readonly LBRACE = 31;
+  
+  /** Right curly brace } */
   static readonly RBRACE = 32;
-  static readonly ASYNC = 33; // Define ASYNC as a static property
-  static readonly AWAIT = 34; // Define AWAIT as a static property
-  static readonly FN = 35; // Define FN as a static property
-  static readonly EXTENDS = 36; // Add EXTENDS token
-  static readonly PIPE = 37;    // Add PIPE token
-  static readonly GENERIC = 38; // Add GENERIC token for generic type handling
+  
+  /** async keyword for asynchronous functions */
+  static readonly ASYNC = 33;
+  
+  /** await keyword for awaiting Promises */
+  static readonly AWAIT = 34;
+  
+  /** fn keyword for function declarations */
+  static readonly FN = 35;
+  
+  /** extends keyword for type constraints and class inheritance */
+  static readonly EXTENDS = 36;
+  
+  /** | operator for union types */
+  static readonly PIPE = 37;
+  
+  /** Generic type parameter tokens like <T> */
+  static readonly GENERIC = 38;
 
   constructor(input: any) {
     super(input);
