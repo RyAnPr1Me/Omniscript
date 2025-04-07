@@ -103,6 +103,7 @@ export default class OmniscriptParser extends Parser {
   }
 
   decorator(): Decorator {
+    const startToken = this._input.LT(1);
     this.match(OmniscriptParser.AT);
     const name = this.qualifiedName();
     let args = null;
@@ -111,7 +112,13 @@ export default class OmniscriptParser extends Parser {
       args = this.argumentList();
       this.match(OmniscriptParser.RPAREN);
     }
-    return { type: 'Decorator', name, arguments: args };
+    return { 
+      type: 'Decorator', 
+      name, 
+      arguments: args,
+      line: startToken.line,
+      column: startToken.column
+    };
   }
 
   qualifiedName(): string {
@@ -400,5 +407,15 @@ export default class OmniscriptParser extends Parser {
       line: startToken.line,
       column: startToken.column
     };
+  }
+
+  private getCurrentOperator(): string {
+    const token = this._input.LT(1);
+    return token.text;
+  }
+
+  private isUnaryOperator(type: number): boolean {
+    const token = this._input.LT(1);
+    return ['-', '!', '~'].includes(token.text);
   }
 }

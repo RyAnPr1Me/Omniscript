@@ -27,13 +27,18 @@ export interface Statement extends ASTNode {
 
 export interface Expression extends ASTNode {
   type: 'Expression';
-  kind: 'Binary' | 'Unary' | 'Literal' | 'Identifier' | 'Call';
+  kind: 'Binary' | 'Unary' | 'Literal' | 'Identifier' | 'Call' | 'MemberAccess' | 'ArrayLiteral' | 'ObjectLiteral';
   operator?: string;
   left?: Expression;
   right?: Expression;
   value?: any;
   name?: string;
   arguments?: Expression[];
+  object?: Expression;
+  member?: string;
+  elements?: Expression[];
+  properties?: {key: string; value: Expression}[];
+  callee?: Expression;
 }
 
 export interface VariableDeclaration extends Statement {
