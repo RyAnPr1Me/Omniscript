@@ -176,6 +176,27 @@ omni enable stdlib/http
 omni install
 ```
 
+## Troubleshooting
+
+If you still see the error:
+  
+  -bash: omni: command not found
+  
+after running:
+  
+  npm run build
+  npm link
+
+ensure that your global npm bin folder is in your PATH. You can check the global bin directory with:
+
+  npm bin -g
+
+Then, add that folder to your PATH in your shell configuration file (e.g., ~/.bashrc, ~/.zshrc):
+
+  export PATH="$(npm bin -g):$PATH"
+
+After updating, reload your shell or source your configuration file.
+
 ## Contributing
 
 We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
