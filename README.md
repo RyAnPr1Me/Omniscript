@@ -14,7 +14,7 @@ A modern programming language for full-stack development with first-class suppor
 
 ```bash
 # Clone the repository directly from GitHub:
-git clone https://github.com/omniscript/omniscript.git
+git clone https://github.com/RyAnPr1Me/omniscript.git
 cd omniscript
 npm install
 
