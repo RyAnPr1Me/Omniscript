@@ -1,73 +1,53 @@
-import * as llvm from 'llvm-bindings';
-
-type CompilerValue = llvm.Value | null;
-
-interface ASTNode {
-  type: string;
-}
-
-interface FunctionDeclaration extends ASTNode {
-  id: { name: string };
-  params: any[];
-  body: any[];
-}
-
-interface ReturnStatement extends ASTNode {
-  argument: any;
-}
+import { Program, FunctionDeclaration, ReturnStatement, Expression, ASTNode } from './types';
 
 export class Compiler {
-  private context: llvm.LLVMContext;
-  private module: llvm.Module;
-  private builder: llvm.IRBuilder;
-
-  constructor() {
-    this.context = new llvm.LLVMContext();
-    this.module = new llvm.Module("omniscript", this.context);
-    this.builder = new llvm.IRBuilder(this.context);
-  }
-
   compile(ast: any) {
-    this.module = new llvm.Module("omniscript", this.context);
-    this.visitNode(ast);
-    return this.module;
+    return this.visitNode(ast);
   }
 
-  private visitNode(node: ASTNode): CompilerValue {
+  private visitNode(node: ASTNode): any {
     switch (node.type) {
       case 'Program':
-        return this.visitProgram(node);
+        return this.visitProgram(node as Program);
       case 'FunctionDeclaration':
-        return this.visitFunctionDeclaration(node);
+        return this.visitFunctionDeclaration(node as FunctionDeclaration);
       case 'ReturnStatement':
-        return this.visitReturnStatement(node);
+        return this.visitReturnStatement(node as ReturnStatement);
+      case 'Expression':
+        return this.visitExpression(node as Expression);
       default:
-        return null;
+        throw new Error(`Unknown node type: ${node.type}`);
     }
   }
 
-  private visitProgram(node: any) {
-    node.body.forEach((n: any) => this.visitNode(n));
-  }
-
-  private visitFunctionDeclaration(node: FunctionDeclaration) {
-    const returnType = this.context.getVoidTy();
-    const paramTypes: llvm.Type[] = [];
-    const fnType = llvm.FunctionType.get(returnType, paramTypes, false);
-    const fn = this.module.addFunction(node.id.name, fnType);
-    
-    const entry = fn.addBasicBlock("entry");
-    this.builder.setInsertionPoint(entry);
-    
-    node.body.forEach(stmt => this.visitNode(stmt));
-    return fn;
-  }
-
-  private visitReturnStatement(node: ReturnStatement): llvm.Value {
-    if (node.argument) {
-      const value: llvm.Value = this.visitNode(node.argument) as llvm.Value;
-      return this.builder.createRet(value);
+  private visitProgram(node: Program): any {
+    let result: any = null;
+    for (const stmt of node.body) {
+      result = this.visitNode(stmt);
     }
-    return this.builder.createRetVoid();
+    return result;
+  }
+
+  private visitFunctionDeclaration(node: FunctionDeclaration): any {
+    return {
+      type: 'Function',
+      name: node.id.name,
+      params: node.params,
+      body: node.body.map(stmt => this.visitNode(stmt))
+    };
+  }
+
+  private visitReturnStatement(node: ReturnStatement): any {
+    return {
+      type: 'Return',
+      value: node.argument ? this.visitNode(node.argument) : undefined
+    };
+  }
+
+  private visitExpression(node: Expression): any {
+    return {
+      type: 'Value',
+      value: node.value
+    };
   }
 }

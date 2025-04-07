@@ -1,13 +1,14 @@
+/// <reference types="node" />
 import { Command } from 'commander';
 import { readFile } from 'node:fs/promises';
-import * as readline from 'node:readline';
+import { Interface as ReadlineInterface, createInterface } from 'node:readline';
 import { Omniscript } from './index';
 
 const program = new Command();
 const omniscript = new Omniscript();
 
 function startRepl(engine: Omniscript) {
-  const rl = readline.createInterface({
+  const rl: ReadlineInterface = createInterface({
     input: process.stdin,
     output: process.stdout,
     prompt: 'omni> '

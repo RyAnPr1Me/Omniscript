@@ -1,12 +1,12 @@
-import { Database as SQLite } from 'sqlite3';
-import { Pool, Client } from 'pg';
+import { Database } from 'sqlite3';
+import { Pool } from 'pg';
 
 export class SQLiteConnection {
-  private db: SQLite;
+  private db: Database;
 
   constructor(connectionString: string) {
     const path = connectionString.replace('sqlite://', '');
-    this.db = new SQLite(path);
+    this.db = new Database(path);
   }
 }
 

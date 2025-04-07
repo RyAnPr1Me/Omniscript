@@ -1,26 +1,37 @@
-import * as llvm from 'llvm-bindings';
+interface Bytecode {
+  type: string;
+  name?: string;
+  params?: any[];
+  body?: Bytecode[];
+  value?: any;
+}
 
 export class Runtime {
-  private engine: llvm.ExecutionEngine;
+  private scope: Map<string, any>;
 
   constructor() {
-    llvm.initializeNativeTarget();
-    llvm.initializeNativeAsmPrinter();
+    this.scope = new Map();
   }
 
-  execute(module: llvm.Module) {
-    this.engine = llvm.createExecutionEngineForModule(module);
-    const mainFn = module.getFunction("main");
-    
-    if (mainFn) {
-      return this.engine.runFunction(mainFn, []);
+  execute(bytecode: Bytecode): any {
+    switch (bytecode.type) {
+      case 'Function':
+        return this.executeFunction(bytecode);
+      case 'Return':
+        return this.executeReturn(bytecode);
+      case 'Value':
+        return bytecode.value;
+      default:
+        throw new Error(`Unknown bytecode type: ${bytecode.type}`);
     }
-    return null;
   }
 
-  async executeAsync(module: llvm.Module) {
-    return new Promise((resolve) => {
-      resolve(this.execute(module));
-    });
+  private executeFunction(fn: Bytecode): any {
+    this.scope.set(fn.name!, fn);
+    return fn.body?.reduce((_, stmt: Bytecode) => this.execute(stmt), undefined);
+  }
+
+  private executeReturn(ret: Bytecode): any {
+    return ret.value !== undefined ? this.execute(ret.value) : undefined;
   }
 }
