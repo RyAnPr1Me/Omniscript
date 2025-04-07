@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 /// <reference types="node" />
 import { Command } from 'commander';
 import { readFile } from 'node:fs/promises';

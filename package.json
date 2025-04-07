@@ -1,6 +1,9 @@
 {
   "name": "omniscript",
   "version": "0.1.0",
+  "bin": {
+    "omni": "dist/cli.js"
+  },
   "dependencies": {
     "commander": "^11.0.0",
     "typescript": "^5.0.0",

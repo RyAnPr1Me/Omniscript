@@ -17,6 +17,8 @@ A modern programming language for full-stack development with first-class suppor
 git clone https://github.com/RyAnPr1Me/omniscript.git
 cd omniscript
 npm install
+npm run build       // Build the project to generate the CLI
+npm link            // Link the CLI globally so omni is in your PATH
 
 # Create a new project (ensure omni CLI is in your PATH)
 omni new myapp
