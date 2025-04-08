@@ -161,6 +161,24 @@ app.listen(3000);
 - [Best Practices](docs/best-practices.md)
 - [Examples](examples/README.md)
 
+## Installation
+
+You can install Omniscript via two methods:
+
+### Standard Installer
+```bash
+npm install
+npm run build       # Compiles TypeScript files into the dist/ folder
+npm link            # Links the CLI globally (exposes the "omni" command)
+```
+
+### Advanced Interactive Installer
+For an interactive installation experience with custom options, run:
+```bash
+node installer/advancedInstaller.js
+```
+Follow the on-screen prompts to choose your installation tasks.
+
 ## Package Manager
 
 Omniscript includes a built-in package manager for managing dependencies and enabling standard library modules.
