@@ -192,6 +192,36 @@ HTTP.enableDebugging();
 Database.enableProfiler();
 ```
 
+## Debugging and Profiling
+Omniscript provides built-in debugging and profiling tools to help developers optimize their applications.
+
+### Debugging
+Enable debugging to log detailed information about runtime operations:
+
+```typescript
+runtime.enableDebugMode();
+```
+
+### Profiling
+Use the profiler to measure performance of specific code sections:
+
+```typescript
+runtime.scheduleCoroutine(async () => {
+  console.time("Task");
+  await someAsyncTask();
+  console.timeEnd("Task");
+});
+```
+
+## Advanced Features
+
+### Parallel Execution
+Omniscript supports parallel execution for computationally intensive tasks:
+
+```typescript
+runtime.enableParallelExecution();
+```
+
 ### Reactive Programming
 Reactive programming primitives like `Stream`, `Observable`, and `Signal` are now part of the standard library.
 

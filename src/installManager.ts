@@ -1,7 +1,5 @@
 #!/usr/bin/env node
 
-// To run this installer, execute: `node src/installManager.ts`
-
 import { execSync } from 'child_process';
 import os from 'os';
 import readline from 'readline';
@@ -10,107 +8,94 @@ import path from 'path';
 
 export class OmniscriptInstaller {
   static runCommand(cmd: string): void {
-    console.log(`Executing: ${cmd}`);
+    console.log(`🚀 Executing: ${cmd}`);
     try {
       execSync(cmd, { stdio: 'inherit' });
     } catch (err) {
       if (err instanceof Error) {
-        console.error(`Command failed: ${cmd}`);
+        console.error(`❌ Command failed: ${cmd}`);
         console.error(`Error: ${err.message}`);
       } else {
-        console.error(`Command failed: ${cmd}`);
+        console.error(`❌ Command failed: ${cmd}`);
         console.error(`Unknown error:`, err);
       }
       process.exit(1);
     }
   }
 
-  static async interactiveInstall(): Promise<void> {
-    console.log("Welcome to the Omniscript Installer!");
-    console.log("This program will guide you through the installation process.");
-
-    const rl = readline.createInterface({
-      input: process.stdin,
-      output: process.stdout
-    });
-
-    const askQuestion = (question: string): Promise<string> => {
-      return new Promise(resolve => rl.question(question, resolve));
-    };
-
+  static isToolAvailable(tool: string): boolean {
     try {
-      const installPath = await askQuestion("Enter the installation directory (default: /usr/local/omniscript): ");
-      const pathToInstall = installPath.trim() || "/usr/local/omniscript";
-
-      console.log(`Installing Omniscript to ${pathToInstall}...`);
-      if (!fs.existsSync(pathToInstall)) {
-        fs.mkdirSync(pathToInstall, { recursive: true });
-      }
-
-      console.log("Cloning Omniscript repository...");
-      const repoUrl = "https://github.com/RyAnPr1Me/Omniscript.git";
-      this.runCommand(`git clone ${repoUrl} ${pathToInstall}`);
-
-      console.log("Installing dependencies...");
-      this.runCommand(`npm install --prefix ${pathToInstall}`);
-
-      console.log("Building the project...");
-      this.runCommand(`npm run build --prefix ${pathToInstall}`);
-
-      console.log("Setting up Omniscript environment...");
-      const omniScriptPath = path.join(pathToInstall, 'omni');
-      fs.writeFileSync(omniScriptPath, `#!/bin/bash\nnode ${path.join(pathToInstall, 'src/cli.js')} $@`);
-      fs.chmodSync(omniScriptPath, '755');
-
-      console.log("Linking Omniscript CLI globally...");
-      this.runCommand(`ln -sf ${omniScriptPath} /usr/local/bin/omni`);
-
-      console.log("Installation complete! The 'omni' command is now globally available.");
-    } catch (error) {
-      console.error("Installation failed.", error);
-    } finally {
-      rl.close();
+      execSync(`which ${tool}`, { stdio: 'ignore' });
+      return true;
+    } catch {
+      return false;
     }
   }
 
-  static performInstallation(): void {
-    console.log("Starting Omniscript installation...");
-    const platform = os.platform();
-
-    if (platform !== 'linux' && platform !== 'darwin' && platform !== 'win32') {
-      console.error("Unsupported operating system. Installation aborted.");
+  static async installLanguage(languageName: string, upgrade: boolean = false): Promise<void> {
+    if (languageName !== 'omniscript') {
+      console.error(`❌ Unsupported language: ${languageName}`);
       process.exit(1);
     }
 
-    const defaultPath = "/usr/local/omniscript";
-    console.log(`Installing Omniscript to the default directory: ${defaultPath}`);
-
-    if (!fs.existsSync(defaultPath)) {
-      fs.mkdirSync(defaultPath, { recursive: true });
+    if (!this.isToolAvailable('git')) {
+      console.error('❌ Git is not installed. Please install Git and try again.');
+      process.exit(1);
     }
 
-    console.log("Cloning Omniscript repository...");
-    const repoUrl = "https://github.com/RyAnPr1Me/Omniscript.git";
+    if (!this.isToolAvailable('npm')) {
+      console.error('❌ npm is not installed. Please install Node.js and npm, then try again.');
+      process.exit(1);
+    }
+
+    const defaultPath = '/usr/local/omniscript';
+    const repoUrl = 'https://github.com/RyAnPr1Me/Omniscript.git';
+
+    if (fs.existsSync(defaultPath)) {
+      console.log('⚠️ Omniscript is already installed.');
+      if (upgrade) {
+        console.log('🔄 Upgrading Omniscript...');
+        this.runCommand(`git -C ${defaultPath} pull`);
+        this.runCommand(`npm install --prefix ${defaultPath}`);
+        this.runCommand(`npm run build --prefix ${defaultPath}`);
+        console.log('✅ Omniscript has been upgraded successfully!');
+      } else {
+        console.log('✅ Omniscript is already installed. Use --upgrade to update.');
+      }
+      return;
+    }
+
+    console.log('📥 Cloning Omniscript repository...');
     this.runCommand(`git clone ${repoUrl} ${defaultPath}`);
 
-    console.log("Installing dependencies...");
+    console.log('📦 Installing dependencies...');
     this.runCommand(`npm install --prefix ${defaultPath}`);
 
-    console.log("Building the project...");
+    console.log('🔨 Building the project...');
     this.runCommand(`npm run build --prefix ${defaultPath}`);
 
-    console.log("Setting up Omniscript environment...");
+    console.log('🔗 Linking Omniscript CLI globally...');
     const omniScriptPath = path.join(defaultPath, 'omni');
     fs.writeFileSync(omniScriptPath, `#!/bin/bash\nnode ${path.join(defaultPath, 'src/cli.js')} $@`);
     fs.chmodSync(omniScriptPath, '755');
-
-    console.log("Linking Omniscript CLI globally...");
     this.runCommand(`ln -sf ${omniScriptPath} /usr/local/bin/omni`);
 
-    console.log("Installation complete! The 'omni' command is now globally available.");
+    console.log('✅ Omniscript has been installed successfully! The `omni` command is now globally available.');
   }
 }
 
 if (require.main === module) {
-  OmniscriptInstaller.performInstallation();
+  const args = process.argv.slice(2);
+  const languageName = args[0];
+  const upgradeFlag = args.includes('--upgrade');
+
+  if (!languageName) {
+    console.error('❌ Please specify a language to install. Example: node install.js omniscript');
+    process.exit(1);
+  }
+
+  OmniscriptInstaller.installLanguage(languageName, upgradeFlag).catch(err => {
+    console.error('❌ Installation failed:', err);
+    process.exit(1);
+  });
 }

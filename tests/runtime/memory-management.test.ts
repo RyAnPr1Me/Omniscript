@@ -18,3 +18,26 @@ describe('Runtime - Memory Management', () => {
     expect(console.log).toHaveBeenCalledWith("Advanced memory management enabled.");
   });
 });
+
+describe('Runtime - Memory Management Edge Cases', () => {
+  test('handles circular references gracefully', () => {
+    const obj1: any = {};
+    const obj2: any = { ref: obj1 };
+    obj1.ref = obj2;
+
+    runtime.allocate(obj1);
+    runtime.allocate(obj2);
+
+    runtime.detectCircularReferences();
+    expect(console.warn).toHaveBeenCalledWith("Circular reference detected:", obj1);
+  });
+
+  test('garbage collection cleans up unreferenced objects', () => {
+    const obj = {};
+    runtime.allocate(obj);
+    runtime.release(obj);
+
+    runtime.runGarbageCollector();
+    expect(runtime.referenceCounts.has(obj)).toBe(false);
+  });
+});
