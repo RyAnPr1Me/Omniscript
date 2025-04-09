@@ -7,7 +7,7 @@ import path from 'path';
 import readline from 'readline';
 
 class OmniscriptInstaller {
-  static runCommand(cmd) {
+  static runCommand(cmd: string): void {
     console.log(`\u001b[36m> ${cmd}\u001b[0m`);
     try {
       execSync(cmd, { stdio: 'inherit' });
@@ -17,7 +17,7 @@ class OmniscriptInstaller {
     }
   }
 
-  static isToolAvailable(tool) {
+  static isToolAvailable(tool: string): boolean {
     try {
       execSync(`${os.platform() === 'win32' ? 'where' : 'which'} ${tool}`, { stdio: 'ignore' });
       return true;
@@ -45,7 +45,7 @@ class OmniscriptInstaller {
     }
   }
 
-  static async install(languageName, options = {}) {
+  static async install(languageName: string, options: { prefix?: string; upgrade?: boolean } = {}): Promise<void> {
     if (languageName !== 'omniscript') {
       console.error(`\u001b[31m❌ Unsupported language: ${languageName}\u001b[0m`);
       process.exit(1);
@@ -82,7 +82,7 @@ class OmniscriptInstaller {
     console.log('✅ Omniscript installed! Use `omni` from anywhere.');
   }
 
-  static linkCLI(installPath) {
+  static linkCLI(installPath: string): void {
     const cliPath = path.join(installPath, 'src/cli.js');
     const omniBin = os.platform() === 'win32'
       ? path.join(process.env.APPDATA || '', 'omni.cmd')
@@ -106,7 +106,7 @@ if (require.main === module) {
   const language = args[0];
   const upgrade = args.includes('--upgrade');
   const prefixIndex = args.indexOf('--prefix');
-  const prefix = prefixIndex !== -1 ? args[prefixIndex + 1] : null;
+  const prefix = prefixIndex !== -1 ? args[prefixIndex + 1] || undefined : undefined;
 
   OmniscriptInstaller.install(language, { upgrade, prefix }).catch(err => {
     console.error('❌ Installation failed:', err);

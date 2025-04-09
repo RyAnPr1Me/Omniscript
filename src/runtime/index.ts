@@ -113,7 +113,7 @@ export class Runtime {
     setInterval(() => this.runGarbageCollector(), 10000); // Run every 10 seconds
   }
 
-  private runGarbageCollector(): void {
+  public runGarbageCollector(): void {
     console.log("Running garbage collector...");
     for (const [object, count] of this.referenceCounts.entries()) {
       if (count <= 0) {
@@ -164,7 +164,7 @@ export class Runtime {
   }
 
   // New: Create an actor from a function handling messages and state
-  createActor(actorFn: (message: any, state: any) => any, initialState: any): Actor {
+  createActor<TState>(actorFn: (message: any, state: TState) => TState | Promise<TState>, initialState: TState): Actor<TState> {
     return new Actor(actorFn, initialState);
   }
 
@@ -200,7 +200,7 @@ export class Runtime {
     console.log("Result of vector addition:", result);
   }
 
-  private addVectors(v1: any, v2: any): any {
+  public addVectors(v1: any, v2: any): any {
     return { x: v1.x + v2.x, y: v1.y + v2.y };
   }
 
@@ -212,6 +212,10 @@ export class Runtime {
   optimizeGarbageCollection(): void {
     console.log("Optimizing garbage collection for high-performance applications.");
     // Placeholder for advanced garbage collection logic
+  }
+
+  public getReferenceCounts(): Map<any, number> {
+    return this.referenceCounts;
   }
 }
 

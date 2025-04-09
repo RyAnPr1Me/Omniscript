@@ -20,6 +20,8 @@ describe('Runtime - Memory Management', () => {
 });
 
 describe('Runtime - Memory Management Edge Cases', () => {
+  const runtime = new Runtime();
+
   test('handles circular references gracefully', () => {
     const obj1: any = {};
     const obj2: any = { ref: obj1 };
@@ -38,6 +40,6 @@ describe('Runtime - Memory Management Edge Cases', () => {
     runtime.release(obj);
 
     runtime.runGarbageCollector();
-    expect(runtime.referenceCounts.has(obj)).toBe(false);
+    expect(runtime.getReferenceCounts().has(obj)).toBe(false);
   });
 });

@@ -12,6 +12,8 @@ describe('Runtime - Operator Overloading', () => {
 });
 
 describe('Runtime - Operator Overloading Edge Cases', () => {
+  const runtime = new Runtime();
+
   test('handles invalid operator usage gracefully', () => {
     console.log = jest.fn();
     expect(() => runtime.operatorOverloadingExample()).not.toThrow();
