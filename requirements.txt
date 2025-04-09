@@ -1,0 +1,2 @@
+# Python dependencies for Omniscript development
+antlr4-python3-runtime==4.13.1

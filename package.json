@@ -19,6 +19,8 @@
   "scripts": {
     "build": "tsc && ( [ -f dist/cli.js ] && chmod +x dist/cli.js || echo 'dist/cli.js not found' )",
     "test": "jest",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "lint": "eslint . --ext .ts",
+    "format": "prettier --write ."
   }
 }

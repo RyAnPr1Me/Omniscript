@@ -14,8 +14,13 @@ export class OmniscriptInstaller {
     try {
       execSync(cmd, { stdio: 'inherit' });
     } catch (err) {
-      console.error(`Command failed: ${cmd}`);
-      console.error(`Error: ${err.message}`);
+      if (err instanceof Error) {
+        console.error(`Command failed: ${cmd}`);
+        console.error(`Error: ${err.message}`);
+      } else {
+        console.error(`Command failed: ${cmd}`);
+        console.error(`Unknown error:`, err);
+      }
       process.exit(1);
     }
   }
