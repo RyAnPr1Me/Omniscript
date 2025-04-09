@@ -217,3 +217,34 @@ const actor = runtime.createActor((msg, state) => state + msg, 0);
 actor.send(1);
 actor.send(2);
 ```
+
+## Error Handling
+Omniscript provides robust error handling mechanisms, including:
+
+- Try/Catch blocks for synchronous and asynchronous errors.
+- Pattern matching for error cases.
+- Custom error types for specific scenarios.
+
+### Example
+```typescript
+try {
+  const result = await someAsyncOperation();
+} catch (error) {
+  if (error instanceof SpecificError) {
+    handleSpecificError(error);
+  } else {
+    console.error("An unexpected error occurred:", error);
+  }
+}
+```
+
+## Memory Management
+Omniscript includes advanced memory management features:
+
+- **Garbage Collection**: Automatically reclaims unused memory.
+- **Circular Reference Detection**: Identifies and resolves circular references.
+
+### Example
+```typescript
+runtime.enableMemoryManagement();
+```

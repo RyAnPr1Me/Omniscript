@@ -185,6 +185,24 @@ export class Runtime {
     this.debugMode = true;
     console.log("Debug mode enabled.");
   }
+
+  enableMemoryManagement(): void {
+    console.log("Advanced memory management enabled.");
+    this.enableGarbageCollection();
+    this.detectCircularReferences();
+  }
+
+  operatorOverloadingExample(): void {
+    console.log("Operator overloading example executed.");
+    const vector1 = { x: 1, y: 2 };
+    const vector2 = { x: 3, y: 4 };
+    const result = this.addVectors(vector1, vector2);
+    console.log("Result of vector addition:", result);
+  }
+
+  private addVectors(v1: any, v2: any): any {
+    return { x: v1.x + v2.x, y: v1.y + v2.y };
+  }
 }
 
 // New helper Actor class (could be moved to its own module if desired)
