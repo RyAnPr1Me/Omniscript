@@ -188,11 +188,11 @@ export class Runtime {
 }
 
 // New helper Actor class (could be moved to its own module if desired)
-export class Actor {
+export class Actor<TState> {
   private mailbox: any[] = [];
   private busy = false;
 
-  constructor(private actorFn: (message: any, state: any) => any, private state: any) {}
+  constructor(private actorFn: (message: any, state: TState) => TState | Promise<TState>, private state: TState) {}
 
   send(message: any): void {
     this.mailbox.push(message);
@@ -207,5 +207,23 @@ export class Actor {
       this.state = await this.actorFn(msg, this.state);
     }
     this.busy = false;
+  }
+}
+
+export class Coroutine {
+  private generator: Generator;
+
+  constructor(generatorFn: () => Generator) {
+    this.generator = generatorFn();
+  }
+
+  async run(): Promise<void> {
+    let result = this.generator.next();
+    while (!result.done) {
+      if (result.value instanceof Promise) {
+        await result.value;
+      }
+      result = this.generator.next();
+    }
   }
 }

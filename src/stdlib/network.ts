@@ -1,3 +1,5 @@
+import { OmniscriptError } from '../errors';
+
 export class HTTP {
   // New: Debug flag and method to enable debugging
   private static debugEnabled: boolean = false;
@@ -134,5 +136,38 @@ export class EventSourcingServer {
       console.debug("[EventSourcingServer] Adding new client");
     }
     this.clients.push(client);
+  }
+}
+
+export class AsyncUtils {
+  static async withTimeout<T>(promise: Promise<T>, timeout: number): Promise<T> {
+    let timeoutHandle: NodeJS.Timeout;
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timeoutHandle = setTimeout(() => reject(new OmniscriptError('Operation timed out')), timeout);
+    });
+
+    return Promise.race([promise, timeoutPromise]).finally(() => clearTimeout(timeoutHandle));
+  }
+
+  static async withCancellation<T>(promise: Promise<T>, cancelToken: { cancel: boolean }): Promise<T> {
+    const cancellationPromise = new Promise<never>((_, reject) => {
+      const interval = setInterval(() => {
+        if (cancelToken.cancel) {
+          clearInterval(interval);
+          reject(new OmniscriptError('Operation cancelled'));
+        }
+      }, 10);
+    });
+
+    return Promise.race([promise, cancellationPromise]);
+  }
+
+  static async propagateErrors<T>(promise: Promise<T>): Promise<T> {
+    try {
+      return await promise;
+    } catch (error) {
+      console.error('Async error propagated:', error);
+      throw error;
+    }
   }
 }

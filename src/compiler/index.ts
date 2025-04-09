@@ -2,7 +2,7 @@ import { Program, FunctionDeclaration, ReturnStatement, Expression, ASTNode } fr
 
 export class Compiler {
   compile(ast: any) {
-    console.log("Starting JIT compilation with SIMD and parallel execution optimizations...");
+    console.log("Starting JIT compilation with advanced language features...");
     const bytecode = this.visitNode(ast);
     this.optimizeForSIMD(bytecode);
     this.optimizeForParallelExecution(bytecode);
@@ -19,6 +19,12 @@ export class Compiler {
         return this.visitReturnStatement(node as ReturnStatement);
       case 'Expression':
         return this.visitExpression(node as Expression);
+      case 'ConditionalType':
+        return this.visitConditionalType(node);
+      case 'IntersectionType':
+        return this.visitIntersectionType(node);
+      case 'Macro':
+        return this.visitMacro(node);
       default:
         throw new Error(`Unknown node type: ${node.type}`);
     }
@@ -53,6 +59,36 @@ export class Compiler {
     return {
       type: 'Value',
       value: node.value
+    };
+  }
+
+  private visitConditionalType(node: any): any {
+    return {
+      type: 'ConditionalType',
+      checkType: this.visitNode(node.checkType),
+      extendsType: this.visitNode(node.extendsType),
+      trueType: this.visitNode(node.trueType),
+      falseType: this.visitNode(node.falseType)
+    };
+  }
+
+  private visitIntersectionType(node: any): any {
+    return {
+      type: 'IntersectionType',
+      types: node.types.map((type: any) => this.visitNode(type))
+    };
+  }
+
+  private visitMacro(node: any): any {
+    console.log("Expanding macro:", node.name);
+    return this.expandMacro(node);
+  }
+
+  private expandMacro(node: any): any {
+    // Placeholder for macro expansion logic
+    return {
+      type: 'ExpandedMacro',
+      content: node.content
     };
   }
 
