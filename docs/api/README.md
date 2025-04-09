@@ -31,3 +31,15 @@
 - [Decorators](./language/decorators.md)
 - [Operators](./language/operators.md)
 - [Async/Await](./language/async.md)
+
+### Updated Modules
+
+#### Reactive Programming
+- [Stream](./stdlib/reactive.md)
+- [Observable](./stdlib/reactive.md)
+- [Signal](./stdlib/reactive.md)
+
+#### Runtime Enhancements
+- [Actor Model](./runtime/actors.md)
+- [Garbage Collection](./runtime/memory.md)
+- [Debugging and Profiling](./runtime/debugging.md)

@@ -38,3 +38,15 @@ myapp/
 - Include integration tests
 - Test edge cases
 - Maintain high test coverage
+
+### Reactive Programming
+- Use `Signal` for state management in UI components.
+- Prefer `Stream` for event-driven programming.
+
+### Memory Management
+- Enable garbage collection in long-running applications.
+- Use `detectCircularReferences` to avoid memory leaks.
+
+### Concurrency
+- Use the actor model for isolated state and message passing.
+- Avoid shared mutable state to prevent race conditions.

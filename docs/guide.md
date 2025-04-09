@@ -181,3 +181,39 @@ omni install
 - [API Reference](./api/README.md)
 - [Best Practices Guide](./best-practices.md)
 - [Examples](./examples/README.md)
+
+## Updated Features
+
+### Debugging and Profiling
+Omniscript now includes built-in support for debugging and profiling. Use the `enableDebugging` and `enableProfiler` methods to activate these features.
+
+```typescript
+HTTP.enableDebugging();
+Database.enableProfiler();
+```
+
+### Reactive Programming
+Reactive programming primitives like `Stream`, `Observable`, and `Signal` are now part of the standard library.
+
+```typescript
+const signal = new Signal(0);
+signal.subscribe(value => console.log(value));
+signal.value = 42; // Logs: 42
+```
+
+### Enhanced Memory Management
+Omniscript introduces advanced memory management features, including garbage collection and circular reference detection.
+
+```typescript
+runtime.enableGarbageCollection();
+runtime.detectCircularReferences();
+```
+
+### Actor Model
+The runtime now supports the actor model for concurrent programming.
+
+```typescript
+const actor = runtime.createActor((msg, state) => state + msg, 0);
+actor.send(1);
+actor.send(2);
+```

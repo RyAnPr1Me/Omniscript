@@ -220,3 +220,24 @@ fn checkDatabaseConnection(): HealthStatus {
 - Training and certification
 
 For detailed deployment instructions, see [Deployment Guide](../deployment/README.md)
+
+## Updated Examples
+
+### Reactive Programming
+```typescript
+import { Signal } from 'stdlib/reactive';
+
+const signal = new Signal<number>(0);
+signal.subscribe(value => console.log(`Value updated: ${value}`));
+signal.value = 10; // Logs: Value updated: 10
+```
+
+### Actor Model
+```typescript
+import { Runtime } from 'stdlib/runtime';
+
+const runtime = new Runtime();
+const actor = runtime.createActor((msg, state) => state + msg, 0);
+actor.send(5);
+actor.send(10);
+```
