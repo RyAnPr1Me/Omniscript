@@ -80,10 +80,17 @@ class OmniscriptInstaller {
 
     this.linkCLI(installPath);
     console.log('✅ Omniscript installed! Use `omni` from anywhere.');
+
+    // New: Post-installation message with next steps
+    console.log('\n🎉 Installation Complete!');
+    console.log('Next Steps:');
+    console.log('1. Create a new project: omni new myproject');
+    console.log('2. Start the development server: omni dev');
+    console.log('3. Explore the documentation: https://github.com/RyAnPr1Me/Omniscript#readme');
   }
 
   static linkCLI(installPath: string): void {
-    const cliPath = path.join(installPath, 'src/cli.js');
+    const cliPath = path.join(installPath, 'dist/cli.js');
     const omniBin = os.platform() === 'win32'
       ? path.join(process.env.APPDATA || '', 'omni.cmd')
       : '/usr/local/bin/omni';
@@ -98,6 +105,14 @@ class OmniscriptInstaller {
     }
 
     console.log('🔗 CLI linked globally.');
+
+    // New: Verify CLI installation
+    try {
+      const versionOutput = execSync('omni --version', { encoding: 'utf-8' });
+      console.log(`🌟 CLI verification successful: ${versionOutput.trim()}`);
+    } catch (error) {
+      console.error('⚠️ CLI verification failed. Ensure `omni` is in your PATH.');
+    }
   }
 }
 
