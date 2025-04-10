@@ -6,6 +6,41 @@ interface Bytecode {
   value?: any;
 }
 
+// Added Result type for better error handling
+export class Result<T, E> {
+  private constructor(private value?: T, private error?: E) {}
+
+  static Ok<T, E>(value: T): Result<T, E> {
+    return new Result(value);
+  }
+
+  static Err<T, E>(error: E): Result<T, E> {
+    return new Result(undefined, error);
+  }
+
+  isOk(): boolean {
+    return this.error === undefined;
+  }
+
+  isErr(): boolean {
+    return this.error !== undefined;
+  }
+
+  unwrap(): T {
+    if (this.isErr()) {
+      throw new Error(`Tried to unwrap an Err: ${this.error}`);
+    }
+    return this.value!;
+  }
+
+  unwrapErr(): E {
+    if (this.isOk()) {
+      throw new Error(`Tried to unwrap an Ok: ${this.value}`);
+    }
+    return this.error!;
+  }
+}
+
 export class Runtime {
   private scope: Map<string, any>;
   private referenceCounts: Map<any, number>;

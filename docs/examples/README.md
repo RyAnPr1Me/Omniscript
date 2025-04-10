@@ -241,3 +241,22 @@ const actor = runtime.createActor((msg, state) => state + msg, 0);
 actor.send(5);
 actor.send(10);
 ```
+
+### Reactive Programming Example
+
+```typescript
+import { Signal } from 'stdlib/reactive';
+
+const signal = new Signal<number>(0);
+signal.subscribe(value => console.log(`Value updated: ${value}`));
+signal.value = 42; // Logs: Value updated: 42
+```
+
+### Math Utilities Example
+
+```typescript
+import { MathUtils } from 'stdlib/math';
+
+console.log(MathUtils.factorial(5)); // Logs: 120
+console.log(MathUtils.gcd(48, 18)); // Logs: 6
+```

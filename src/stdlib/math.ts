@@ -19,4 +19,13 @@ export class MathUtils {
   static random(min: number = 0, max: number = 1): number {
     return Math.random() * (max - min) + min;
   }
+
+  static factorial(n: number): number {
+    if (n < 0) throw new Error("Factorial is not defined for negative numbers");
+    return n === 0 ? 1 : n * this.factorial(n - 1);
+  }
+
+  static gcd(a: number, b: number): number {
+    return b === 0 ? a : this.gcd(b, a % b);
+  }
 }

@@ -278,3 +278,53 @@ Omniscript includes advanced memory management features:
 ```typescript
 runtime.enableMemoryManagement();
 ```
+
+## Reactive Programming
+
+Omniscript now includes reactive programming primitives for state management and event-driven programming.
+
+### Stream
+A `Stream` allows you to emit values to multiple subscribers.
+
+```typescript
+import { Stream } from 'stdlib/reactive';
+
+const stream = new Stream<number>();
+
+const unsubscribe = stream.subscribe(value => {
+  console.log(`Received: ${value}`);
+});
+
+stream.next(42); // Logs: Received: 42
+unsubscribe();
+```
+
+### Signal
+A `Signal` is a reactive state container that notifies subscribers when its value changes.
+
+```typescript
+import { Signal } from 'stdlib/reactive';
+
+const signal = new Signal<number>(0);
+signal.subscribe(value => {
+  console.log(`Value updated: ${value}`);
+});
+
+signal.value = 10; // Logs: Value updated: 10
+```
+
+## Math Utilities
+
+The `MathUtils` class has been enhanced with additional utilities.
+
+### New Methods
+- `factorial(n: number): number` - Computes the factorial of a number.
+- `gcd(a: number, b: number): number` - Computes the greatest common divisor of two numbers.
+
+### Example
+```typescript
+import { MathUtils } from 'stdlib/math';
+
+console.log(MathUtils.factorial(5)); // Logs: 120
+console.log(MathUtils.gcd(48, 18)); // Logs: 6
+```
