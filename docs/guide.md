@@ -279,6 +279,55 @@ Omniscript includes advanced memory management features:
 runtime.enableMemoryManagement();
 ```
 
+## Advanced Memory Management
+
+Omniscript provides advanced memory management features to optimize resource usage and prevent memory leaks. These include garbage collection, circular reference detection, and memory usage statistics.
+
+### Garbage Collection
+Garbage collection automatically reclaims unused memory. You can enable it in your application:
+
+```typescript
+runtime.enableGarbageCollection();
+```
+
+The garbage collector logs memory usage before and after execution:
+
+```typescript
+Running garbage collector...
+Garbage collection completed. {
+  before: { allocated: 10, references: 20 },
+  after: { allocated: 5, references: 10 }
+}
+```
+
+### Circular Reference Detection
+Circular references can lead to memory leaks. Omniscript detects and logs circular references:
+
+```typescript
+runtime.detectCircularReferences();
+```
+
+Example output:
+
+```plaintext
+Detecting circular references...
+Circular references detected: [Object1, Object2]
+```
+
+### Memory Usage Statistics
+You can retrieve memory usage statistics at any time:
+
+```typescript
+const memoryUsage = runtime.getMemoryUsage();
+console.log(memoryUsage);
+// Output: { allocated: 5, references: 10 }
+```
+
+### Best Practices
+- Enable garbage collection in long-running applications.
+- Regularly check for circular references during development.
+- Monitor memory usage to identify potential issues.
+
 ## Reactive Programming
 
 Omniscript now includes reactive programming primitives for state management and event-driven programming.

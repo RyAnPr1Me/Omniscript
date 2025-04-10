@@ -148,8 +148,17 @@ export class Runtime {
     setInterval(() => this.runGarbageCollector(), 10000); // Run every 10 seconds
   }
 
+  public getMemoryUsage(): { allocated: number; references: number } {
+    return {
+      allocated: this.referenceCounts.size,
+      references: Array.from(this.referenceCounts.values()).reduce((a, b) => a + b, 0),
+    };
+  }
+
   public runGarbageCollector(): void {
     console.log("Running garbage collector...");
+    const initialMemoryUsage = this.getMemoryUsage();
+
     for (const [object, count] of this.referenceCounts.entries()) {
       if (count <= 0) {
         this.referenceCounts.delete(object);
@@ -157,33 +166,41 @@ export class Runtime {
       }
     }
 
-    // Cleanup weak references by iterating over referenceCounts
-    for (const object of this.referenceCounts.keys()) {
-      if (!this.referenceCounts.has(object)) {
-        this.cleanup(object);
-      }
-    }
+    const finalMemoryUsage = this.getMemoryUsage();
+    console.log("Garbage collection completed.", {
+      before: initialMemoryUsage,
+      after: finalMemoryUsage,
+    });
   }
 
   detectCircularReferences(): void {
     console.log("Detecting circular references...");
     const visited = new Set<any>();
+    const circularReferences: any[] = [];
 
     for (const [object] of this.referenceCounts.entries()) {
       if (!visited.has(object)) {
-        this.traverseReferences(object, visited, new Set());
+        const stack = new Set<any>();
+        if (this.traverseReferences(object, visited, stack)) {
+          circularReferences.push(object);
+        }
       }
+    }
+
+    if (circularReferences.length > 0) {
+      console.warn("Circular references detected:", circularReferences);
+    } else {
+      console.log("No circular references detected.");
     }
   }
 
-  private traverseReferences(object: any, visited: Set<any>, stack: Set<any>): void {
+  private traverseReferences(object: any, visited: Set<any>, stack: Set<any>): boolean {
     if (stack.has(object)) {
-      console.warn("Circular reference detected:", object);
-      return;
+      return true; // Circular reference detected
     }
 
     if (visited.has(object)) {
-      return;
+      return false;
     }
 
     visited.add(object);
@@ -191,11 +208,14 @@ export class Runtime {
 
     if (typeof object === 'object' && object !== null) {
       for (const key in object) {
-        this.traverseReferences(object[key], visited, stack);
+        if (this.traverseReferences(object[key], visited, stack)) {
+          return true;
+        }
       }
     }
 
     stack.delete(object);
+    return false;
   }
 
   // New: Create an actor from a function handling messages and state
