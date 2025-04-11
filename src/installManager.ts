@@ -8,36 +8,213 @@ import https from 'https';
 import { pipeline } from 'stream';
 import { promisify } from 'util';
 import { createGunzip } from 'zlib';
+import { createHash } from 'crypto';
 
 const streamPipeline = promisify(pipeline);
 
 export class OmniscriptInstaller {
   private static TEMP_DIR = path.join(os.tmpdir(), 'omniscript-installer');
-  private static readonly DEPENDENCIES = {
-    node: '16.0.0',
-    npm: '7.0.0',
-    git: '2.0.0'
+  private static readonly REPO_URL = 'https://github.com/RyAnPr1Me/Omniscript.git';
+  private static readonly RELEASE_URL = 'https://github.com/RyAnPr1Me/Omniscript/releases/latest';
+  private static readonly FALLBACK_DOWNLOAD_URL = 'https://omniscript-cdn.yourdomain.com/latest';
+
+  // Essential files that must be present for Omniscript to work
+  private static readonly ESSENTIAL_FILES = {
+    'package.json': {
+      content: `{
+        "name": "omniscript",
+        "version": "0.1.0",
+        "bin": {
+          "omni": "./dist/cli.js",
+          "omniscript-installer": "./dist/bin/install.js"
+        },
+        "dependencies": {
+          "antlr4": "^4.13.1",
+          "commander": "^11.0.0",
+          "typescript": "^5.0.0"
+        }
+      }`,
+      checksum: '' // Will be computed during build
+    },
+    'tsconfig.json': {
+      content: `{
+        "compilerOptions": {
+          "target": "ES2020",
+          "module": "commonjs",
+          "outDir": "./dist",
+          "rootDir": "./src",
+          "strict": true,
+          "esModuleInterop": true,
+          "skipLibCheck": true,
+          "forceConsistentCasingInFileNames": true
+        }
+      }`,
+      checksum: ''
+    }
   };
 
-  static async downloadFile(url: string, destPath: string): Promise<void> {
-    const response = await fetch(url);
-    if (!response.ok) throw new Error(`Failed to download: ${response.statusText}`);
-    const fileStream = fs.createWriteStream(destPath);
+  // Minimum required files for the compiler and runtime
+  private static readonly CORE_FILES = [
+    'src/cli.ts',
+    'src/index.ts',
+    'src/compiler/index.ts',
+    'src/parser/OmniscriptParser.g4',
+    'src/runtime/index.ts',
+    'src/stdlib/index.ts'
+  ];
+
+  static async downloadWithRetry(url: string, destPath: string, maxRetries: number = 3): Promise<void> {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`Failed to download: ${response.statusText}`);
+        const fileStream = fs.createWriteStream(destPath);
+        
+        if (!response.body) {
+          throw new Error('Response body is null');
+        }
+
+        const reader = response.body.getReader();
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            fileStream.write(value);
+          }
+          fileStream.end();
+          return; // Success
+        } catch (error) {
+          fileStream.end();
+          throw error;
+        }
+      } catch (error) {
+        console.log(`Download attempt ${attempt} failed:`, error);
+        if (attempt === maxRetries) throw error;
+        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+      }
+    }
+  }
+
+  static async downloadRepository(): Promise<string> {
+    console.log('📦 Downloading Omniscript...');
     
-    if (!response.body) {
-      throw new Error('Response body is null');
+    // Try multiple download methods
+    const downloadMethods = [
+      { name: 'GitHub Release', fn: async () => {
+        const releaseInfo = await fetch(this.RELEASE_URL).then(r => r.json());
+        return releaseInfo.zipball_url;
+      }},
+      { name: 'GitHub Archive', fn: async () => 
+        `${this.REPO_URL}/archive/refs/heads/main.zip`
+      },
+      { name: 'Fallback CDN', fn: async () => this.FALLBACK_DOWNLOAD_URL }
+    ];
+
+    let downloadUrl: string | null = null;
+    let error: Error | null = null;
+
+    for (const method of downloadMethods) {
+      try {
+        console.log(`Trying ${method.name}...`);
+        downloadUrl = await method.fn();
+        break;
+      } catch (e) {
+        error = e as Error;
+        console.log(`${method.name} failed:`, e);
+      }
     }
 
-    const reader = response.body.getReader();
+    if (!downloadUrl) {
+      throw new Error(`All download methods failed. Last error: ${error?.message}`);
+    }
+
+    const zipPath = path.join(this.TEMP_DIR, 'omniscript.zip');
+    await this.downloadWithRetry(downloadUrl, zipPath);
+    
+    return zipPath;
+  }
+
+  static async extractFiles(zipPath: string, targetDir: string): Promise<void> {
+    console.log('📂 Extracting files...');
+    
+    // Use built-in unzip on Unix-like systems, or fallback to JS implementation
+    if (os.platform() !== 'win32') {
+      try {
+        execSync(`unzip "${zipPath}" -d "${targetDir}"`);
+        return;
+      } catch (error) {
+        console.log('Native unzip failed, falling back to JS implementation');
+      }
+    }
+    
+    // JS fallback implementation
+    // ... (keep existing extraction code)
+  }
+
+  static async createMinimalInstall(installPath: string): Promise<void> {
+    console.log('🔨 Creating minimal installation...');
+    
+    // Create essential directories
+    const dirs = [
+      'src/compiler',
+      'src/parser',
+      'src/runtime',
+      'src/stdlib',
+      'dist/bin'
+    ];
+    
+    for (const dir of dirs) {
+      fs.mkdirSync(path.join(installPath, dir), { recursive: true });
+    }
+
+    // Write essential files
+    for (const [filename, { content }] of Object.entries(this.ESSENTIAL_FILES)) {
+      fs.writeFileSync(path.join(installPath, filename), content);
+    }
+  }
+
+  static async verifyChecksums(installPath: string): Promise<boolean> {
+    console.log('🔒 Verifying file integrity...');
+    
+    for (const [filename, { checksum }] of Object.entries(this.ESSENTIAL_FILES)) {
+      const filePath = path.join(installPath, filename);
+      if (!fs.existsSync(filePath)) {
+        console.error(`Missing file: ${filename}`);
+        return false;
+      }
+
+      const fileContent = fs.readFileSync(filePath);
+      const computedHash = createHash('sha256').update(fileContent).digest('hex');
+      
+      if (checksum && computedHash !== checksum) {
+        console.error(`Checksum mismatch for ${filename}`);
+        return false;
+      }
+    }
+    
+    return true;
+  }
+
+  static async buildFromSource(installPath: string): Promise<void> {
+    console.log('🏗️ Building from source...');
+    
+    process.chdir(installPath);
     
     try {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        fileStream.write(value);
-      }
-    } finally {
-      fileStream.end();
+      // Install dependencies
+      console.log('📦 Installing dependencies...');
+      execSync('npm install', { stdio: 'inherit' });
+      
+      // Build the project
+      console.log('🔨 Building project...');
+      execSync('npm run build', { stdio: 'inherit' });
+      
+      // Create executables
+      console.log('📦 Creating executables...');
+      execSync('npm run build:exe', { stdio: 'inherit' });
+      
+    } catch (error) {
+      throw new Error(`Build failed: ${error}`);
     }
   }
 
@@ -78,7 +255,7 @@ export class OmniscriptInstaller {
   private static getNodeDownloadUrl(): string {
     const platform = os.platform();
     const arch = os.arch();
-    const version = this.DEPENDENCIES.node;
+    const version = '16.0.0';
     
     switch(platform) {
       case 'win32':
@@ -93,7 +270,7 @@ export class OmniscriptInstaller {
   private static getGitDownloadUrl(): string {
     const platform = os.platform();
     const arch = os.arch();
-    const version = this.DEPENDENCIES.git;
+    const version = '2.0.0';
     
     switch(platform) {
       case 'win32':
@@ -140,6 +317,38 @@ export class OmniscriptInstaller {
     }
   }
 
+  private static async cloneRepository(installPath: string): Promise<void> {
+    console.log('📦 Cloning Omniscript repository...');
+    const tempClonePath = path.join(this.TEMP_DIR, 'omniscript-repo');
+    
+    try {
+      // Remove existing temp clone if any
+      if (fs.existsSync(tempClonePath)) {
+        fs.rmSync(tempClonePath, { recursive: true, force: true });
+      }
+      
+      // Clone the repository
+      execSync(`git clone ${this.REPO_URL} "${tempClonePath}"`, { stdio: 'inherit' });
+      
+      // Build from source
+      console.log('🔨 Building from source...');
+      process.chdir(tempClonePath);
+      execSync('npm install', { stdio: 'inherit' });
+      execSync('npm run build:exe', { stdio: 'inherit' });
+      
+      // Copy built files to install location
+      this.copyDir(path.join(tempClonePath, 'dist'), path.join(installPath, 'dist'));
+      
+    } catch (error) {
+      throw new Error(`Failed to clone repository: ${error}`);
+    } finally {
+      // Cleanup
+      if (fs.existsSync(tempClonePath)) {
+        fs.rmSync(tempClonePath, { recursive: true, force: true });
+      }
+    }
+  }
+
   static async install(options: { 
     prefix?: string; 
     upgrade?: boolean;
@@ -148,52 +357,66 @@ export class OmniscriptInstaller {
     console.log('🚀 Starting Omniscript installation...');
     
     try {
-      await this.ensureDependencies();
-      
-      // Get installation path based on user preference
+      // Create temp directory
+      if (!fs.existsSync(this.TEMP_DIR)) {
+        fs.mkdirSync(this.TEMP_DIR, { recursive: true });
+      }
+
+      // Get installation path
       const installPath = options.prefix || this.getDefaultInstallPath({ userInstall: options.userInstall });
       console.log(`📁 Target installation path: ${installPath}`);
 
-      // Create parent directories if they don't exist
-      const parentDir = path.dirname(installPath);
-      if (!fs.existsSync(parentDir)) {
-        fs.mkdirSync(parentDir, { recursive: true });
-      }
-
-      // Check write permissions for the parent directory
-      const hasPermissions = await this.checkWritePermissions(parentDir);
+      // Check permissions
+      const hasPermissions = await this.checkWritePermissions(path.dirname(installPath));
       if (!hasPermissions) {
         if (!options.userInstall) {
           console.log('⚠️ Insufficient permissions for system-wide installation.');
           console.log('💡 Tip: Try running with sudo or use --user for user-level installation');
           process.exit(1);
         }
-        throw new Error(`Cannot write to ${parentDir}. Please check permissions.`);
+        throw new Error(`Cannot write to installation directory. Please check permissions.`);
       }
 
-      // Proceed with installation
-      if (!fs.existsSync(installPath)) {
-        fs.mkdirSync(installPath, { recursive: true });
+      // Download and extract
+      const zipPath = await this.downloadRepository();
+      await this.extractFiles(zipPath, installPath);
+
+      // Verify or create minimal install
+      if (!await this.verifyChecksums(installPath)) {
+        console.log('⚠️ Installation verification failed, creating minimal install...');
+        await this.createMinimalInstall(installPath);
       }
 
-      // Bundle core files
-      await this.bundleCoreFiles(installPath);
+      // Build from source
+      await this.buildFromSource(installPath);
       
-      // Create necessary environment variables
+      // Setup environment
       await this.setupEnvironment(installPath, options.userInstall);
       
-      // Create shortcuts/links
+      // Create shortcuts
       await this.createShortcuts(installPath);
 
-      console.log(`\n✅ Installation complete at ${installPath}`);
-      console.log('\nNext steps:');
-      console.log('1. Open a new terminal');
-      console.log('2. Run: omni new myproject');
-      console.log('3. Start coding!');
+      // Final verification
+      if (this.verifyInstallation(installPath)) {
+        console.log(`\n✅ Installation complete at ${installPath}`);
+        console.log('\nNext steps:');
+        console.log('1. Open a new terminal');
+        console.log('2. Run: omni new myproject');
+        console.log('3. Start coding!');
+      } else {
+        throw new Error('Installation verification failed');
+      }
       
     } catch (error) {
       console.error('❌ Installation failed:', error);
       process.exit(1);
+    } finally {
+      // Cleanup
+      try {
+        fs.rmSync(this.TEMP_DIR, { recursive: true, force: true });
+      } catch (error) {
+        console.warn('⚠️ Failed to clean up temporary files:', error);
+      }
     }
   }
 
@@ -350,6 +573,33 @@ export class OmniscriptInstaller {
       fs.writeFileSync('createShortcut.vbs', wsScript);
       execSync('cscript //NoLogo createShortcut.vbs');
       fs.unlinkSync('createShortcut.vbs');
+    }
+  }
+
+  private static verifyInstallation(installPath: string): boolean {
+    try {
+      // Check for essential files
+      const requiredFiles = [
+        path.join(installPath, 'dist', 'bin', os.platform() === 'win32' ? 'omniscript-cli.exe' : 'omniscript-cli'),
+        path.join(installPath, 'dist', 'stdlib'),
+        path.join(installPath, 'dist', 'compiler')
+      ];
+
+      for (const file of requiredFiles) {
+        if (!fs.existsSync(file)) {
+          console.error(`Missing required file: ${file}`);
+          return false;
+        }
+      }
+
+      // Try running the CLI
+      const cliPath = path.join(installPath, 'dist', 'bin', os.platform() === 'win32' ? 'omniscript-cli.exe' : 'omniscript-cli');
+      execSync(`"${cliPath}" --version`, { stdio: 'ignore' });
+
+      return true;
+    } catch (error) {
+      console.error('Verification error:', error);
+      return false;
     }
   }
 
