@@ -4,6 +4,10 @@ import { OmniscriptError } from '../errors';
 export default class OmniscriptLexer extends Lexer {
   static readonly EOF = -1;
 
+  private _tokenStartLine: number = 1;
+  private _tokenStartColumn: number = 0;
+  private _tokenStartCharIndex: number = 0;
+
   constructor(input: any) {
     if (!input) {
       throw new OmniscriptError('No input provided to lexer');
@@ -13,20 +17,18 @@ export default class OmniscriptLexer extends Lexer {
 
   nextToken(): any {
     try {
-      // Ensure we have valid input before proceeding
-      if (!this._input) {
-        throw new OmniscriptError('No input stream available');
-      }
-
       // Skip whitespace
-      while (this._input.LA(1) <= 32 && this._input.LA(1) !== -1) {
+      while (this._input && this._input.LA(1) <= 32 && this._input.LA(1) !== -1) {
         this._input.consume();
       }
 
-      if (this._input.LA(1) === -1) {
-        const token = this.makeToken(OmniscriptLexer.EOF, "<EOF>");
-        this.emit();
-        return token;
+      // Update token start position before consuming
+      this._tokenStartLine = this._input ? this._input.line : 1;
+      this._tokenStartColumn = this._input ? this._input.column : 0;
+      this._tokenStartCharIndex = this._input ? this._input.index : 0;
+
+      if (!this._input || this._input.LA(1) === -1) {
+        return this.makeToken(OmniscriptLexer.EOF, "<EOF>");
       }
 
       const token = super.nextToken();
@@ -43,21 +45,20 @@ export default class OmniscriptLexer extends Lexer {
   }
 
   private makeToken(type: number, text: string): any {
-    const token = {
+    return {
       type,
       text,
       channel: 0,
-      line: this._tokenStartLine || 1,
-      column: this._tokenStartColumn || 0,
-      start: this._tokenStartCharIndex || 0,
-      stop: this._input ? this._input.index : 0,
+      line: this._tokenStartLine,
+      column: this._tokenStartColumn,
+      start: this._tokenStartCharIndex,
+      stop: this._input ? this._input.index - 1 : 0,
       tokenIndex: -1,
       source: {
         sourceName: '',
         inputStream: this._input
       }
     };
-    return token;
   }
 
   // Add support for additional tokens

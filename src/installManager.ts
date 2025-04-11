@@ -230,7 +230,7 @@ export class OmniscriptInstaller {
       const nodeUrl = this.getNodeDownloadUrl();
       const nodeDest = path.join(this.TEMP_DIR, 'node.tar.gz');
       console.log('📥 Downloading Node.js...');
-      await this.downloadFile(nodeUrl, nodeDest);
+      await this.downloadWithRetry(nodeUrl, nodeDest);
       await this.extractTarGz(nodeDest, this.TEMP_DIR);
     }
 
@@ -239,7 +239,7 @@ export class OmniscriptInstaller {
       const gitUrl = this.getGitDownloadUrl();
       const gitDest = path.join(this.TEMP_DIR, 'git.tar.gz');
       console.log('📥 Downloading Git...');
-      await this.downloadFile(gitUrl, gitDest);
+      await this.downloadWithRetry(gitUrl, gitDest);
       await this.extractTarGz(gitDest, this.TEMP_DIR);
     }
   }
