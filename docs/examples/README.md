@@ -1,15 +1,91 @@
 # Omniscript Examples
 
-## Basic Examples
+## Core Features
 
-### Hello World
+### Memory Management
 ```typescript
-fn main() {
-  Console.log("Hello, Omniscript!");
-}
+// Enable memory management features
+runtime.enableMemoryManagement();
+
+// Monitor memory usage
+setInterval(() => {
+  const usage = runtime.getMemoryUsage();
+  console.log("Memory stats:", usage);
+}, 10000);
+
+// Detect circular references
+runtime.detectCircularReferences();
 ```
 
-### Web Server
+### Reactive Programming
+```typescript
+// Event streams
+const clicks = new Stream<MouseEvent>();
+clicks.subscribe(event => {
+  console.log(`Clicked at: ${event.x}, ${event.y}`);
+});
+
+// Reactive state
+const counter = new Signal<number>(0);
+counter.subscribe(value => {
+  console.log(`Counter: ${value}`);
+});
+
+// Derived state
+const doubled = derived(counter, n => n * 2);
+doubled.subscribe(value => {
+  console.log(`Doubled: ${value}`);
+});
+```
+
+### Actor Model
+```typescript
+// Create a stateful counter actor
+const counter = runtime.createActor(
+  (msg: "increment" | "decrement", state: number) => {
+    switch (msg) {
+      case "increment": return state + 1;
+      case "decrement": return state - 1;
+    }
+  },
+  0 // Initial state
+);
+
+// Send messages
+counter.send("increment"); // State: 1
+counter.send("increment"); // State: 2
+counter.send("decrement"); // State: 1
+```
+
+### Thread-Safe Collections
+```typescript
+// Thread-safe list
+const list = new List<number>();
+await list.push(1);
+await list.push(2);
+
+// Thread-safe map
+const cache = new Map<string, User>();
+await cache.set("user1", { id: 1, name: "John" });
+const user = await cache.get("user1");
+```
+
+### Math Operations
+```typescript
+import { MathUtils } from 'stdlib/math';
+
+// Constants
+console.log(MathUtils.PI);  // 3.141592653589793
+console.log(MathUtils.E);   // 2.718281828459045
+
+// Functions
+console.log(MathUtils.factorial(5));  // 120
+console.log(MathUtils.gcd(48, 18));   // 6
+```
+
+## Web Development
+
+### HTTP Server
 ```typescript
 import { HTTP } from 'stdlib/network';
 
@@ -39,224 +115,93 @@ async fn getUsers(): Promise<User[]> {
 }
 ```
 
-## Advanced Examples
-- [Todo App](./todo-app.md)
-- [Chat Application](./chat-app.md)
-- [REST API Server](./rest-api.md)
+### WebSocket Example
+```typescript
+import { WebSocket } from 'stdlib/network';
+
+const ws = new WebSocket('ws://example.com');
+ws.onMessage(msg => Console.log(msg));
+```
+
+## Error Handling
+
+### Using Result Type
+```typescript
+function divide(a: number, b: number): Result<number, Error> {
+  if (b === 0) {
+    return Result.Err(new Error("Division by zero"));
+  }
+  return Result.Ok(a / b);
+}
+
+const result = divide(10, 2);
+if (result.isOk()) {
+  console.log(result.unwrap());
+} else {
+  console.error(result.unwrapErr());
+}
+```
+
+### Pattern Matching
+```typescript
+match user {
+  { role: "admin" } => handleAdmin(),
+  { role: "user", id } => handleUser(id),
+  _ => handleUnknown()
+}
+```
+
+## Testing Examples
+
+### Unit Testing
+```typescript
+describe('MathUtils', () => {
+  test('factorial computes correct value', () => {
+    expect(MathUtils.factorial(5)).toBe(120);
+  });
+
+  test('gcd finds greatest common divisor', () => {
+    expect(MathUtils.gcd(48, 18)).toBe(6);
+  });
+});
+```
+
+### Reactive Testing
+```typescript
+describe('Signal', () => {
+  test('notifies subscribers on value change', () => {
+    const signal = new Signal<number>(0);
+    const mockFn = jest.fn();
+    
+    signal.subscribe(mockFn);
+    signal.value = 42;
+    
+    expect(mockFn).toHaveBeenCalledWith(42);
+  });
+});
+```
 
 ## Implementation Status
 
-### Areas for Improvement
-- **Parser & Runtime**: Core implementation needs additional work for complete language feature support
-- **Memory Management**: Documentation and specification of the memory model needs to be expanded
-- **Operator Overloading**: Better definition and guidelines needed for operator overloading patterns
-- **Error Handling**: Standardized error handling patterns and best practices to be established
+### Core Features
+✅ Memory Management
+✅ Reactive Programming
+✅ Actor Model
+✅ Thread-Safe Collections
+✅ Pattern Matching
+✅ Error Handling
 
-### Memory Management Example
-```typescript
-// Example of current memory handling
-fn example() {
-  // Automatic reference counting
-  let obj = new Object();
-  
-  // Explicit cleanup when needed
-  using resource = open("file.txt") {
-    // Resource automatically cleaned up after block
-  }
-}
-```
+### Standard Library
+✅ Math Utilities
+✅ HTTP Client/Server
+✅ WebSocket Support
+✅ Database Operations
+✅ Threading Support
+
+### Development Tools
+✅ Memory Profiling
+✅ Garbage Collection
+✅ Circular Reference Detection
+✅ Performance Monitoring
 
 For detailed implementation status, see our [Project Status](../status.md) page.
-
-### Error Handling Example
-```typescript
-fn divide(a: number, b: number): Result<number, Error> {
-  if (b === 0) {
-    return Err("Division by zero");
-  }
-  return Ok(a / b);
-}
-```
-
-### Operator Overloading Guidelines
-Available operators and their usage patterns:
-
-```typescript
-class Vector2D {
-  constructor(public x: number, public y: number) {}
-
-  // Arithmetic operators
-  operator +(other: Vector2D): Vector2D {
-    return new Vector2D(this.x + other.x, this.y + other.y);
-  }
-  
-  operator -(other: Vector2D): Vector2D {
-    return new Vector2D(this.x - other.x, this.y - other.y);
-  }
-  
-  // Scalar multiplication
-  operator *(scalar: number): Vector2D {
-    return new Vector2D(this.x * scalar, this.y * scalar);
-  }
-  
-  // Comparison operators
-  operator ==(other: Vector2D): boolean {
-    return this.x === other.x && this.y === other.y;
-  }
-  
-  // Custom indexing
-  operator [](index: number): number {
-    if (index === 0) return this.x;
-    if (index === 1) return this.y;
-    throw new Error("Index out of bounds");
-  }
-}
-
-// Usage example
-let v1 = new Vector2D(1, 2);
-let v2 = new Vector2D(3, 4);
-let v3 = v1 + v2;        // Vector addition
-let scaled = v1 * 2;     // Scalar multiplication
-let xCoord = v1[0];      // Index access
-```
-
-Supported operators:
-- Arithmetic: `+`, `-`, `*`, `/`, `%`
-- Comparison: `==`, `!=`, `<`, `>`, `<=`, `>=`
-- Indexing: `[]`
-- Unary: `-`, `!`, `~`
-
-Best practices:
-- Keep operator behavior intuitive and mathematically sound
-- Maintain type safety in operator implementations
-- Document operator behavior when non-standard
-- Use methods instead of operators for complex operations
-
-## Production Status
-
-### Version 1.0 Release Features
-- **Production-Ready Components**:
-  - Core Language Runtime
-  - Standard Library
-  - Package Manager
-  - Development Tools
-  - Enterprise Support
-
-### Enterprise Features
-```typescript
-// Enterprise-grade error handling
-@transaction
-@retry(attempts = 3)
-@logging
-async fn processPayment(order: Order): Result<Payment, PaymentError> {
-  match await paymentGateway.charge(order.amount) {
-    Ok(payment) => {
-      metrics.recordLatency("payment_success");
-      return Ok(payment);
-    },
-    Err(e) => {
-      alerts.notify("payment_failure", e);
-      return Err(e);
-    }
-  }
-}
-
-// Advanced operator capabilities
-class Matrix<T extends number> {
-  // Advanced operator overloading with type constraints
-  @optimize
-  operator *(other: Matrix<T> | Vector<T>): Matrix<T> | Vector<T> {
-    return this.multiply(other);
-  }
-
-  // SIMD-optimized operations
-  @parallel
-  operator +(other: Matrix<T>): Matrix<T> {
-    return this.parallelAdd(other);
-  }
-}
-```
-
-### Performance Optimizations
-- JIT compilation for hot paths
-- SIMD operations support
-- Parallel execution annotations
-- Memory pooling for resource management
-- Zero-cost abstractions
-
-### Production Deployment
-```typescript
-// Configuration management
-@config({ region: "us-west" })
-class ServiceConfig implements CloudConfig {
-  @secret @inject
-  apiKey: string;
-  
-  @metric
-  requestLimit: number;
-}
-
-// Health monitoring
-@health.check
-fn checkDatabaseConnection(): HealthStatus {
-  return db.ping()
-    .map(latency => HealthStatus.ok({ latency }))
-    .unwrapOr(HealthStatus.error("DB unreachable"));
-}
-```
-
-### Supported Platforms
-- Linux (x86_64, ARM64)
-- MacOS (x86_64, Apple Silicon)
-- Windows (x86_64)
-- WebAssembly
-- Docker containers
-
-### Enterprise Support
-- 24/7 production support
-- Security patches
-- Performance monitoring
-- Custom deployment assistance
-- Training and certification
-
-For detailed deployment instructions, see [Deployment Guide](../deployment/README.md)
-
-## Updated Examples
-
-### Reactive Programming
-```typescript
-import { Signal } from 'stdlib/reactive';
-
-const signal = new Signal<number>(0);
-signal.subscribe(value => console.log(`Value updated: ${value}`));
-signal.value = 10; // Logs: Value updated: 10
-```
-
-### Actor Model
-```typescript
-import { Runtime } from 'stdlib/runtime';
-
-const runtime = new Runtime();
-const actor = runtime.createActor((msg, state) => state + msg, 0);
-actor.send(5);
-actor.send(10);
-```
-
-### Reactive Programming Example
-
-```typescript
-import { Signal } from 'stdlib/reactive';
-
-const signal = new Signal<number>(0);
-signal.subscribe(value => console.log(`Value updated: ${value}`));
-signal.value = 42; // Logs: Value updated: 42
-```
-
-### Math Utilities Example
-
-```typescript
-import { MathUtils } from 'stdlib/math';
-
-console.log(MathUtils.factorial(5)); // Logs: 120
-console.log(MathUtils.gcd(48, 18)); // Logs: 6
-```

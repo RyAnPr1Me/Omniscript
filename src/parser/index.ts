@@ -2,14 +2,35 @@ import { CharStreams, CommonTokenStream } from 'antlr4';
 import OmniscriptLexer from './OmniscriptLexer';
 import OmniscriptParser from './OmniscriptParser';
 import { Expression, ExpressionKind, Operator, ASTNode } from './types';
+import { OmniscriptError } from '../errors';
 
 export class Parser {
   parse(source: string) {
-    const inputStream = CharStreams.fromString(source);
-    const lexer = new OmniscriptLexer(inputStream);
-    const tokenStream = new CommonTokenStream(lexer);
-    const parser = new OmniscriptParser(tokenStream);
-    return parser.program();
+    if (!source || typeof source !== 'string') {
+      throw new OmniscriptError('Invalid source input');
+    }
+
+    try {
+      const inputStream = CharStreams.fromString(source);
+      const lexer = new OmniscriptLexer(inputStream);
+      const tokenStream = new CommonTokenStream(lexer);
+      const parser = new OmniscriptParser(tokenStream);
+      
+      // Set error handling strategy
+      parser.removeErrorListeners();
+      parser.addErrorListener({
+        syntaxError: (recognizer: any, offendingSymbol: any, line: number, column: number, msg: string) => {
+          throw new OmniscriptError(`${msg} at line ${line}:${column}`);
+        }
+      });
+
+      return parser.program();
+    } catch (error) {
+      if (error instanceof OmniscriptError) {
+        throw error;
+      }
+      throw new OmniscriptError(`Parser error: ${error instanceof Error ? error.message : String(error)}`);
+    }
   }
 
   parseExpression(expr: Expression | string): Expression {

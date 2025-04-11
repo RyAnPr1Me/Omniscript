@@ -1,4 +1,5 @@
 import { Parser } from 'antlr4';
+import { OmniscriptError } from '../errors';
 import { 
   Program, Statement, Expression, VariableDeclaration, 
   Decorator, ParserInput, Token, ExpressionKind, 
@@ -175,30 +176,56 @@ export default class OmniscriptParser extends Parser {
   static readonly GENERIC = 38;
 
   constructor(input: any) {
+    if (!input) {
+      throw new OmniscriptError('No input provided to parser');
+    }
     super(input);
   }
 
   program(): Program {
     try {
+      // Validate input stream
+      if (!this._input || !this._input.LT) {
+        throw new OmniscriptError('Invalid parser input stream');
+      }
+
+      // Get first token for line/column info
+      const startToken = this._input.LT(1);
+      if (!startToken) {
+        throw new OmniscriptError('Unable to read first token');
+      }
+
       return {
         type: 'Program',
         body: this.parseStatements(),
-        line: this._input.LT(1).line,
-        column: this._input.LT(1).column
+        line: startToken.line || 0,
+        column: startToken.column || 0
       };
     } catch (error) {
-      const err = error as Error;
-      console.error(`Parser Error: ${err.message}`);
-      throw err;
+      if (error instanceof OmniscriptError) {
+        throw error;
+      }
+      throw new OmniscriptError(`Parser error: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
   parseStatements(): Statement[] {
     const statements: Statement[] = [];
-    while (this._input.LA(1) !== OmniscriptParser.EOF) {
-      statements.push(this.statement());
+    try {
+      while (this._input.LA(1) !== OmniscriptParser.EOF) {
+        const token = this._input.LT(1);
+        if (!token) {
+          throw new OmniscriptError('Unexpected end of input');
+        }
+        statements.push(this.statement());
+      }
+      return statements;
+    } catch (error) {
+      if (error instanceof OmniscriptError) {
+        throw error;
+      }
+      throw new OmniscriptError(`Error parsing statements: ${error instanceof Error ? error.message : String(error)}`);
     }
-    return statements;
   }
 
   statement(): Statement {

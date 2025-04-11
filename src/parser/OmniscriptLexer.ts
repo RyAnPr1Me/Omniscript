@@ -1,15 +1,64 @@
 import { Lexer } from 'antlr4';
+import { OmniscriptError } from '../errors';
 
 export default class OmniscriptLexer extends Lexer {
+  static readonly EOF = -1;
+
   constructor(input: any) {
+    if (!input) {
+      throw new OmniscriptError('No input provided to lexer');
+    }
     super(input);
   }
 
-  // Remove unsupported emitToken method
-  // Use the default emit method provided by the Lexer class
+  nextToken(): any {
+    try {
+      // Ensure we have valid input before proceeding
+      if (!this._input) {
+        throw new OmniscriptError('No input stream available');
+      }
 
-  // Remove unsupported recover method
-  // Use the default error handling provided by the Lexer class
+      // Skip whitespace
+      while (this._input.LA(1) <= 32 && this._input.LA(1) !== -1) {
+        this._input.consume();
+      }
+
+      if (this._input.LA(1) === -1) {
+        const token = this.makeToken(OmniscriptLexer.EOF, "<EOF>");
+        this.emit();
+        return token;
+      }
+
+      const token = super.nextToken();
+      if (!token) {
+        throw new OmniscriptError('Failed to create token');
+      }
+      return token;
+    } catch (error) {
+      if (error instanceof OmniscriptError) {
+        throw error;
+      }
+      throw new OmniscriptError(`Lexer error: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  private makeToken(type: number, text: string): any {
+    const token = {
+      type,
+      text,
+      channel: 0,
+      line: this._tokenStartLine || 1,
+      column: this._tokenStartColumn || 0,
+      start: this._tokenStartCharIndex || 0,
+      stop: this._input ? this._input.index : 0,
+      tokenIndex: -1,
+      source: {
+        sourceName: '',
+        inputStream: this._input
+      }
+    };
+    return token;
+  }
 
   // Add support for additional tokens
   static readonly NEWLINE = 1;

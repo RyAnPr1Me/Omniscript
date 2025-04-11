@@ -278,20 +278,58 @@ export class OmniscriptInstaller {
     const platform = os.platform();
     const binPath = path.join(installPath, 'bin');
     
+    // Create the bin directory if it doesn't exist
+    fs.mkdirSync(binPath, { recursive: true });
+    
     if (platform === 'win32') {
       const scope = userInstall ? 'USER' : 'SYSTEM';
       const cmd = `setx PATH "%PATH%;${binPath}" /M:${scope}`;
       execSync(cmd);
     } else {
-      // Create profile script for Unix-like systems
-      const rcFile = platform === 'darwin' ? '.zshrc' : '.bashrc';
-      const profilePath = path.join(os.homedir(), rcFile);
-      const exportPath = `\n# Omniscript Path\nexport PATH="${binPath}:$PATH"\n`;
+      // For Unix-like systems, create both system and user-level links
+      const globalBinPath = '/usr/local/bin';
+      const userBinPath = path.join(os.homedir(), '.local', 'bin');
       
-      // Append to RC file if it doesn't already contain the path
-      const currentContent = fs.existsSync(profilePath) ? fs.readFileSync(profilePath, 'utf8') : '';
-      if (!currentContent.includes(binPath)) {
-        fs.appendFileSync(profilePath, exportPath);
+      // Ensure user bin directory exists
+      fs.mkdirSync(userBinPath, { recursive: true });
+      
+      const targetPath = path.join(binPath, 'omni');
+      const linkPath = userInstall 
+        ? path.join(userBinPath, 'omni')
+        : path.join(globalBinPath, 'omni');
+
+      try {
+        // Remove existing symlink if it exists
+        if (fs.existsSync(linkPath)) {
+          fs.unlinkSync(linkPath);
+        }
+        
+        // Create new symlink
+        fs.symlinkSync(targetPath, linkPath);
+        fs.chmodSync(targetPath, '755');
+        console.log(`✓ Created symlink: ${linkPath} -> ${targetPath}`);
+
+        // Add .local/bin to PATH if needed for user installations
+        if (userInstall) {
+          const rcFile = platform === 'darwin' ? '.zshrc' : '.bashrc';
+          const profilePath = path.join(os.homedir(), rcFile);
+          const pathExport = `\n# Omniscript Path\nexport PATH="${userBinPath}:$PATH"\n`;
+          
+          const currentContent = fs.existsSync(profilePath) 
+            ? fs.readFileSync(profilePath, 'utf8') 
+            : '';
+            
+          if (!currentContent.includes(userBinPath)) {
+            fs.appendFileSync(profilePath, pathExport);
+            console.log(`✓ Added ${userBinPath} to PATH in ${rcFile}`);
+          }
+        }
+      } catch (error) {
+        console.error('⚠️ Failed to create symlink:', error);
+        if (!userInstall) {
+          console.log('💡 Try installing with --user flag or running with sudo');
+        }
+        throw error;
       }
     }
   }
