@@ -93,6 +93,23 @@ export interface ASTNode {
 	line: number;
 	/** Column number where the node starts. */
 	column: number;
+	/** Subject expression for match expressions. */
+	subject?: Expression;
+	/** Arms for match expressions. */
+	arms?: MatchArm[];
+}
+
+/**
+ * Represents a match arm in a match expression.
+ *
+ * @property pattern - The pattern to match against.
+ * @property body - The statements to execute if the pattern matches.
+ */
+export interface MatchArm {
+	/** The pattern expression to match against. */
+	pattern: Expression;
+	/** The statements to execute if the pattern matches. */
+	body: Statement[];
 }
 
 /**

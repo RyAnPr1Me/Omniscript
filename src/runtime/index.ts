@@ -8,14 +8,14 @@ interface Bytecode {
 
 // Added Result type for better error handling
 export class Result<T, E> {
-  private constructor(private value?: T, private error?: E) {}
+  private constructor(private value: T | undefined, private error: E | undefined) {}
 
   static Ok<T, E>(value: T): Result<T, E> {
-    return new Result(value);
+    return new Result<T, E>(value, undefined);
   }
 
   static Err<T, E>(error: E): Result<T, E> {
-    return new Result(undefined, error);
+    return new Result<T, E>(undefined, error);
   }
 
   isOk(): boolean {

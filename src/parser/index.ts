@@ -9,25 +9,26 @@ export class Parser {
     const lexer = new OmniscriptLexer(inputStream);
     const tokenStream = new CommonTokenStream(lexer);
     const parser = new OmniscriptParser(tokenStream);
-
     return parser.program();
   }
 
-  parseExpression(expr: string) {
-    const inputStream = CharStreams.fromString(expr);
-    const lexer = new OmniscriptLexer(inputStream);
-    const tokenStream = new CommonTokenStream(lexer);
-    const parser = new OmniscriptParser(tokenStream);
-
-    return parser.expression();
+  parseExpression(expr: Expression | string): Expression {
+    if (typeof expr === 'string') {
+      const inputStream = CharStreams.fromString(expr);
+      const lexer = new OmniscriptLexer(inputStream);
+      const tokenStream = new CommonTokenStream(lexer);
+      const parser = new OmniscriptParser(tokenStream);
+      return parser.expression();
+    }
+    return expr;
   }
 
   parsePatternMatching(node: ASTNode): any {
     if (node.type === 'MatchExpression') {
       return {
         type: 'Match',
-        subject: this.parseExpression(node.subject),
-        arms: node.arms.map((arm: any) => this.parseMatchArm(arm))
+        subject: node.subject ? this.parseExpression(node.subject) : null,
+        arms: (node.arms || []).map((arm: any) => this.parseMatchArm(arm))
       };
     }
     throw new Error(`Unsupported node type for pattern matching: ${node.type}`);
@@ -64,5 +65,13 @@ export class Parser {
       default:
         throw new Error(`Unknown pattern kind: ${pattern.kind}`);
     }
+  }
+
+  private parseMatchExpression(node: ASTNode): any {
+    return {
+      type: 'MatchExpression',
+      subject: node.subject ? this.parseExpression(node.subject) : null,
+      arms: (node.arms || []).map((arm: any) => this.parseMatchArm(arm))
+    };
   }
 }
