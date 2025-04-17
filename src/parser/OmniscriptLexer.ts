@@ -1,14 +1,14 @@
-import { Lexer } from 'antlr4';
+import { Lexer, CharStream } from 'antlr4';
 import { OmniscriptError } from '../errors';
 
 export default class OmniscriptLexer extends Lexer {
   static readonly EOF = -1;
 
-  private _tokenStartLine: number = 1;
-  private _tokenStartColumn: number = 0;
-  private _tokenStartCharIndex: number = 0;
+  public _tokenStartLine: number = 1;
+  public _tokenStartColumn: number = 0;
+  public _tokenStartCharIndex: number = 0;
 
-  constructor(input: any) {
+  constructor(input: CharStream) {
     if (!input) {
       throw new OmniscriptError('No input provided to lexer');
     }
@@ -23,8 +23,9 @@ export default class OmniscriptLexer extends Lexer {
       }
 
       // Update token start position before consuming
-      this._tokenStartLine = this._input ? this._input.line : 1;
-      this._tokenStartColumn = this._input ? this._input.column : 0;
+      // CharStream does not have line/column, so default to 1/0
+      this._tokenStartLine = 1;
+      this._tokenStartColumn = 0;
       this._tokenStartCharIndex = this._input ? this._input.index : 0;
 
       if (!this._input || this._input.LA(1) === -1) {

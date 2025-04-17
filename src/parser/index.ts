@@ -7,7 +7,7 @@ import { OmniscriptError } from '../errors';
 export class Parser {
   parse(source: string) {
     if (!source || typeof source !== 'string') {
-      throw new OmniscriptError('Invalid source input');
+      throw new Error('Invalid source input');
     }
 
     try {
@@ -20,16 +20,13 @@ export class Parser {
       parser.removeErrorListeners();
       parser.addErrorListener({
         syntaxError: (recognizer: any, offendingSymbol: any, line: number, column: number, msg: string) => {
-          throw new OmniscriptError(`${msg} at line ${line}:${column}`);
+          throw new Error(`${msg} at line ${line}:${column}`);
         }
       });
 
       return parser.program();
     } catch (error) {
-      if (error instanceof OmniscriptError) {
-        throw error;
-      }
-      throw new OmniscriptError(`Parser error: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(`Parser error: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
