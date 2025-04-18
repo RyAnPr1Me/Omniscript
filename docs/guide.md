@@ -1,14 +1,14 @@
 # Omniscript Language Guide
 
 ## Introduction
-Omniscript is a modern programming language designed for full-stack web development, combining type safety, memory management, and reactive programming features.
+Omniscript is a modern programming language designed for full-stack web development, combining type safety, memory management, concurrency, and reactive programming features. It supports advanced decorators, pattern matching, operator overloading, and a rich standard library.
 
 ## Runtime Features
 
 ### Memory Management
 ```typescript
 // Enable garbage collection
-runtime.enableGarbageCollection();
+timeout.enableGarbageCollection();
 
 // Monitor memory usage
 const usage = runtime.getMemoryUsage();
@@ -162,6 +162,8 @@ omni install
 4. Leverage reactive programming for state management
 5. Use async/await with proper error handling
 6. Monitor memory usage in production applications
+7. Write unit and integration tests for all components
+8. Document public APIs and include usage examples
 
 ## See Also
 - [API Reference](./api/README.md)

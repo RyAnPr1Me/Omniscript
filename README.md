@@ -154,6 +154,26 @@ app.post("/users", async (req, res) => {
 app.listen(3000);
 ```
 
+## Testing & Debugging
+
+Omniscript includes a comprehensive test suite using Jest. To run all tests:
+
+```bash
+npm test -- --config jest.config.js
+```
+
+If you encounter issues with open handles or async operations, use:
+
+```bash
+npm test -- --config jest.config.js --detectOpenHandles
+```
+
+For test-driven development, run tests in watch mode:
+
+```bash
+npm run test:watch -- --config jest.config.js
+```
+
 ## Documentation
 
 - [Language Guide](docs/guide.md)
@@ -222,3 +242,22 @@ We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 ## License
 
 MIT - See [LICENSE](LICENSE) for details
+
+---
+
+### Additional Resources
+- [Memory Management API Reference](docs/api/runtime/memory.md)
+- [Performance Optimization Guide](docs/api/performance.md)
+- [Error Handling Guide](docs/api/error-handling.md)
+- [Collections API Reference](docs/api/stdlib/collections.md)
+- [Reactive Programming API Reference](docs/api/stdlib/reactive.md)
+- [Omniscript Examples](docs/examples/README.md)
+
+### Best Practices
+- Use thread-safe collections and the actor model for concurrency
+- Leverage the Result type and pattern matching for error handling
+- Enable garbage collection and monitor memory usage in production
+- Write unit and integration tests for all components
+- Document public APIs and include usage examples
+
+For more, see [Best Practices](docs/best-practices.md).
