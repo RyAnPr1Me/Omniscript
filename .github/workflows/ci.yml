@@ -2,29 +2,26 @@ name: Continuous Integration
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   pull_request:
-    branches:
-      - main
+    branches: [main]
 
 jobs:
   build-test:
     name: Lint, Build, and Test
     runs-on: ubuntu-latest
 
-    # Ensure devDependencies (like eslint) get installed
     env:
       NPM_CONFIG_PRODUCTION: false
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4 :contentReference[oaicite:0]{index=0}
+        uses: actions/checkout@v4
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20' :contentReference[oaicite:1]{index=1}
+          node-version: '20'
 
       - name: Cache npm dependencies
         uses: actions/cache@v4
@@ -32,7 +29,7 @@ jobs:
           path: ~/.npm
           key: ${{ runner.os }}-node-modules-${{ hashFiles('**/package-lock.json') }}
           restore-keys: |
-            ${{ runner.os }}-node-modules- :contentReference[oaicite:2]{index=2}
+            ${{ runner.os }}-node-modules-
 
       - name: Install dependencies
         run: npm ci
