@@ -1,8 +1,4 @@
 module.exports = {
-  env: {
-    node: true,
-    es2021: true,
-  },
   extends: [
     'eslint:recommended',
     'plugin:@typescript-eslint/recommended',
@@ -14,6 +10,12 @@ module.exports = {
     sourceType: 'module',
   },
   plugins: ['@typescript-eslint'],
+  languageOptions: {
+    globals: {
+      // You can define any global variables here (if needed)
+      // e.g., process: 'readonly',
+    },
+  },
   rules: {
     'no-console': 'warn',
     'no-debugger': 'warn',
