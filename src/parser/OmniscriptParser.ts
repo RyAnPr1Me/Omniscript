@@ -370,6 +370,9 @@ export default class OmniscriptParser extends Parser {
 
   private parsePrimaryExpression(): Expression {
     const token = this._input.LT(1);
+    if (!token) {
+      throw new OmniscriptError('Unexpected end of input in expression');
+    }
     
     switch (token.type) {
       case OmniscriptParser.IDENTIFIER:
@@ -467,7 +470,7 @@ export default class OmniscriptParser extends Parser {
         return groupExpr;
 
       default:
-        throw new Error(`Unexpected token in expression: ${token.text} at line ${token.line}:${token.column}`);
+        throw new Error(`Unexpected token in expression: ${token.text ?? '<null>'} at line ${token.line ?? '?'}:${token.column ?? '?'}`);
     }
   }
 
@@ -579,11 +582,17 @@ export default class OmniscriptParser extends Parser {
 
   private getCurrentOperator(): string {
     const token = this._input.LT(1);
+    if (!token) {
+      throw new OmniscriptError('Unexpected end of input while reading operator');
+    }
     return token.text;
   }
 
   private isUnaryOperator(type: number): boolean {
     const token = this._input.LT(1);
+    if (!token) {
+      throw new OmniscriptError('Unexpected end of input while checking unary operator');
+    }
     return ['-', '!', '~'].includes(token.text);
   }
 

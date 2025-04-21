@@ -2,15 +2,16 @@ import { List, Map } from '../../src/stdlib/collections';
 import { describe, expect, test } from '@jest/globals';
 
 describe('Standard Library - Collections', () => {
-  test('List operations', () => {
+  test('List operations', async () => {
     const list = new List<number>();
-    list.push(1);
-    expect(list.pop()).toBe(1);
+    await list.push(1);
+    expect(await list.pop()).toBe(1);
   });
 
-  test('Map operations', () => {
+  test('Map operations', async () => {
     const map = new Map<string, number>();
-    map.set('one', 1);
-    expect(map.get('one')).toBe(1);
+    await map.set('one', 1);
+    const value = await map.get('one');
+    expect(value).toBe(1);
   });
 });

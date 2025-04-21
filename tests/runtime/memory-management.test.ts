@@ -3,6 +3,13 @@ import { Runtime } from '../../src/runtime';
 describe('Runtime - Memory Management', () => {
   const runtime = new Runtime();
 
+  beforeEach(() => {
+    jest.spyOn(console, 'log').mockImplementation(() => {});
+  });
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
   test('enables garbage collection', () => {
     runtime.enableGarbageCollection();
     expect(console.log).toHaveBeenCalledWith("Garbage collection enabled.");
@@ -21,6 +28,14 @@ describe('Runtime - Memory Management', () => {
 
 describe('Runtime - Memory Management Edge Cases', () => {
   const runtime = new Runtime();
+
+  beforeEach(() => {
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
+    jest.spyOn(console, 'log').mockImplementation(() => {});
+  });
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
 
   test('handles circular references gracefully', () => {
     const obj1: any = {};

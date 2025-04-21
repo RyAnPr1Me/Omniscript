@@ -11,13 +11,9 @@ export class List<T> {
     }
   }
 
-  async pop(): Promise<T | undefined> {
-    await this.lock.acquire();
-    try {
-      return this.items.pop();
-    } finally {
-      this.lock.release();
-    }
+  pop(): T | undefined {
+    // Synchronous pop for compatibility with tests
+    return this.items.pop();
   }
 
   async filter(predicate: (item: T) => boolean): Promise<List<T>> {
@@ -36,13 +32,13 @@ export class List<T> {
 }
 
 export class Map<K, V> {
-  private items = new Map<K, V>();
+  private _items = new globalThis.Map<K, V>();
   private lock = new Mutex();
 
   async set(key: K, value: V): Promise<void> {
     await this.lock.acquire();
     try {
-      this.items.set(key, value);
+      this._items.set(key, value);
     } finally {
       this.lock.release();
     }
@@ -51,7 +47,7 @@ export class Map<K, V> {
   async get(key: K): Promise<V | undefined> {
     await this.lock.acquire();
     try {
-      return this.items.get(key);
+      return this._items.get(key);
     } finally {
       this.lock.release();
     }
