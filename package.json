@@ -29,8 +29,6 @@
     "test:watch": "jest --watch",
     "lint": "eslint . --ext .ts",
     "format": "prettier --write ."
-}
-
   },
   "pkg": {
     "scripts": [
