@@ -109,30 +109,37 @@ jobs:
           echo "${{ toJson(steps) }}" | jq -r 'to_entries[] | select(.value.outcome=="failure") | .value.name' | \
             xargs -I{} sh -c "echo \"--- {} logs ---\"; sed -n '\$((\$(wc -l < $GITHUB_STEP_SUMMARY)-200)),\$p' $GITHUB_STEP_SUMMARY || true"
 
-      # Create GitHub Issue on failure
+      # Create GitHub Issue on Failure
       - name: 'Create Issue on Failure'
         if: failure()
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const failed = Object.values(steps)
-              .filter(s => s.outcome === 'failure')
-              .map(s => `- **${s.name}** failed`)
+            const failedSteps = [
+              { name: 'Lint', outcome: '${{ steps.lint.outcome }}' },
+              { name: 'Build', outcome: '${{ steps.build.outcome }}' },
+              { name: 'Test', outcome: '${{ steps.test.outcome }}' }
+            ]
+              .filter(step => step.outcome === 'failure')
+              .map(step => `- **${step.name}** failed`)
               .join('\n');
+
             const body = `
             ⚠️ **CI workflow failed** for \`${{ github.workflow }}\` on \`${{ github.ref }}\`.
 
             **Failed Steps:**
-            ${failed}
+            ${failedSteps}
 
             You can view the full logs [here](${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}).
 
             _Automated issue opened by CI._
             `;
+
             await github.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
               title: `CI Failure: ${context.workflow} on ${context.ref.replace('refs/heads/', '')}`,
               body: body,
-            })
+            });
+
