@@ -8,15 +8,36 @@ on:
 
 jobs:
   build-test:
-    name: Lint, Build, and Test
+    name: Lint, Build, Test, and Report Status
     runs-on: ubuntu-latest
+
+    # Grant permissions for the job. Required for the commit step later.
+    permissions:
+      contents: write
 
     env:
       NPM_CONFIG_PRODUCTION: false
+      # Add verbose logging for npm operations - helpful for debugging install issues
+      NPM_CONFIG_LOGLEVEL: verbose
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      # --- Debugging Steps ---
+      # Print environment variables - shows paths, secrets (be careful!), etc.
+      - name: Debug: Print Environment Variables
+        run: env | sort
+
+      # Print Node.js version being used
+      - name: Debug: Print Node.js Version
+        run: node --version
+
+      # Print npm version and configuration
+      - name: Debug: Print npm Info
+        run: |
+          npm --version
+          npm config list
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -31,14 +52,83 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-modules-
 
+      # --- More Debugging during Install ---
+      # List files before install to see project structure and lock file presence
+      - name: Debug: List files before install
+        run: ls -la
+
       - name: Install dependencies
         run: npm ci
 
+      # List files after install to verify node_modules creation
+      - name: Debug: List files after install
+        run: ls -la
+
+      # --- Core Build & Test Steps ---
       - name: Lint
+        id: lint_step # Add an ID to reference this step's outcome
         run: npm run lint
 
       - name: Build
+        id: build_step # Add an ID
         run: npm run build
 
       - name: Test
+        id: test_step # Add an ID
         run: npm test
+
+      # --- Status Reporting and README Update ---
+      # This step will only run on successful pushes to the main branch.
+      # It determines status based on the outcome of the test step.
+      - name: Report Status and Update README
+        if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          # Configure Git user for the commit
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+
+          # Determine status based on the test step outcome
+          STATUS="NONFUNCTIONAL"
+          if [ "${{ steps.test_step.outcome }}" == "success" ]; then
+            STATUS="FUNCTIONAL"
+          fi
+
+          STATUS_LINE="STATUS=$STATUS"
+          README_FILE="README.md"
+          TEMP_README="README.md.temp"
+
+          echo "Determining status: Test outcome was ${{ steps.test_step.outcome }}. Setting status to $STATUS"
+
+          # Create a temporary README with the new status line at the top,
+          # followed by the original README content excluding any old status line.
+          echo "$STATUS_LINE" > "$TEMP_README"
+          grep -v "^STATUS=" "$README_FILE" >> "$TEMP_README"
+
+          # Replace the original README with the updated one
+          mv "$TEMP_README" "$README_FILE"
+
+          # Check if there are changes to commit
+          git add "$README_FILE"
+          if git diff --staged --quiet; then
+            echo "README.md has not changed. No commit needed."
+          else
+            # Commit and push the changes
+            echo "Committing README.md update."
+            git commit -m "CI: Build status updated to $STATUS"
+            git push origin HEAD
+          fi
+
+      # --- Debugging on Failure (Optional) ---
+      # This step runs only if any previous step failed.
+      # Useful for gathering more context specifically when things break.
+      - name: Debug on Failure
+        if: failure()
+        run: |
+          echo "Workflow failed! Dumping diagnostic information:"
+          echo "--- Environment Variables ---"
+          env | sort
+          echo "--- Current Directory ---"
+          pwd
+          echo "--- Directory Contents ---"
+          ls -laR .
+          # Add commands here to dump relevant log files if your project creates them
