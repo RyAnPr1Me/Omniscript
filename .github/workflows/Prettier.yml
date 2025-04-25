@@ -12,11 +12,15 @@ on:
 jobs:
   prettier:
     runs-on: ubuntu-latest
+    permissions: # *** IMPORTANT: Add these permissions ***
+      contents: write  # Needed to push changes
+      pull-requests: write # For creating/updating pull requests (if needed)
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
+        with:
+          fetch-depth: 0  # Important to get the full history for commit
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -26,21 +30,21 @@ jobs:
         run: npm ci
 
       - name: Check formatting with Prettier
-        id: prettier_check # Add an ID to use in subsequent steps
+        id: prettier_check
         run: |
           if npx prettier --check . ; then
             echo "Formatting is ok"
           else
             echo "Formatting issues found"
-            exit 1 #  Ensure workflow fails if formatting issues are present
+            exit 1
           fi
       - name: Fix formatting with Prettier (if issues found)
-        if: ${{ failure() }} # Only run if the previous step failed
+        if: ${{ failure() }}
         run: |
           npx prettier --write .
-        
+
       - name: Create a commit with the formatting changes
-        if: ${{ failure() }}  # Only run if the previous step failed
+        if: ${{ failure() }}
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
