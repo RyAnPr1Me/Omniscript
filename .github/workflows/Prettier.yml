@@ -15,11 +15,6 @@ jobs:
     permissions:
       contents: write  # Needed to push changes
       pull-requests: write # For creating/updating pull requests (if needed)
-      # IMPORTANT:  If Prettier might change the workflow file itself,
-      # or if another workflow attempts to edit another workflow file,
-      # you'll need the "workflows: write" permission.  However,
-      # *be very careful* when enabling this.  It can lead to
-      # unintended behavior.
       workflows: write  # Enable with CAUTION!  Only if needed.
 
     steps:
