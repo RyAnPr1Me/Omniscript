@@ -1,6 +1,9 @@
 name: Prettier Formatter Check
 
 on:
+  # Manual trigger
+  workflow_dispatch:
+
   push:
     branches: [main]
   pull_request:
@@ -23,4 +26,24 @@ jobs:
         run: npm ci
 
       - name: Check formatting with Prettier
-        run: npx prettier --check .
+        id: prettier_check # Add an ID to use in subsequent steps
+        run: |
+          if npx prettier --check . ; then
+            echo "Formatting is ok"
+          else
+            echo "Formatting issues found"
+            exit 1 #  Ensure workflow fails if formatting issues are present
+          fi
+      - name: Fix formatting with Prettier (if issues found)
+        if: ${{ failure() }} # Only run if the previous step failed
+        run: |
+          npx prettier --write .
+        
+      - name: Create a commit with the formatting changes
+        if: ${{ failure() }}  # Only run if the previous step failed
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -m "Fix formatting with Prettier" || echo "No changes to commit"
+          git push
