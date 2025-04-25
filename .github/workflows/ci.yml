@@ -136,7 +136,7 @@ jobs:
             _Automated issue opened by CI._
             `;
 
-            await github.issues.create({
+            await github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
               title: `CI Failure: ${context.workflow} on ${context.ref.replace('refs/heads/', '')}`,
