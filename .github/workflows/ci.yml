@@ -8,7 +8,7 @@ on:
 
 jobs:
   build-test:
-    name: Lint, Build, Test, and Report Status
+    name: 'Lint, Build, Test, and Report Status' # Quoted name
     runs-on: ubuntu-latest
 
     # Grant permissions for the job. Required for the commit step later.
@@ -21,31 +21,31 @@ jobs:
       NPM_CONFIG_LOGLEVEL: verbose
 
     steps:
-      - name: Checkout repository
+      - name: 'Checkout repository' # Quoted name
         uses: actions/checkout@v4
 
       # --- Debugging Steps ---
       # Print environment variables - shows paths, secrets (be careful!), etc.
-      # <-- Line 29 starts here with exactly 6 spaces followed by '-'
-      - name: Debug: Print Environment Variables
+      # Line 29 now has the name quoted:
+      - name: 'Debug: Print Environment Variables' # Quoted name, handles the colon
         run: env | sort
 
       # Print Node.js version being used
-      - name: Debug: Print Node.js Version
+      - name: 'Debug: Print Node.js Version' # Quoted name
         run: node --version
 
       # Print npm version and configuration
-      - name: Debug: Print npm Info
+      - name: 'Debug: Print npm Info' # Quoted name
         run: |
           npm --version
           npm config list
 
-      - name: Set up Node.js
+      - name: 'Set up Node.js' # Quoted name
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: Cache npm dependencies
+      - name: 'Cache npm dependencies' # Quoted name
         uses: actions/cache@v4
         with:
           path: ~/.npm
@@ -55,33 +55,33 @@ jobs:
 
       # --- More Debugging during Install ---
       # List files before install to see project structure and lock file presence
-      - name: Debug: List files before install
+      - name: 'Debug: List files before install' # Quoted name
         run: ls -la
 
-      - name: Install dependencies
+      - name: 'Install dependencies' # Quoted name
         run: npm ci
 
       # List files after install to verify node_modules creation
-      - name: Debug: List files after install
+      - name: 'Debug: List files after install' # Quoted name
         run: ls -la
 
       # --- Core Build & Test Steps ---
-      - name: Lint
-        id: lint_step # Add an ID to reference this step's outcome
+      - name: 'Lint' # Quoted name
+        id: lint_step
         run: npm run lint
 
-      - name: Build
-        id: build_step # Add an ID
+      - name: 'Build' # Quoted name
+        id: build_step
         run: npm run build
 
-      - name: Test
-        id: test_step # Add an ID
+      - name: 'Test' # Quoted name
+        id: test_step
         run: npm test
 
       # --- Status Reporting and README Update ---
       # This step will only run on successful pushes to the main branch.
       # It determines status based on the outcome of the test step.
-      - name: Report Status and Update README
+      - name: 'Report Status and Update README' # Quoted name
         if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
           # Configure Git user for the commit
@@ -127,7 +127,7 @@ jobs:
       # This step runs only if any previous step failed.
       # Useful for gathering more context specifically when things break.
       # It checks which step failed and provides more diagnostics.
-      - name: Debug on Failure
+      - name: 'Debug on Failure' # Quoted name
         if: failure()
         run: |
           echo "--- Workflow Failed ---"
