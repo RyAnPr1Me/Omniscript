@@ -89,6 +89,7 @@ jobs:
 
           # Determine status based on the test step outcome
           STATUS="NONFUNCTIONAL"
+          # Check the outcome of the test step specifically
           if [ "${{ steps.test_step.outcome }}" == "success" ]; then
             STATUS="FUNCTIONAL"
           fi
@@ -99,10 +100,11 @@ jobs:
 
           echo "Determining status: Test outcome was ${{ steps.test_step.outcome }}. Setting status to $STATUS"
 
-          # Create a temporary README with the new status line at the top,
-          # followed by the original README content excluding any old status line.
-          echo "$STATUS_LINE" > "$TEMP_README"
-          grep -v "^STATUS=" "$README_FILE" >> "$TEMP_README"
+          # Read original README, filter out old status line, prepend new status line, write to temp
+          {
+            echo "$STATUS_LINE"
+            grep -v "^STATUS=" "$README_FILE" 2>/dev/null || true # Ignore errors if README doesn't exist yet
+          } > "$TEMP_README"
 
           # Replace the original README with the updated one
           mv "$TEMP_README" "$README_FILE"
@@ -115,20 +117,39 @@ jobs:
             # Commit and push the changes
             echo "Committing README.md update."
             git commit -m "CI: Build status updated to $STATUS"
-            git push origin HEAD
+            # Use a more robust push command in case of race conditions
+            # --force-with-lease is safer than --force
+            git push origin HEAD --force-with-lease
           fi
 
       # --- Debugging on Failure (Optional) ---
       # This step runs only if any previous step failed.
       # Useful for gathering more context specifically when things break.
+      # It checks which step failed and provides more diagnostics.
       - name: Debug on Failure
         if: failure()
         run: |
-          echo "Workflow failed! Dumping diagnostic information:"
+          echo "--- Workflow Failed ---"
+          echo "Job build-test failed."
+          echo "Checking step outcomes:"
+          echo "Checkout: ${{ steps.checkout_step.outcome }}" # Add id to checkout step if needed, or rely on default outcome check
+          echo "Set up Node.js: ${{ steps.setup_node_step.outcome }}" # Add id to setup_node if needed
+          echo "Cache dependencies: ${{ steps.cache_step.outcome }}" # Add id to cache step if needed
+          echo "Install dependencies: ${{ steps.install_step.outcome }}" # Add id to install step if needed
+          echo "Lint: ${{ steps.lint_step.outcome }}"
+          echo "Build: ${{ steps.build_step.outcome }}"
+          echo "Test: ${{ steps.test_step.outcome }}"
+          echo "Report Status: ${{ steps.report_status_step.outcome }}" # Add id to report status step if needed
+
           echo "--- Environment Variables ---"
           env | sort
+
           echo "--- Current Directory ---"
           pwd
-          echo "--- Directory Contents ---"
+
+          echo "--- Directory Contents (Recursive) ---"
           ls -laR .
-          # Add commands here to dump relevant log files if your project creates them
+
+          # Add more specific debugging commands here based on potential failure points
+          # Example: If build fails, check build logs
+          # if [ -f build.log ]; then echo "--- Build Log ---"; cat build.log; fi
