@@ -51,6 +51,16 @@ jobs:
       - name: 'Debug: List files before install'
         run: ls -la
 
+      # Check if package-lock.json exists, if not, run npm install to generate it
+      - name: 'Create package-lock.json if missing'
+        run: |
+          if [ ! -f package-lock.json ]; then
+            echo "package-lock.json not found, running npm install to generate it."
+            npm install
+          else
+            echo "package-lock.json exists, skipping npm install."
+          fi
+
       - name: 'Install dependencies'
         run: npm ci
 
@@ -125,11 +135,36 @@ jobs:
               .map(step => `- **${step.name}** failed`)
               .join('\n');
 
+            // Get the files from the step that failed
+            const getFilesInErrorLogs = (stepName) => {
+              const stepLogs = process.env.GITHUB_STEP_SUMMARY;
+              const filesInLogs = [];
+              const regex = /(?:in|at)\s(.+\.ts)/g;
+              let match;
+              while ((match = regex.exec(stepLogs)) !== null) {
+                filesInLogs.push(match[1]);
+              }
+              return filesInLogs.join(', ');
+            };
+
+            // Determine the failed step and files
+            let failedFiles = [];
+            if ('${{ steps.lint.outcome }}' === 'failure') {
+              failedFiles = getFilesInErrorLogs('Lint');
+            } else if ('${{ steps.build.outcome }}' === 'failure') {
+              failedFiles = getFilesInErrorLogs('Build');
+            } else if ('${{ steps.test.outcome }}' === 'failure') {
+              failedFiles = getFilesInErrorLogs('Test');
+            }
+
             const body = `
             ⚠️ **CI workflow failed** for \`${{ github.workflow }}\` on \`${{ github.ref }}\`.
 
             **Failed Steps:**
             ${failedSteps}
+
+            **Files Involved:**
+            ${failedFiles.length > 0 ? failedFiles : 'No specific files identified'}
 
             You can view the full logs [here](${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}).
 
@@ -142,4 +177,3 @@ jobs:
               title: `CI Failure: ${context.workflow} on ${context.ref.replace('refs/heads/', '')}`,
               body: body,
             });
-
