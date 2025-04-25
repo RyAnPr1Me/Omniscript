@@ -26,6 +26,7 @@ jobs:
 
       # --- Debugging Steps ---
       # Print environment variables - shows paths, secrets (be careful!), etc.
+      # <-- Line 29 starts here with exactly 6 spaces followed by '-'
       - name: Debug: Print Environment Variables
         run: env | sort
 
@@ -132,14 +133,12 @@ jobs:
           echo "--- Workflow Failed ---"
           echo "Job build-test failed."
           echo "Checking step outcomes:"
-          echo "Checkout: ${{ steps.checkout_step.outcome }}" # Add id to checkout step if needed, or rely on default outcome check
-          echo "Set up Node.js: ${{ steps.setup_node_step.outcome }}" # Add id to setup_node if needed
-          echo "Cache dependencies: ${{ steps.cache_step.outcome }}" # Add id to cache step if needed
-          echo "Install dependencies: ${{ steps.install_step.outcome }}" # Add id to install step if needed
+          # You might need to add 'id:' to more steps above if you want to check their specific outcomes here
           echo "Lint: ${{ steps.lint_step.outcome }}"
           echo "Build: ${{ steps.build_step.outcome }}"
           echo "Test: ${{ steps.test_step.outcome }}"
-          echo "Report Status: ${{ steps.report_status_step.outcome }}" # Add id to report status step if needed
+          # If the status reporting step fails, you might add an id for it as well
+          # echo "Report Status: ${{ steps.report_status_step.outcome }}"
 
           echo "--- Environment Variables ---"
           env | sort
