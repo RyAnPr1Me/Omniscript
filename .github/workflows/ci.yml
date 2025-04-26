@@ -154,15 +154,14 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const failedSteps = [
-              { name: 'Lint', outcome: '${{ steps.lint.outcome }}' },
-              { name: 'Build', outcome: '${{ steps.build.outcome }}' },
-              { name: 'Test', outcome: '${{ steps.test.outcome }}' }
+              { name: 'Lint', outcome: context.steps.lint.outcome },
+              { name: 'Build', outcome: context.steps.build.outcome },
+              { name: 'Test', outcome: context.steps.test.outcome }
             ]
-              .filter(step => step.outcome === 'failure')
-              .map(step => `- **${step.name}** failed`)
+              .filter(s => s.outcome === 'failure')
+              .map(s => `- **${s.name}** failed`)
               .join('\n');
 
-            // Get the files from the step that failed
             const getFilesInErrorLogs = (stepName) => {
               const stepLogs = process.env.GITHUB_STEP_SUMMARY;
               const filesInLogs = [];
@@ -174,18 +173,17 @@ jobs:
               return filesInLogs.join(', ');
             };
 
-            // Determine the failed step and files
             let failedFiles = [];
-            if ('${{ steps.lint.outcome }}' === 'failure') {
+            if (context.steps.lint.outcome === 'failure') {
               failedFiles = getFilesInErrorLogs('Lint');
-            } else if ('${{ steps.build.outcome }}' === 'failure') {
+            } else if (context.steps.build.outcome === 'failure') {
               failedFiles = getFilesInErrorLogs('Build');
-            } else if ('${{ steps.test.outcome }}' === 'failure') {
+            } else if (context.steps.test.outcome === 'failure') {
               failedFiles = getFilesInErrorLogs('Test');
             }
 
             const body = `
-            ⚠️ **CI workflow failed** for \`${{ github.workflow }}\` on \`${{ github.ref }}\`.
+            ⚠️ **CI workflow failed** for \`${context.workflow}\` on \`${context.ref}\`.
 
             **Failed Steps:**
             ${failedSteps}
