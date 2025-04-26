@@ -153,13 +153,15 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const failedSteps = [
-              { name: 'Lint', outcome: context.steps.lint.outcome },
-              { name: 'Build', outcome: context.steps.build.outcome },
-              { name: 'Test', outcome: context.steps.test.outcome }
-            ]
-              .filter(s => s.outcome === 'failure')
-              .map(s => `- **${s.name}** failed`)
+            const steps = {
+              lint: { outcome: '${{ steps.lint.outcome }}' },
+              build: { outcome: '${{ steps.build.outcome }}' },
+              test: { outcome: '${{ steps.test.outcome }}' }
+            };
+
+            const failedSteps = Object.entries(steps)
+              .filter(([_, step]) => step.outcome === 'failure')
+              .map(([name, _]) => `- **${name}** failed`)
               .join('\n');
 
             const getFilesInErrorLogs = (stepName) => {
@@ -174,11 +176,11 @@ jobs:
             };
 
             let failedFiles = [];
-            if (context.steps.lint.outcome === 'failure') {
+            if (steps.lint.outcome === 'failure') {
               failedFiles = getFilesInErrorLogs('Lint');
-            } else if (context.steps.build.outcome === 'failure') {
+            } else if (steps.build.outcome === 'failure') {
               failedFiles = getFilesInErrorLogs('Build');
-            } else if (context.steps.test.outcome === 'failure') {
+            } else if (steps.test.outcome === 'failure') {
               failedFiles = getFilesInErrorLogs('Test');
             }
 

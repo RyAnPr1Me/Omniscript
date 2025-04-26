@@ -3,7 +3,6 @@ name: Prettier Formatter Check
 on:
   # Manual trigger
   workflow_dispatch:
-
   push:
     branches: [main]
   pull_request:
@@ -12,10 +11,11 @@ on:
 jobs:
   prettier:
     runs-on: ubuntu-latest
-    # Permissions needed for the workflow to push changes
+    # Updated permissions block
     permissions:
-      contents: write  # Needed to push changes
-      pull-requests: write # Needed if you want the bot to update PRs
+      contents: write
+      pull-requests: write
+      # Remove workflows permission as it's not needed/supported
 
     steps:
       - name: Checkout code
