@@ -16,7 +16,6 @@ jobs:
     permissions:
       contents: write  # Needed to push changes
       pull-requests: write # Needed if you want the bot to update PRs
-      workflows: write  # <-- Add this line to allow workflow file updates
 
     steps:
       - name: Checkout code
