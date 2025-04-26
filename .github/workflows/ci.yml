@@ -115,9 +115,20 @@ jobs:
           echo "Build:   ${{ steps.build.outcome }}"
           echo "Test:    ${{ steps.test.outcome }}"
           echo "--- Logs of failing step ---"
-          # prints last 200 lines of the failing step's logs
-          echo "${{ toJson(steps) }}" | jq -r 'to_entries[] | select(.value.outcome=="failure") | .value.name' | \
-            xargs -I{} sh -c "echo \"--- {} logs ---\"; sed -n '\$((\$(wc -l < $GITHUB_STEP_SUMMARY)-200)),\$p' $GITHUB_STEP_SUMMARY || true"
+          # Print the names of failed steps (no jq, just bash)
+          for step in lint build test; do
+            outcome="${{ steps[step].outcome }}"
+            if [ "$outcome" = "failure" ]; then
+              echo "--- $step logs ---"
+              # Print last 200 lines of the step's log if available
+              LOG_FILE="$GITHUB_WORKSPACE/${step}.log"
+              if [ -f "$LOG_FILE" ]; then
+                tail -n 200 "$LOG_FILE"
+              else
+                echo "No log file found for $step."
+              fi
+            fi
+          done
 
       # Create GitHub Issue on Failure
       - name: 'Create Issue on Failure'
