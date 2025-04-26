@@ -13,7 +13,8 @@ export enum ExpressionKind {
 	Call = "Call",
 	MemberAccess = "MemberAccess",
 	ArrayLiteral = "ArrayLiteral",
-	ObjectLiteral = "ObjectLiteral"
+	ObjectLiteral = "ObjectLiteral",
+	Ternary = "Ternary" // New: ternary expressions
 }
 
 /**
@@ -156,7 +157,7 @@ export interface Expression extends ASTNode {
 	/** The kind of expression. */
 	kind: ExpressionKind;
 	/** Operator used (if applicable). */
-	operator?: Operator;
+	operator?: Operator | '??=';
 	/** Left-hand side expression (if applicable). */
 	left?: Expression;
 	/** Right-hand side expression (if applicable). */
@@ -180,6 +181,12 @@ export interface Expression extends ASTNode {
 	properties?: { key: string; value: Expression }[];
 	/** The function or method callee for call expressions. */
 	callee?: Expression;
+	/** Condition for ternary expressions. */
+	condition?: Expression;
+	/** True expression for ternary expressions. */
+	trueExpr?: Expression;
+	/** False expression for ternary expressions. */
+	falseExpr?: Expression;
 }
 
 /**

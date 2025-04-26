@@ -175,6 +175,10 @@ export default class OmniscriptParser extends Parser {
   /** Generic type parameter tokens like <T> */
   static readonly GENERIC = 38;
 
+  // Add new static tokens for the new features
+  static readonly QUESTION = 39; // ?
+  static readonly NULLISH_ASSIGN = 40; // ??=
+
   constructor(input: any) {
     if (!input) {
       throw new OmniscriptError('No input provided to parser');
@@ -328,7 +332,41 @@ export default class OmniscriptParser extends Parser {
     while (true) {
       const operator = this.getCurrentOperator() as Operator; // Fixed type
       const newPrecedence = this.getOperatorPrecedence(operator);
-      
+
+      // Add support for ternary operator (?:)
+      if (this._input.LA(1) === OmniscriptParser.QUESTION) {
+        this.match(OmniscriptParser.QUESTION);
+        const trueExpr = this.expression();
+        this.match(OmniscriptParser.COLON);
+        const falseExpr = this.expression();
+        left = {
+          type: 'Expression',
+          kind: ExpressionKind.Ternary,
+          condition: left,
+          trueExpr,
+          falseExpr,
+          line: left.line,
+          column: left.column
+        };
+        continue;
+      }
+
+      // Add support for nullish assignment (??=)
+      if (this._input.LA(1) === OmniscriptParser.NULLISH_ASSIGN) {
+        this.match(OmniscriptParser.NULLISH_ASSIGN);
+        const right = this.parseBinaryExpression(newPrecedence);
+        left = {
+          type: 'Expression',
+          kind: ExpressionKind.Binary,
+          operator: '??=',
+          left,
+          right,
+          line: left.line,
+          column: left.column
+        };
+        continue;
+      }
+
       if (newPrecedence <= precedence) {
         break;
       }
@@ -503,7 +541,8 @@ export default class OmniscriptParser extends Parser {
       '?:': 3,      // Ternary
       '=': 2,       // Assignment
       '+=': 2,      // Add assign
-      '-=': 2       // Subtract assign
+      '-=': 2,      // Subtract assign
+      '??=': 2      // Nullish assignment
     };
     return precedenceMap[operator] || 0;
   }
