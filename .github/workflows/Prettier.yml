@@ -1,0 +1,88 @@
+name: Prettier Formatter Check
+
+on:
+  # Manual trigger
+  workflow_dispatch:
+
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  prettier:
+    runs-on: ubuntu-latest
+    # Permissions needed for the workflow to push changes
+    permissions:
+      contents: write  # Needed to push changes
+      pull-requests: write # Needed if you want the bot to update PRs
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Get full git history for commit
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20 # Use the Node.js version your project requires
+          
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check formatting with Prettier
+        id: prettier_check
+        run: |
+          # Run Prettier in check mode.
+          # The '|| true' makes this step *not* fail the workflow immediately
+          # if formatting issues are found. We'll handle the failure condition later.
+          # We use '|| true' because we want the *output* to determine failure, not
+          # Prettier's exit code itself, so we can proceed to the 'write' step.
+          # UPDATE: Let's revert to exit 1 for clearer logic with 'if: failure()'.
+          # Removed || true - we want this step to fail if issues are found.
+          npx prettier --check .
+
+
+      - name: Fix formatting with Prettier (if issues found)
+        # This step only runs if the 'Check formatting' step failed
+        if: ${{ failure() }}
+        run: |
+          echo "Formatting issues found. Running prettier --write ."
+          # Run Prettier in write mode to fix formatting
+          npx prettier --write .
+
+      - name: Identify changes after formatting
+        # This step only runs if formatting was fixed
+        if: ${{ failure() }}
+        id: git_status
+        run: |
+          git status --porcelain > changes.txt
+          # Check if the changes.txt file is empty (no changes)
+          if [ -s changes.txt ]
+          then
+            echo "changes_made=true" >> $GITHUB_OUTPUT
+          else
+            echo "changes_made=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create a commit with the formatting changes
+        # This step runs only if formatting was fixed AND changes were made
+        if: ${{ failure() && steps.git_status.outputs.changes_made == 'true' }}
+        run: |
+          echo "Committing formatting changes..."
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -m "Fix formatting with Prettier"
+          echo "Pushing formatting changes..."
+          git push # This push *will* trigger the workflow again, which should now pass
+
+      - name: Fail the workflow if formatting issues were found but not committed
+        # Ensure the initial workflow run fails if formatting was bad,
+        # even if the bot successfully committed/pushed the fix.
+        # This signals that manual intervention was needed or the fix is in progress.
+        if: ${{ failure() }}
+        run: |
+          echo "Workflow failed due to formatting issues."
+          exit 1 # Explicitly fail the workflow run

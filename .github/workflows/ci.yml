@@ -2,34 +2,178 @@ name: Continuous Integration
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   pull_request:
-    branches:
-      - main
+    branches: [main]
 
 jobs:
   build-test:
-    name: Lint, Build, and Test
+    name: 'Lint, Build, Test, and Report Status'
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: write
+      issues: write   # grant permission to open issues
+
+    env:
+      NPM_CONFIG_PRODUCTION: false
+      NPM_CONFIG_LOGLEVEL: verbose
+
     steps:
-      - name: Checkout repository
+      - name: 'Checkout repository'
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
+      # Debug Steps
+      - name: 'Debug: Print Environment Variables'
+        run: env | sort
+
+      - name: 'Debug: Print Node.js Version'
+        run: node --version
+
+      - name: 'Debug: Print npm Info'
+        run: |
+          npm --version
+          npm config list
+
+      - name: 'Set up Node.js'
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: Install dependencies
+      - name: 'Cache npm dependencies'
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-modules-
+
+      - name: 'Debug: List files before install'
+        run: ls -la
+
+      # Check if package-lock.json exists, if not, run npm install to generate it
+      - name: 'Create package-lock.json if missing'
+        run: |
+          if [ ! -f package-lock.json ]; then
+            echo "package-lock.json not found, running npm install to generate it."
+            npm install
+          else
+            echo "package-lock.json exists, skipping npm install."
+          fi
+
+      - name: 'Install dependencies'
         run: npm ci
 
-      - name: Lint
+      - name: 'Debug: List files after install'
+        run: ls -la
+
+      # Core Lint/Build/Test
+      - name: 'Lint'
+        id: lint
         run: npm run lint
 
-      - name: Build
+      - name: 'Build'
+        id: build
         run: npm run build
 
-      - name: Test
+      - name: 'Test'
+        id: test
         run: npm test
+
+      # Report status on success
+      - name: 'Report Status and Update README'
+        if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        id: report
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+
+          if [ "${{ steps.test.outcome }}" == "success" ]; then
+            STATUS="FUNCTIONAL"
+          else
+            STATUS="NONFUNCTIONAL"
+          fi
+
+          echo "STATUS=$STATUS" > README.md.temp
+          grep -v "^STATUS=" README.md 2>/dev/null || true >> README.md.temp
+          mv README.md.temp README.md
+
+          git add README.md
+          if ! git diff --staged --quiet; then
+            git commit -m "CI: Build status updated to $STATUS"
+            git push origin HEAD --force-with-lease
+          else
+            echo "No README changes to commit."
+          fi
+
+      # Debug on any failure
+      - name: 'Debug on Failure'
+        if: failure()
+        run: |
+          echo "❌ Workflow failed in job: build-test"
+          echo "Lint:    ${{ steps.lint.outcome }}"
+          echo "Build:   ${{ steps.build.outcome }}"
+          echo "Test:    ${{ steps.test.outcome }}"
+          echo "--- Logs of failing step ---"
+          # prints last 200 lines of the failing step's logs
+          echo "${{ toJson(steps) }}" | jq -r 'to_entries[] | select(.value.outcome=="failure") | .value.name' | \
+            xargs -I{} sh -c "echo \"--- {} logs ---\"; sed -n '\$((\$(wc -l < $GITHUB_STEP_SUMMARY)-200)),\$p' $GITHUB_STEP_SUMMARY || true"
+
+      # Create GitHub Issue on Failure
+      - name: 'Create Issue on Failure'
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const failedSteps = [
+              { name: 'Lint', outcome: '${{ steps.lint.outcome }}' },
+              { name: 'Build', outcome: '${{ steps.build.outcome }}' },
+              { name: 'Test', outcome: '${{ steps.test.outcome }}' }
+            ]
+              .filter(step => step.outcome === 'failure')
+              .map(step => `- **${step.name}** failed`)
+              .join('\n');
+
+            // Get the files from the step that failed
+            const getFilesInErrorLogs = (stepName) => {
+              const stepLogs = process.env.GITHUB_STEP_SUMMARY;
+              const filesInLogs = [];
+              const regex = /(?:in|at)\s(.+\.ts)/g;
+              let match;
+              while ((match = regex.exec(stepLogs)) !== null) {
+                filesInLogs.push(match[1]);
+              }
+              return filesInLogs.join(', ');
+            };
+
+            // Determine the failed step and files
+            let failedFiles = [];
+            if ('${{ steps.lint.outcome }}' === 'failure') {
+              failedFiles = getFilesInErrorLogs('Lint');
+            } else if ('${{ steps.build.outcome }}' === 'failure') {
+              failedFiles = getFilesInErrorLogs('Build');
+            } else if ('${{ steps.test.outcome }}' === 'failure') {
+              failedFiles = getFilesInErrorLogs('Test');
+            }
+
+            const body = `
+            ⚠️ **CI workflow failed** for \`${{ github.workflow }}\` on \`${{ github.ref }}\`.
+
+            **Failed Steps:**
+            ${failedSteps}
+
+            **Files Involved:**
+            ${failedFiles.length > 0 ? failedFiles : 'No specific files identified'}
+
+            You can view the full logs [here](${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}).
+
+            _Automated issue opened by CI._
+            `;
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `CI Failure: ${context.workflow} on ${context.ref.replace('refs/heads/', '')}`,
+              body: body,
+            });
