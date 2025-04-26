@@ -116,19 +116,33 @@ jobs:
           echo "Test:    ${{ steps.test.outcome }}"
           echo "--- Logs of failing step ---"
           # Print the names of failed steps (no jq, just bash)
-          for step in lint build test; do
-            outcome="${{ steps[step].outcome }}"
-            if [ "$outcome" = "failure" ]; then
-              echo "--- $step logs ---"
-              # Print last 200 lines of the step's log if available
-              LOG_FILE="$GITHUB_WORKSPACE/${step}.log"
-              if [ -f "$LOG_FILE" ]; then
-                tail -n 200 "$LOG_FILE"
-              else
-                echo "No log file found for $step."
-              fi
+          if [ "${{ steps.lint.outcome }}" = "failure" ]; then
+            echo "--- lint logs ---"
+            LOG_FILE="$GITHUB_WORKSPACE/lint.log"
+            if [ -f "$LOG_FILE" ]; then
+              tail -n 200 "$LOG_FILE"
+            else
+              echo "No log file found for lint."
             fi
-          done
+          fi
+          if [ "${{ steps.build.outcome }}" = "failure" ]; then
+            echo "--- build logs ---"
+            LOG_FILE="$GITHUB_WORKSPACE/build.log"
+            if [ -f "$LOG_FILE" ]; then
+              tail -n 200 "$LOG_FILE"
+            else
+              echo "No log file found for build."
+            fi
+          fi
+          if [ "${{ steps.test.outcome }}" = "failure" ]; then
+            echo "--- test logs ---"
+            LOG_FILE="$GITHUB_WORKSPACE/test.log"
+            if [ -f "$LOG_FILE" ]; then
+              tail -n 200 "$LOG_FILE"
+            else
+              echo "No log file found for test."
+            fi
+          fi
 
       # Create GitHub Issue on Failure
       - name: 'Create Issue on Failure'
