@@ -116,6 +116,8 @@ jobs:
           echo "Test:    ${{ steps.test.outcome }}"
           echo "--- Logs of failing step ---"
           # Print the names of failed steps (no jq, just bash)
+          # The previous version used a for-loop with steps[step].outcome, which is not supported.
+          # Use explicit checks for each step instead.
           if [ "${{ steps.lint.outcome }}" = "failure" ]; then
             echo "--- lint logs ---"
             LOG_FILE="$GITHUB_WORKSPACE/lint.log"
