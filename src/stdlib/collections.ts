@@ -1,3 +1,5 @@
+import { Result } from '../runtime';
+
 export class List<T> {
   private items: T[] = [];
   private lock = new Mutex();
@@ -6,6 +8,18 @@ export class List<T> {
     await this.lock.acquire();
     try {
       this.items.push(item);
+    } finally {
+      this.lock.release();
+    }
+  }
+
+  async tryPush(item: T): Promise<Result<void, Error>> {
+    try {
+      await this.lock.acquire();
+      this.items.push(item);
+      return Result.Ok(void 0);
+    } catch (error) {
+      return Result.Err(error as Error);
     } finally {
       this.lock.release();
     }
@@ -27,6 +41,15 @@ export class List<T> {
       return newList;
     } finally {
       this.lock.release();
+    }
+  }
+
+  async toArray(): Promise<T[]> {
+    await this.lock.acquire();
+    try {
+      return [...this.items];
+    } finally {
+      this.lock.release(); 
     }
   }
 }
@@ -52,6 +75,24 @@ export class Map<K, V> {
       this.lock.release();
     }
   }
+
+  async entries(): Promise<[K, V][]> {
+    await this.lock.acquire();
+    try {
+      return Array.from(this._items.entries());
+    } finally {
+      this.lock.release();
+    }
+  }
+
+  async clear(): Promise<void> {
+    await this.lock.acquire();
+    try {
+      this._items.clear();
+    } finally {
+      this.lock.release();
+    }
+  }
 }
 
 class Mutex {
@@ -68,5 +109,14 @@ class Mutex {
 
   release(): void {
     // No-op, handled by acquire
+  }
+
+  // Add timeout support
+  async acquireWithTimeout(timeoutMs: number): Promise<boolean> {
+    const timeoutPromise = new Promise<false>(resolve => 
+      setTimeout(() => resolve(false), timeoutMs)
+    );
+    const acquirePromise = this.acquire().then(() => true);
+    return Promise.race([acquirePromise, timeoutPromise]);
   }
 }
