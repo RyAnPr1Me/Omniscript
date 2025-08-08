@@ -754,12 +754,12 @@ export default class OmniscriptParser extends Parser {
   }
 
   private parameterList(): any[] {
-    // Placeholder implementation for parameter list parsing
+    // TODO: Implement parameter list parsing (currently returns empty for stub)
     return [];
   }
 
   private block(): any[] {
-    // Placeholder implementation for block parsing
+    // TODO: Implement statement block parsing (currently returns empty for stub)
     return [];
   }
 }

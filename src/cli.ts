@@ -44,7 +44,25 @@ program
   .action(async (file: string) => {
     try {
       const source = await readFile(file, 'utf-8');
-      await omniscript.execute(source);
+      const result = await omniscript.execute(source);
+      if (result !== undefined) {
+        console.log(result);
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      process.exit(1);
+    }
+  });
+
+program
+  .command('eval')
+  .description('Evaluate inline Omniscript/functional code snippet')
+  .argument('<code...>', 'Code to execute (wrap in quotes)')
+  .action(async (codeParts: string[]) => {
+    const code = codeParts.join(' ');
+    try {
+      const result = await omniscript.execute(code);
+      if (result !== undefined) console.log(result);
     } catch (error) {
       console.error('Error:', error);
       process.exit(1);

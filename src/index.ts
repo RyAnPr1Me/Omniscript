@@ -1,6 +1,8 @@
 import { Parser } from './parser';
 import { Compiler } from './compiler';
 import { Runtime } from './runtime';
+import { FunctionalParser } from './functional/parser';
+import { evaluate as evalFunctional } from './functional/eval';
 
 export class Omniscript {
   private parser: Parser;
@@ -14,9 +16,15 @@ export class Omniscript {
   }
 
   async execute(source: string): Promise<any> {
-    const ast = this.parser.parse(source);
-    const bytecode = this.compiler.compile(ast);
-    return this.runtime.execute(bytecode);
+    try {
+      const ast = this.parser.parse(source);
+      const bytecode = this.compiler.compile(ast);
+      return this.runtime.execute(bytecode);
+    } catch (err) {
+      const fparser = new FunctionalParser();
+      const prog = fparser.parse(source);
+      return evalFunctional(prog);
+    }
   }
 }
 

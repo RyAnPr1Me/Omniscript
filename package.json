@@ -1,14 +1,16 @@
 {
   "name": "omniscript",
   "version": "0.1.0",
-  "type": "module",
+  "type": "commonjs",
   "bin": {
     "omni": "./dist/cli.js",
-    "omniscript-installer": "./dist/bin/installManager.ts"
+    "omniscript-installer": "./dist/bin/installManager.js"
   },
   "dependencies": {
     "antlr4": "^4.13.1",
-    "commander": "^11.0.0"
+    "commander": "^11.0.0",
+    "pg": "^8.11.5",
+    "sqlite3": "^5.1.7"
   },
   "devDependencies": {
     "@types/jest": "^29.5.5",
@@ -20,13 +22,15 @@
     "ts-node": "^10.9.2",
     "typescript": "^5.8.3",
     "@eslint/js": "^8.56.0",
-    "eslint-config-prettier": "^9.0.0"
+    "eslint-config-prettier": "^9.0.0",
+    "prettier": "^3.2.5",
+    "@types/pg": "^8.10.2"
   },
   "scripts": {
     "prebuild": "rm -rf dist",
     "build": "tsc",
-    "postbuild": "chmod +x dist/bin/install.js && chmod +x dist/cli.js",
-    "build:exe": "npm run build && pkg . --targets node16-win-x64,node16-linux-x64,node16-macos-x64 --output dist/bin/omniscript-installer",
+    "postbuild": "chmod +x dist/cli.js",
+    "build:exe": "npm run build && pkg . --targets node18-win-x64,node18-linux-x64,node18-macos-x64 --output dist/bin/omniscript-installer",
     "test": "jest",
     "test:watch": "jest --watch",
     "lint": "eslint .",
@@ -37,9 +41,9 @@
       "dist/**/*.js"
     ],
     "targets": [
-      "node16-win-x64",
-      "node16-linux-x64",
-      "node16-macos-x64"
+  "node18-win-x64",
+  "node18-linux-x64",
+  "node18-macos-x64"
     ],
     "outputPath": "dist/bin",
     "entries": [
@@ -54,5 +58,8 @@
       "tsconfig.json"
     ]
   }
+  ,
+  "repository": {"type": "git", "url": "https://github.com/RyAnPr1Me/Omniscript.git"},
+  "bugs": {"url": "https://github.com/RyAnPr1Me/Omniscript/issues"}
 }
 

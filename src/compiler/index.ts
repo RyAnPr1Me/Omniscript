@@ -1,11 +1,12 @@
 import { Program, FunctionDeclaration, ReturnStatement, Expression, ASTNode } from './types';
 
+let DEBUG = false; // set true to enable verbose compiler diagnostics
+
 export class Compiler {
   compile(ast: any) {
-    console.log("Starting JIT compilation with advanced language features...");
+  if (DEBUG) console.log("Starting JIT compilation with advanced language features...");
     const bytecode = this.visitNode(ast);
-    this.optimizeForSIMD(bytecode);
-    this.optimizeForParallelExecution(bytecode);
+  // (Removed mock optimization passes)
     return bytecode;
   }
 
@@ -80,7 +81,7 @@ export class Compiler {
   }
 
   private visitMacro(node: any): any {
-    console.log("Expanding macro:", node.name);
+  if (DEBUG) console.log("Expanding macro:", node.name);
     return this.expandMacro(node);
   }
 
@@ -92,39 +93,5 @@ export class Compiler {
     };
   }
 
-  private optimizeForSIMD(bytecode: any): void {
-    console.log("Applying SIMD optimizations...");
-    // Detect numerical operations and optimize for SIMD
-    if (bytecode.type === 'Function' && bytecode.body) {
-      bytecode.body = bytecode.body.map((stmt: any) => {
-        if (stmt.type === 'Loop' && this.isNumericalOperation(stmt.body)) {
-          stmt.simdOptimized = true;
-        }
-        return stmt;
-      });
-    }
-  }
-
-  private optimizeForParallelExecution(bytecode: any): void {
-    console.log("Applying parallel execution optimizations...");
-    // Detect loops and optimize for parallel execution
-    if (bytecode.type === 'Function' && bytecode.body) {
-      bytecode.body = bytecode.body.map((stmt: any) => {
-        if (stmt.type === 'Loop' && this.isParallelizable(stmt.body)) {
-          stmt.parallelOptimized = true;
-        }
-        return stmt;
-      });
-    }
-  }
-
-  private isNumericalOperation(body: any[]): boolean {
-    // Check if the loop body contains numerical operations
-    return body.some((stmt: any) => stmt.type === 'Expression' && typeof stmt.value === 'number');
-  }
-
-  private isParallelizable(body: any[]): boolean {
-    // Check if the loop body is free of dependencies and can be parallelized
-    return body.every((stmt: any) => stmt.type !== 'Assignment' || stmt.target !== 'sharedVariable');
-  }
+  // (Removed mock optimization helper methods)
 }

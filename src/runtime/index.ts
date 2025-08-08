@@ -1,4 +1,4 @@
-interface Bytecode {
+export interface Bytecode {
   type: string;
   name?: string;
   params?: any[];
@@ -112,8 +112,8 @@ export class Runtime {
     return ret.value !== undefined ? await this.executeAsync(ret.value) : undefined;
   }
 
-  enableParallelExecution(): void {
-    console.log("Parallel execution enabled for supported operations.");
+  enableParallelExecution(debug = false): void {
+    if (debug) console.log("Parallel execution enabled for supported operations.");
   }
 
   allocate(object: any): void {
@@ -143,8 +143,8 @@ export class Runtime {
     this.weakReferences.delete(object);
   }
 
-  enableGarbageCollection(): void {
-    console.log("Garbage collection enabled.");
+  enableGarbageCollection(debug = false): void {
+    if (debug) console.log("Garbage collection enabled.");
     setInterval(() => this.runGarbageCollector(), 10000); // Run every 10 seconds
   }
 
@@ -247,27 +247,7 @@ export class Runtime {
     this.detectCircularReferences();
   }
 
-  operatorOverloadingExample(): void {
-    console.log("Operator overloading example executed.");
-    const vector1 = { x: 1, y: 2 };
-    const vector2 = { x: 3, y: 4 };
-    const result = this.addVectors(vector1, vector2);
-    console.log("Result of vector addition:", result);
-  }
-
-  public addVectors(v1: any, v2: any): any {
-    return { x: v1.x + v2.x, y: v1.y + v2.y };
-  }
-
-  optimizeParallelExecution(): void {
-    console.log("Optimizing parallel execution for large-scale tasks.");
-    // Placeholder for advanced parallel execution logic
-  }
-
-  optimizeGarbageCollection(): void {
-    console.log("Optimizing garbage collection for high-performance applications.");
-    // Placeholder for advanced garbage collection logic
-  }
+  // Removed mock/demo optimization & operator example methods.
 
   public getReferenceCounts(): Map<any, number> {
     return this.referenceCounts;
