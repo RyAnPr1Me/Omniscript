@@ -4,7 +4,7 @@ import {
   Program, Statement, Expression, VariableDeclaration, 
   Decorator, ParserInput, Token, ExpressionKind, 
   Operator, FunctionDeclaration, GenericParameter,
-  Parameter, TypeReference, ASTError 
+  Parameter, TypeReference, ASTError, ReturnStatement, IfStatement, WhileStatement, ForStatement, ThrowStatement, TryStatement 
 } from './types';
 
 /**
@@ -178,6 +178,18 @@ export default class OmniscriptParser extends Parser {
   // Add new static tokens for the new features
   static readonly QUESTION = 39; // ?
   static readonly NULLISH_ASSIGN = 40; // ??=
+  // Additional keyword tokens (placeholders; actual lexer must supply these types)
+  static readonly RETURN = 41;
+  static readonly IF = 42;
+  static readonly ELSE = 43;
+  static readonly WHILE = 44;
+  static readonly FOR = 45;
+  static readonly TRY = 46;
+  static readonly CATCH = 47;
+  static readonly FINALLY = 48;
+  static readonly THROW = 49;
+  static readonly LBRACE_FN = 50; // pseudo token for '{'
+  static readonly RBRACE_FN = 51; // pseudo token for '}'
 
   constructor(input: any) {
     if (!input) {
@@ -243,6 +255,27 @@ export default class OmniscriptParser extends Parser {
     if (this._input.LA(1) === OmniscriptParser.ASYNC) {
       this.match(OmniscriptParser.ASYNC);
       return this.functionDeclaration(true);
+    }
+    if (this._input.LA(1) === OmniscriptParser.FN) {
+      return this.functionDeclaration(false);
+    }
+    if (this._input.LA(1) === OmniscriptParser.RETURN) {
+      return this.returnStatement();
+    }
+    if (this._input.LA(1) === OmniscriptParser.IF) {
+      return this.ifStatement();
+    }
+    if (this._input.LA(1) === OmniscriptParser.WHILE) {
+      return this.whileStatement();
+    }
+    if (this._input.LA(1) === OmniscriptParser.FOR) {
+      return this.forStatement();
+    }
+    if (this._input.LA(1) === OmniscriptParser.TRY) {
+      return this.tryStatement();
+    }
+    if (this._input.LA(1) === OmniscriptParser.THROW) {
+      return this.throwStatement();
     }
     throw new Error(`Unexpected token: ${token.text} at line ${token.line}:${token.column}`);
   }
@@ -754,12 +787,95 @@ export default class OmniscriptParser extends Parser {
   }
 
   private parameterList(): any[] {
-    // TODO: Implement parameter list parsing (currently returns empty for stub)
-    return [];
+    const params: Parameter[] = [];
+    while (this._input.LA(1) === OmniscriptParser.IDENTIFIER) {
+      const nameTok = this._input.LT(1); this.match(OmniscriptParser.IDENTIFIER);
+      let optional = false;
+      if (this._input.LA(1) === OmniscriptParser.QUESTION) { this.match(OmniscriptParser.QUESTION); optional = true; }
+      let typeRef: TypeReference = { name: 'any', isUnion: false } as any;
+      if (this._input.LA(1) === OmniscriptParser.COLON) {
+        this.match(OmniscriptParser.COLON);
+        typeRef = this.parseTypeReference();
+      }
+      let defaultValue: Expression | undefined;
+      if (this._input.LA(1) === OmniscriptParser.ASSIGN) {
+        this.match(OmniscriptParser.ASSIGN);
+        defaultValue = this.expression();
+      }
+      params.push({ name: nameTok.text, type: typeRef, optional, defaultValue });
+      if (this._input.LA(1) === OmniscriptParser.COMMA) { this.match(OmniscriptParser.COMMA); } else break;
+    }
+    return params;
   }
 
   private block(): any[] {
-    // TODO: Implement statement block parsing (currently returns empty for stub)
-    return [];
+    const stmts: Statement[] = [];
+    // Expect '{'
+    if (this._input.LA(1) !== OmniscriptParser.LBRACE) {
+      return stmts; // treat empty block if missing
+    }
+    this.match(OmniscriptParser.LBRACE);
+    while (this._input.LA(1) !== OmniscriptParser.RBRACE && this._input.LA(1) !== OmniscriptParser.EOF) {
+      stmts.push(this.statement());
+    }
+    if (this._input.LA(1) === OmniscriptParser.RBRACE) this.match(OmniscriptParser.RBRACE);
+    return stmts;
+  }
+
+  private returnStatement(): ReturnStatement {
+    const tok = this._input.LT(1); this.match(OmniscriptParser.RETURN);
+    let argument: Expression | null = null;
+    if (this._input.LA(1) !== OmniscriptParser.RBRACE && this._input.LA(1) !== OmniscriptParser.EOF) {
+      argument = this.expression();
+    }
+    return { type: 'ReturnStatement', argument, line: tok.line, column: tok.column };
+  }
+
+  private ifStatement(): IfStatement {
+    const tok = this._input.LT(1); this.match(OmniscriptParser.IF);
+    const condition = this.expression();
+    const thenBody = this.block();
+    let elseBody: Statement[] | undefined;
+    if (this._input.LA(1) === OmniscriptParser.ELSE) { this.match(OmniscriptParser.ELSE); elseBody = this.block(); }
+    return { type:'IfStatement', condition, thenBody, elseBody, line: tok.line, column: tok.column };
+  }
+
+  private whileStatement(): WhileStatement {
+    const tok = this._input.LT(1); this.match(OmniscriptParser.WHILE);
+    const condition = this.expression();
+    const body = this.block();
+    return { type:'WhileStatement', condition, body, line: tok.line, column: tok.column };
+  }
+
+  private forStatement(): ForStatement {
+    const tok = this._input.LT(1); this.match(OmniscriptParser.FOR);
+    // Simplified for form: for init; condition; update { ... }
+    let init: Statement | null = null;
+  try { init = this.statement(); } catch { init = null; }
+    let condition: Expression | null = null;
+    try { condition = this.expression(); } catch { condition = null; }
+    let update: Expression | null = null;
+    try { update = this.expression(); } catch { update = null; }
+    const body = this.block();
+    return { type:'ForStatement', init, condition, update, body, line: tok.line, column: tok.column };
+  }
+
+  private throwStatement(): ThrowStatement {
+    const tok = this._input.LT(1); this.match(OmniscriptParser.THROW);
+    const argument = this.expression();
+    return { type:'ThrowStatement', argument, line: tok.line, column: tok.column };
+  }
+
+  private tryStatement(): TryStatement {
+    const tok = this._input.LT(1); this.match(OmniscriptParser.TRY);
+    const tryBlock = this.block();
+    let catchVar: string | undefined; let catchBlock: Statement[] | undefined; let finallyBlock: Statement[] | undefined;
+    if (this._input.LA(1) === OmniscriptParser.CATCH) {
+      this.match(OmniscriptParser.CATCH);
+      if (this._input.LA(1) === OmniscriptParser.LPAREN) { this.match(OmniscriptParser.LPAREN); catchVar = this.match(OmniscriptParser.IDENTIFIER).text; this.match(OmniscriptParser.RPAREN); }
+      catchBlock = this.block();
+    }
+    if (this._input.LA(1) === OmniscriptParser.FINALLY) { this.match(OmniscriptParser.FINALLY); finallyBlock = this.block(); }
+    return { type:'TryStatement', tryBlock, catchVar, catchBlock, finallyBlock, line: tok.line, column: tok.column };
   }
 }

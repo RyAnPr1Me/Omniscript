@@ -132,7 +132,7 @@ export interface Program extends ASTNode {
  */
 export interface Statement extends ASTNode {
 	/** Discriminated type identifying the statement kind. */
-	type: 'VariableDeclaration' | 'FunctionDeclaration' | 'Decorator' | 'Expression';
+	type: 'VariableDeclaration' | 'FunctionDeclaration' | 'Decorator' | 'Expression' | 'ReturnStatement' | 'IfStatement' | 'WhileStatement' | 'ForStatement' | 'ThrowStatement' | 'TryStatement';
 }
 
 /**
@@ -261,6 +261,45 @@ export interface FunctionDeclaration extends Statement {
 	returnType: TypeReference;
 	body: Statement[];
 	isAsync: boolean;
+}
+
+export interface ReturnStatement extends Statement {
+	type: 'ReturnStatement';
+	argument?: Expression | null;
+}
+
+export interface IfStatement extends Statement {
+	type: 'IfStatement';
+	condition: Expression;
+	thenBody: Statement[];
+	elseBody?: Statement[];
+}
+
+export interface WhileStatement extends Statement {
+	type: 'WhileStatement';
+	condition: Expression;
+	body: Statement[];
+}
+
+export interface ForStatement extends Statement {
+	type: 'ForStatement';
+	init?: Statement | null;
+	condition?: Expression | null;
+	update?: Expression | null;
+	body: Statement[];
+}
+
+export interface ThrowStatement extends Statement {
+	type: 'ThrowStatement';
+	argument: Expression;
+}
+
+export interface TryStatement extends Statement {
+	type: 'TryStatement';
+	tryBlock: Statement[];
+	catchVar?: string;
+	catchBlock?: Statement[];
+	finallyBlock?: Statement[];
 }
 
 /**
