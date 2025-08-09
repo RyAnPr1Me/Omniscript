@@ -1,5 +1,3 @@
-import { Program, FunctionDeclaration, ReturnStatement, Expression, ASTNode } from './types';
-
 let DEBUG = false; // set true to enable verbose compiler diagnostics
 
 export class Compiler {
@@ -10,16 +8,28 @@ export class Compiler {
     return bytecode;
   }
 
-  private visitNode(node: ASTNode): any {
+  private visitNode(node: any): any {
     switch (node.type) {
       case 'Program':
-        return this.visitProgram(node as Program);
+        return this.visitProgram(node);
       case 'FunctionDeclaration':
-        return this.visitFunctionDeclaration(node as FunctionDeclaration);
+        return this.visitFunctionDeclaration(node);
       case 'ReturnStatement':
-        return this.visitReturnStatement(node as ReturnStatement);
+        return this.visitReturnStatement(node);
+      case 'VariableDeclaration':
+        return this.visitVariableDeclaration(node);
       case 'Expression':
-        return this.visitExpression(node as Expression);
+        return this.visitExpressionStatement(node);
+      case 'IfStatement':
+        return this.visitIfStatement(node);
+      case 'WhileStatement':
+        return this.visitWhileStatement(node);
+      case 'ForStatement':
+        return this.visitForStatement(node);
+      case 'ThrowStatement':
+        return this.visitThrowStatement(node);
+      case 'TryStatement':
+        return this.visitTryStatement(node);
       case 'ConditionalType':
         return this.visitConditionalType(node);
       case 'IntersectionType':
@@ -31,35 +41,72 @@ export class Compiler {
     }
   }
 
-  private visitProgram(node: Program): any {
-    let result: any = null;
-    for (const stmt of node.body) {
-      result = this.visitNode(stmt);
-    }
-    return result;
+  private visitProgram(node: any): any {
+    return {
+      type: 'Block',
+      body: node.body.map((stmt: any) => this.visitNode(stmt))
+    };
   }
 
-  private visitFunctionDeclaration(node: FunctionDeclaration): any {
+  private visitFunctionDeclaration(node: any): any {
     return {
       type: 'Function',
-      name: node.id.name,
-      params: node.params,
-      body: node.body.map(stmt => this.visitNode(stmt)),
+      name: node.name,
+      params: (node.params || []).map((p: any) => p.name),
+      body: (node.body || []).map((stmt: any) => this.visitNode(stmt)),
       optimized: true // Mark as optimized
     };
   }
 
-  private visitReturnStatement(node: ReturnStatement): any {
+  private visitReturnStatement(node: any): any {
     return {
       type: 'Return',
-      value: node.argument ? this.visitNode(node.argument) : undefined
+      argument: node.argument || undefined
     };
   }
 
-  private visitExpression(node: Expression): any {
+  private visitExpressionStatement(node: any): any {
+    return { type: 'Expr', expr: node };
+  }
+
+  private visitVariableDeclaration(node: any): any {
+    return { type: 'VarDecl', name: node.name, initializer: node.initializer || null };
+  }
+
+  private visitIfStatement(node: any): any {
     return {
-      type: 'Value',
-      value: node.value
+      type: 'If',
+      condition: node.condition,
+      then: { type: 'Block', body: (node.thenBody || []).map((s: any) => this.visitNode(s)) },
+      else: node.elseBody ? { type: 'Block', body: node.elseBody.map((s: any) => this.visitNode(s)) } : undefined
+    };
+  }
+
+  private visitWhileStatement(node: any): any {
+    return { type: 'While', condition: node.condition, body: { type: 'Block', body: (node.body || []).map((s: any) => this.visitNode(s)) } };
+  }
+
+  private visitForStatement(node: any): any {
+    return {
+      type: 'For',
+      init: node.init ? this.visitNode(node.init) : null,
+      condition: node.condition || null,
+      update: node.update || null,
+      body: { type: 'Block', body: (node.body || []).map((s: any) => this.visitNode(s)) }
+    };
+  }
+
+  private visitThrowStatement(node: any): any {
+    return { type: 'Throw', argument: node.argument };
+  }
+
+  private visitTryStatement(node: any): any {
+    return {
+      type: 'Try',
+      tryBlock: { type: 'Block', body: (node.tryBlock || []).map((s: any) => this.visitNode(s)) },
+      catchVar: node.catchVar,
+      catchBlock: node.catchBlock ? { type: 'Block', body: node.catchBlock.map((s: any) => this.visitNode(s)) } : undefined,
+      finallyBlock: node.finallyBlock ? { type: 'Block', body: node.finallyBlock.map((s: any) => this.visitNode(s)) } : undefined
     };
   }
 

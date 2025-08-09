@@ -190,6 +190,7 @@ export default class OmniscriptParser extends Parser {
   static readonly THROW = 49;
   static readonly LBRACE_FN = 50; // pseudo token for '{'
   static readonly RBRACE_FN = 51; // pseudo token for '}'
+  static readonly SEMI = 52; // ;
 
   constructor(input: any) {
     if (!input) {
@@ -849,13 +850,34 @@ export default class OmniscriptParser extends Parser {
 
   private forStatement(): ForStatement {
     const tok = this._input.LT(1); this.match(OmniscriptParser.FOR);
-    // Simplified for form: for init; condition; update { ... }
+    // Canonical form: for (init; condition; update) { ... }
+    this.match(OmniscriptParser.LPAREN);
+    // init: may be variable declaration or expression or empty
     let init: Statement | null = null;
-  try { init = this.statement(); } catch { init = null; }
+    if (this._input.LA(1) !== OmniscriptParser.SEMI) {
+      if (this._input.LA(1) === OmniscriptParser.VAR) {
+        init = this.variableDeclaration();
+      } else {
+        const exprInit = this.expression();
+        init = exprInit as any;
+      }
+    }
+    this.match(OmniscriptParser.SEMI);
+
+    // condition: expression or empty
     let condition: Expression | null = null;
-    try { condition = this.expression(); } catch { condition = null; }
+    if (this._input.LA(1) !== OmniscriptParser.SEMI) {
+      condition = this.expression();
+    }
+    this.match(OmniscriptParser.SEMI);
+
+    // update: expression or empty
     let update: Expression | null = null;
-    try { update = this.expression(); } catch { update = null; }
+    if (this._input.LA(1) !== OmniscriptParser.RPAREN) {
+      update = this.expression();
+    }
+    this.match(OmniscriptParser.RPAREN);
+
     const body = this.block();
     return { type:'ForStatement', init, condition, update, body, line: tok.line, column: tok.column };
   }
