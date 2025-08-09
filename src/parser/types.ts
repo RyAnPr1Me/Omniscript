@@ -14,7 +14,9 @@ export enum ExpressionKind {
 	MemberAccess = "MemberAccess",
 	ArrayLiteral = "ArrayLiteral",
 	ObjectLiteral = "ObjectLiteral",
-	Ternary = "Ternary" // New: ternary expressions
+		Ternary = "Ternary", // New: ternary expressions
+		Match = "Match" // New: pattern matching expression
+		, Await = "Await" // New: await expression
 }
 
 /**
@@ -132,7 +134,7 @@ export interface Program extends ASTNode {
  */
 export interface Statement extends ASTNode {
 	/** Discriminated type identifying the statement kind. */
-	type: 'VariableDeclaration' | 'FunctionDeclaration' | 'Decorator' | 'Expression' | 'ReturnStatement' | 'IfStatement' | 'WhileStatement' | 'ForStatement' | 'ThrowStatement' | 'TryStatement';
+	type: 'VariableDeclaration' | 'FunctionDeclaration' | 'Decorator' | 'Expression' | 'ReturnStatement' | 'IfStatement' | 'WhileStatement' | 'ForStatement' | 'ThrowStatement' | 'TryStatement' | 'ClassDeclaration';
 }
 
 /**
@@ -187,6 +189,10 @@ export interface Expression extends ASTNode {
 	trueExpr?: Expression;
 	/** False expression for ternary expressions. */
 	falseExpr?: Expression;
+	/** Subject for match expressions. */
+	subject?: Expression;
+	/** Arms for match expressions (renamed to avoid collision with ASTNode.arms). */
+	matchArms?: { pattern: { kind: 'Wildcard' } | { kind: 'Identifier'; name: string } | { kind: 'Number'; value: number }; guard?: Expression; value: Expression }[];
 }
 
 /**
@@ -221,6 +227,8 @@ export interface Decorator extends Statement {
 	name: string;
 	/** An array of arguments for the decorator function call. */
 	arguments: Expression[] | null;
+	/** Resolved metadata placeholder */
+	meta?: Record<string, any>;
 }
 
 /**
@@ -261,6 +269,26 @@ export interface FunctionDeclaration extends Statement {
 	returnType: TypeReference;
 	body: Statement[];
 	isAsync: boolean;
+	decorators?: Decorator[];
+}
+
+export interface MethodDeclaration {
+	type: 'MethodDeclaration';
+	name: string;
+	params: Parameter[];
+	returnType?: TypeReference;
+	body: Statement[];
+	isAsync?: boolean;
+	isOperator?: boolean;
+	operatorSymbol?: string;
+	decorators?: Decorator[];
+}
+
+export interface ClassDeclaration extends Statement {
+	type: 'ClassDeclaration';
+	name: string;
+	methods: MethodDeclaration[];
+	decorators?: Decorator[];
 }
 
 export interface ReturnStatement extends Statement {

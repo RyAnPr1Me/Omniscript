@@ -55,6 +55,42 @@ export class Runtime {
     this.debugMode = false;
   }
 
+  // Execute a class declaration (AST/bytecode hybrid node)
+  private executeClassDeclaration(node: any): any {
+    const runtime = this;
+    const methodMap: Record<string, Function> = {};
+    const operatorMap: Record<string, Function> = {};
+    for (const m of node.methods || []) {
+      const bodyStmts = m.body?.body || m.body?.statements || [];
+      const fn = function(this: any, ...args: any[]) {
+        runtime.pushEnv();
+        try {
+          runtime.setVar('self', this);
+          (m.params || []).forEach((p: any, i: number) => runtime.setVar(p.name, args[i]));
+          try {
+            return runtime.execute({ type: 'Block', body: bodyStmts });
+          } catch (e: any) {
+            if (e && e.__return) return e.value;
+            throw e;
+          }
+        } finally {
+          runtime.popEnv();
+        }
+      };
+      methodMap[m.name] = fn;
+      if (m.isOperator && m.operatorSymbol) {
+        operatorMap[m.operatorSymbol] = function(this: any, other: any) { return fn.call(this, other); };
+      }
+    }
+    const Klass: any = function(this: any, ...ctorArgs: any[]) {
+      Object.assign(this, { __class: node.name });
+      if (methodMap['constructor']) methodMap['constructor'].apply(this, ctorArgs);
+    };
+    Klass.prototype = { ...methodMap, __ops: operatorMap };
+    this.scope.set(node.name, Klass);
+    return Klass;
+  }
+
   execute(bytecode: Bytecode): any {
     try {
       switch (bytecode.type) {
@@ -80,6 +116,8 @@ export class Runtime {
           return this.executeTry(bytecode as any);
         case 'Value':
           return bytecode.value;
+        case 'ClassDeclaration':
+          return this.executeClassDeclaration(bytecode);
         default:
           throw new Error(`Unknown bytecode type: ${bytecode.type}`);
       }
@@ -397,6 +435,15 @@ export class Runtime {
         return this.evalUnary(expr);
       case 'Binary':
         return this.evalBinary(expr);
+      case 'Await': {
+        const v = this.evalExpr(expr.left);
+        if (v && typeof (v as any).then === 'function') {
+          // Not fully async environment: block by awaiting via then chaining (simulated synchronous via microtask not realistic)
+          // For now just return value (would need async execution path to truly await)
+          return v; // placeholder
+        }
+        return v;
+      }
       case 'Ternary':
         return this.evalExpr(expr.condition) ? this.evalExpr(expr.trueExpr) : this.evalExpr(expr.falseExpr);
       case 'ArrayLiteral':
@@ -413,9 +460,29 @@ export class Runtime {
       case 'MemberAccess':
         const obj = this.evalExpr(expr.object);
         return obj?.[expr.member];
+      case 'Match':
+        return this.evalMatch(expr);
       default:
         return undefined;
     }
+  }
+
+  private evalMatch(expr: any): any {
+    const value = this.evalExpr(expr.subject);
+    for (const arm of expr.matchArms || []) {
+      if (this.matchPattern(value, arm.pattern)) {
+        if (arm.guard && !this.evalExpr(arm.guard)) continue;
+        return this.evalExpr(arm.value);
+      }
+    }
+    return undefined;
+  }
+
+  private matchPattern(value: any, pattern: any): boolean {
+    if (pattern.kind === 'Wildcard') return true;
+    if (pattern.kind === 'Identifier') return true; // simple binding (not stored yet)
+    if (pattern.kind === 'Number') return value === pattern.value;
+    return false;
   }
 
   private evalUnary(expr: any): any {
@@ -431,6 +498,10 @@ export class Runtime {
   private evalBinary(expr: any): any {
     const l = this.evalExpr(expr.left);
     const r = this.evalExpr(expr.right);
+    // Operator overloading: if left has __ops and matching operator function
+    if (l && typeof l === 'object' && l.__ops && typeof l.__ops[expr.operator] === 'function') {
+      return l.__ops[expr.operator](l, r);
+    }
     switch (expr.operator) {
       case '+': return (l as any) + (r as any);
       case '-': return (l as any) - (r as any);

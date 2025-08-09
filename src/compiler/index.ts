@@ -30,6 +30,8 @@ export class Compiler {
         return this.visitThrowStatement(node);
       case 'TryStatement':
         return this.visitTryStatement(node);
+      case 'ClassDeclaration':
+        return this.visitClassDeclaration(node);
       case 'ConditionalType':
         return this.visitConditionalType(node);
       case 'IntersectionType':
@@ -130,6 +132,11 @@ export class Compiler {
   private visitMacro(node: any): any {
   if (DEBUG) console.log("Expanding macro:", node.name);
     return this.expandMacro(node);
+  }
+
+  private visitClassDeclaration(node: any): any {
+    // Pass through; runtime understands shape. Could transform methods later.
+    return node;
   }
 
   private expandMacro(node: any): any {

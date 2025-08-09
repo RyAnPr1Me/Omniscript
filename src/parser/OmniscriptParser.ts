@@ -191,6 +191,8 @@ export default class OmniscriptParser extends Parser {
   static readonly LBRACE_FN = 50; // pseudo token for '{'
   static readonly RBRACE_FN = 51; // pseudo token for '}'
   static readonly SEMI = 52; // ;
+  static readonly MATCH = 53; // match keyword
+  static readonly ARROW = 54; // =>
 
   constructor(input: any) {
     if (!input) {
@@ -251,7 +253,25 @@ export default class OmniscriptParser extends Parser {
       return this.variableDeclaration();
     }
     if (this._input.LA(1) === OmniscriptParser.AT) {
-      return this.decorator();
+      // accumulate decorators then apply to next declaration
+      const decorators: any[] = [];
+      while (this._input.LA(1) === OmniscriptParser.AT) {
+        decorators.push(this.decorator());
+      }
+      // After decorators, expect class or function
+      if (this._input.LA(1) === OmniscriptParser.FN || this._input.LA(1) === OmniscriptParser.ASYNC) {
+        const isAsync = this._input.LA(1) === OmniscriptParser.ASYNC;
+        if (isAsync) this.match(OmniscriptParser.ASYNC);
+        const fnDecl = this.functionDeclaration(isAsync);
+        (fnDecl as any).decorators = decorators;
+        return fnDecl as any;
+      }
+      if (this._input.LA(1) === OmniscriptParser.IDENTIFIER && this._input.LT(1).text === 'class') {
+        // but 'class' is not tokenized yet; treat as identifier for now
+        return this.classDeclaration(decorators);
+      }
+      // Fallback: return first decorator node if nothing to decorate
+      return decorators[0];
     }
     if (this._input.LA(1) === OmniscriptParser.ASYNC) {
       this.match(OmniscriptParser.ASYNC);
@@ -259,6 +279,10 @@ export default class OmniscriptParser extends Parser {
     }
     if (this._input.LA(1) === OmniscriptParser.FN) {
       return this.functionDeclaration(false);
+    }
+    // naive 'class' keyword recognition (IDENTIFIER with text 'class')
+    if (this._input.LA(1) === OmniscriptParser.IDENTIFIER && token.text === 'class') {
+      return this.classDeclaration();
     }
     if (this._input.LA(1) === OmniscriptParser.RETURN) {
       return this.returnStatement();
@@ -437,6 +461,11 @@ export default class OmniscriptParser extends Parser {
         column: token.column
       };
     }
+    if (token.type === OmniscriptParser.AWAIT) {
+      this.match(OmniscriptParser.AWAIT);
+      const expr = this.parseUnaryExpression();
+      return { type:'Expression', kind: ExpressionKind.Await, left: expr, line: token.line, column: token.column } as any;
+    }
     return this.parsePrimaryExpression();
   }
 
@@ -541,9 +570,56 @@ export default class OmniscriptParser extends Parser {
         this.match(OmniscriptParser.RPAREN);
         return groupExpr;
 
+      case OmniscriptParser.MATCH:
+        return this.parseMatchExpression();
+
       default:
         throw new Error(`Unexpected token in expression: ${token.text ?? '<null>'} at line ${token.line ?? '?'}:${token.column ?? '?'}`);
     }
+  }
+
+  private parseMatchExpression(): Expression {
+    const start = this._input.LT(1); this.match(OmniscriptParser.MATCH);
+    const subject = this.expression();
+    this.match(OmniscriptParser.LBRACE);
+    const arms: any[] = [];
+    while (this._input.LA(1) !== OmniscriptParser.RBRACE && this._input.LA(1) !== OmniscriptParser.EOF) {
+      // pattern
+      const patTok = this._input.LT(1);
+      let pattern: any;
+      if (patTok.type === OmniscriptParser.IDENTIFIER) {
+        if (patTok.text === '_') { this.match(OmniscriptParser.IDENTIFIER); pattern = { kind:'Wildcard' }; }
+        else { this.match(OmniscriptParser.IDENTIFIER); pattern = { kind:'Identifier', name: patTok.text }; }
+      } else if (patTok.type === OmniscriptParser.NUMBER) {
+        this.match(OmniscriptParser.NUMBER); pattern = { kind:'Number', value: Number(patTok.text) };
+      } else {
+        throw new Error(`Invalid match pattern: ${patTok.text}`);
+      }
+      // optional guard: if <expr>
+      let guard: Expression | undefined;
+      if (this._input.LA(1) === OmniscriptParser.IF) {
+        this.match(OmniscriptParser.IF);
+        guard = this.expression();
+      }
+      // => value expression
+      if (this._input.LA(1) === OmniscriptParser.ARROW) this.match(OmniscriptParser.ARROW); else {
+        // allow ':' as fallback
+        if (this._input.LA(1) === OmniscriptParser.COLON) this.match(OmniscriptParser.COLON); else throw new Error('Expected => in match arm');
+      }
+      const valueExpr = this.expression();
+      arms.push({ pattern, guard, value: valueExpr });
+      if (this._input.LA(1) === OmniscriptParser.COMMA) { this.match(OmniscriptParser.COMMA); continue; }
+      else break;
+    }
+    this.match(OmniscriptParser.RBRACE);
+    return {
+      type: 'Expression',
+      kind: ExpressionKind.Match,
+      subject,
+      matchArms: arms,
+      line: start.line,
+      column: start.column
+    } as any;
   }
 
   private getOperatorPrecedence(operator: string): number {
@@ -839,6 +915,47 @@ export default class OmniscriptParser extends Parser {
     let elseBody: Statement[] | undefined;
     if (this._input.LA(1) === OmniscriptParser.ELSE) { this.match(OmniscriptParser.ELSE); elseBody = this.block(); }
     return { type:'IfStatement', condition, thenBody, elseBody, line: tok.line, column: tok.column };
+  }
+
+  private classDeclaration(decorators: any[] = []): any {
+    const start = this._input.LT(1); // 'class' identifier
+    this.match(OmniscriptParser.IDENTIFIER); // consume 'class'
+    const nameTok = this.match(OmniscriptParser.IDENTIFIER);
+    this.match(OmniscriptParser.LBRACE);
+    const methods: any[] = [];
+    while (this._input.LA(1) !== OmniscriptParser.RBRACE && this._input.LA(1) !== OmniscriptParser.EOF) {
+      // operator method: identifier 'operator' SYMBOL
+      let mDecorators: any[] = [];
+      while (this._input.LA(1) === OmniscriptParser.AT) mDecorators.push(this.decorator());
+      let isAsync = false;
+      if (this._input.LA(1) === OmniscriptParser.ASYNC) { this.match(OmniscriptParser.ASYNC); isAsync = true; }
+      if (this._input.LA(1) === OmniscriptParser.IDENTIFIER && this._input.LT(1).text === 'operator') {
+        this.match(OmniscriptParser.IDENTIFIER); // operator keyword
+        const opTok = this._input.LT(1); this.match(this._input.LA(1)); // consume operator symbol token
+        const params = this.parseMethodParams();
+        const body = this.block();
+        methods.push({ type:'MethodDeclaration', name:`operator${opTok.text}`, isOperator:true, operatorSymbol: opTok.text, params, body, isAsync, decorators:mDecorators });
+        continue;
+      }
+      // normal method name
+      const methodNameTok = this.match(OmniscriptParser.IDENTIFIER);
+      const params = this.parseMethodParams();
+      const body = this.block();
+      methods.push({ type:'MethodDeclaration', name: methodNameTok.text, params, body, isAsync, decorators:mDecorators });
+    }
+    this.match(OmniscriptParser.RBRACE);
+    return { type:'ClassDeclaration', name: nameTok.text, methods, decorators, line: start.line, column: start.column };
+  }
+
+  private parseMethodParams(): any[] {
+    this.match(OmniscriptParser.LPAREN);
+    const params: any[] = [];
+    while (this._input.LA(1) === OmniscriptParser.IDENTIFIER) {
+      const p = this.match(OmniscriptParser.IDENTIFIER); params.push({ name: p.text });
+      if (this._input.LA(1) === OmniscriptParser.COMMA) { this.match(OmniscriptParser.COMMA); } else break;
+    }
+    this.match(OmniscriptParser.RPAREN);
+    return params;
   }
 
   private whileStatement(): WhileStatement {

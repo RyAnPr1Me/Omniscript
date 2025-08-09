@@ -83,6 +83,7 @@ export default class OmniscriptLexer extends Lexer {
         switch (kw) {
           case 'let':
           case 'const': return this.makeToken(OmniscriptParser.VAR, kw);
+          case 'match': return this.makeToken(OmniscriptParser.MATCH, kw);
           case 'return': return this.makeToken(OmniscriptParser.RETURN, kw);
           case 'if': return this.makeToken(OmniscriptParser.IF, kw);
           case 'else': return this.makeToken(OmniscriptParser.ELSE, kw);
@@ -105,6 +106,7 @@ export default class OmniscriptLexer extends Lexer {
 
       // Two/three-char operators
       if (C() === '?' && C2() === '?' && String.fromCharCode(la(3)) === '=') { consume(); consume(); consume(); return this.makeToken(OmniscriptParser.NULLISH_ASSIGN, '??='); }
+  if (C() === '=' && C2() === '>') { consume(); consume(); return this.makeToken(OmniscriptParser.ARROW, '=>'); }
       if (C() === '=' && C2() === '=') { consume(); consume(); return this.makeToken(OmniscriptParser.EQ, '=='); }
       if (C() === '!' && C2() === '=') { consume(); consume(); return this.makeToken(OmniscriptParser.NEQ, '!='); }
       if (C() === '<' && C2() === '=') { consume(); consume(); return this.makeToken(OmniscriptParser.LTE, '<='); }
