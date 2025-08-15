@@ -48,6 +48,19 @@ export class Runtime {
   private debugMode: boolean;
   private envStack: Array<Map<string, any>> = [];
 
+    // Add missing operator overloading example and addVectors for tests
+    public operatorOverloadingExample(): void {
+      console.log("Operator overloading example executed.");
+      const vector1 = { x: 1, y: 2 };
+      const vector2 = { x: 3, y: 4 };
+      const result = this.addVectors(vector1, vector2);
+      console.log("Result of vector addition:", result);
+    }
+
+    public addVectors(v1: { x: number, y: number }, v2: { x: number, y: number }): { x: number, y: number } {
+      return { x: v1.x + v2.x, y: v1.y + v2.y };
+    }
+
   constructor() {
     this.scope = new Map();
     this.referenceCounts = new Map();
