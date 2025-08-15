@@ -24,4 +24,40 @@ describe('Advanced functional features', () => {
     const result = await omni.execute(src);
     expect(result).toBe(42);
   });
+
+  test('higher-order function: passing function as argument', async () => {
+    const src = 'let apply = (f, x) => f(x); let double = (n) => n * 2; apply(double, 5)';
+    const result = await omni.execute(src);
+    expect(result).toBe(10);
+  });
+
+  test('lambda/arrow function usage', async () => {
+    const src = 'let add = (a, b) => a + b; add(3, 4)';
+    const result = await omni.execute(src);
+    expect(result).toBe(7);
+  });
+
+  test('chained method calls', async () => {
+    const src = 'class Chain { next(val) => val + 1 } let c = new Chain(); c.next(5)';
+    const result = await omni.execute(src);
+    expect(result).toBe(6);
+  });
+
+  test('class inheritance and method override', async () => {
+    const src = 'class Base { get() => 1 } class Derived extends Base { get() => 2 } let d = new Derived(); d.get()';
+    const result = await omni.execute(src);
+    expect(result).toBe(2);
+  });
+
+  test('error handling: try/catch/finally', async () => {
+    const src = 'try { throw 99 } catch e { e } finally { 0 }';
+    const result = await omni.execute(src);
+    expect(result).toBe(99);
+  });
+  
+  test('pattern match with no match falls to default', async () => {
+    const src = 'match 42 { 1 => 10, 2 => 20, _ => 99 }';
+    const result = await omni.execute(src);
+    expect(result).toBe(99);
+  });
 });

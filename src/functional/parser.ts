@@ -1,35 +1,158 @@
 import { lex, Token } from './lexer';
-import { Program, Expression, NumberLiteral, BooleanLiteral, Identifier, Lambda, Call, Let, IfExpr, Pipe, Binary, Match, MatchCase, ClassDecl, MethodDecl, NewInstance, PropAccess } from './ast';
-export class FunctionalParser {
-  private tokens: Token[] = []; private pos=0;
-  parse(src: string): Program { this.tokens = lex(src); this.pos=0; const body: Expression[]=[]; while(!this.peek('EOF')) { if (this.peek(';')) { this.consume(';'); continue; } body.push(this.expression()); if (this.peek(';')) this.consume(';'); } return { type:'Program', body }; }
-  private expression(): Expression { return this.pipe(); }
-  private pipe(): Expression { let expr = this.ifExpr(); while(this.peek('|>')) { this.consume('|>'); const rhs = this.ifExpr(); expr = { type:'Pipe', left: expr, right: rhs } as Pipe; } return expr; }
-  private ifExpr(): Expression { if (this.peek('IF')) { this.consume('IF'); const cond=this.expression(); this.consume('THEN'); const then=this.expression(); this.consume('ELSE'); const els=this.expression(); return { type:'If', cond, then, else: els } as IfExpr; } return this.matchExpr(); }
-  private matchExpr(): Expression { if (this.peek('MATCH')) { this.consume('MATCH'); const target = this.expression(); this.consume('{'); const cases: MatchCase[] = []; while(!this.peek('}')) { let pattern: any; if (this.peek('NUMBER')) { pattern = { type:'NumberLiteral', value: Number(this.consume('NUMBER').value) }; } else if (this.peek('IDENT')) { const nameTok = this.consume('IDENT'); if (nameTok.value === '_') pattern = { type:'Wildcard' }; else pattern = { type:'Identifier', name: nameTok.value }; } else { throw new Error('Invalid match pattern'); } this.consume('=>'); const value = this.expression(); if (this.peek(',')) this.consume(','); cases.push({ pattern, value }); } this.consume('}'); return { type:'Match', expr: target, cases } as Match; } return this.letExpr(); }
-  private letExpr(): Expression { if (this.peek('LET')) { this.consume('LET'); const name=this.consume('IDENT').value; this.consume('='); const value=this.expression(); if (this.peek('IN')) { this.consume('IN'); const body=this.expression(); return { type:'Let', name, value, body } as Let; } return { type:'Let', name, value } as Let; } return this.classDecl(); }
-  private classDecl(): Expression { if (this.peek('CLASS')) { this.consume('CLASS'); const name = this.consume('IDENT').value; this.consume('{'); const methods: MethodDecl[] = []; while(!this.peek('}')) { if (this.peek('OPERATOR')) { this.consume('OPERATOR'); // operator method
-        const opToken = this.consume(this.current().type); // expect + - * /
-        if (!['+','-','*','/'].includes(opToken.type)) throw new Error('Unsupported operator');
-        const opSymbol = opToken.type;
-        this.consume('('); const params: string[] = []; if(!this.peek(')')) { do { params.push(this.consume('IDENT').value); } while (this.consumeOptional(',')); } this.consume(')'); this.consume('=>'); const body = this.expression(); if (this.peek(',')) this.consume(','); methods.push({ type:'MethodDecl', name: opSymbol, params, body, isOperator: true, decorators: [] });
-      } else { // regular method name(params)=>expr
-        const mName = this.consume('IDENT').value; this.consume('('); const params: string[]=[]; if(!this.peek(')')) { do { params.push(this.consume('IDENT').value); } while (this.consumeOptional(',')); } this.consume(')'); this.consume('=>'); const body = this.expression(); if (this.peek(',')) this.consume(','); methods.push({ type:'MethodDecl', name: mName, params, body, decorators: [] }); }
-      }
-      this.consume('}'); return { type:'ClassDecl', name, methods, decorators: [] } as ClassDecl; }
-    return this.binary(); }
+import {
+  Program,
+  Expression,
+  NumberLiteral,
+  Match,
+  MatchCase,
+  IfExpr,
+  Let,
+  Pipe,
+  Binary,
+  Lambda,
+  ClassDecl,
+  MethodDecl
+} from './ast';
 
-  // Precedence: binary (+,-,*,/)
-  private binary(): Expression {
-    return this.additive();
+export class FunctionalParser {
+  private tokens: Token[] = [];
+  private pos = 0;
+
+  parse(src: string): Program {
+    this.tokens = lex(src);
+    this.pos = 0;
+    const body: Expression[] = [];
+    while (!this.peek('EOF')) {
+      // skip any leading semicolons
+      while (this.peek('SEMI')) this.consume('SEMI');
+      if (this.peek('EOF')) break;
+      body.push(this.expression());
+      // consume trailing semicolons
+      while (this.peek('SEMI')) this.consume('SEMI');
+    }
+    return { type: 'Program', body };
   }
+
+  // --- Helper token methods ---
+  private current(): Token { return this.tokens[this.pos] || { type: 'EOF', value: '' }; }
+  private peek(t: string): boolean { return this.current().type === t; }
+  private consume(t?: string): Token {
+    const cur = this.current();
+    if (t && cur.type !== t) throw new Error(`Expected ${t} got ${cur.type} at pos ${this.pos}`);
+    this.pos++;
+    return cur;
+  }
+  private consumeOptional(t: string): boolean { if (this.peek(t)) { this.pos++; return true; } return false; }
+
+  private expression(): Expression { return this.pipe(); }
+
+  private pipe(): Expression {
+    let expr = this.ifExpr();
+    while (this.peek('PIPE_ARROW')) {
+      this.consume('PIPE_ARROW');
+      const rhs = this.ifExpr();
+      expr = { type: 'Pipe', left: expr, right: rhs } as Pipe;
+    }
+    return expr;
+  }
+
+  private ifExpr(): Expression {
+    if (this.peek('IF')) {
+      this.consume('IF');
+      const cond = this.expression();
+      this.consume('THEN');
+      const then = this.expression();
+      this.consume('ELSE');
+      const els = this.expression();
+      return { type: 'If', cond, then, else: els } as IfExpr;
+    }
+    return this.matchExpr();
+  }
+
+  private matchExpr(): Expression {
+    if (this.peek('MATCH')) {
+      this.consume('MATCH');
+      const target = this.expression();
+      this.consume('LBRACE');
+      const cases: MatchCase[] = [];
+      while (!this.peek('RBRACE')) {
+        let pattern: any;
+        if (this.peek('NUMBER')) {
+          pattern = { type: 'NumberLiteral', value: Number(this.consume('NUMBER').value) } as NumberLiteral;
+        } else if (this.peek('IDENT')) {
+          const nameTok = this.consume('IDENT');
+          if (nameTok.value === '_') pattern = { type: 'Wildcard' };
+          else pattern = { type: 'Identifier', name: nameTok.value };
+        } else {
+          throw new Error('Invalid match pattern');
+        }
+        // allow ARROW or COLON as separators
+        if (this.peek('ARROW')) this.consume('ARROW'); else if (this.peek('COLON')) this.consume('COLON'); else throw new Error('Expected => or : in match arm');
+        const value = this.expression();
+        if (this.peek('COMMA')) this.consume('COMMA');
+        cases.push({ pattern, value } as MatchCase);
+      }
+      this.consume('RBRACE');
+      return { type: 'Match', expr: target, cases } as Match;
+    }
+    return this.letExpr();
+  }
+
+  private letExpr(): Expression {
+    if (this.peek('LET')) {
+      this.consume('LET');
+      const name = this.consume('IDENT').value;
+      this.consume('EQUAL');
+      const value = this.expression();
+      return { type: 'Let', name, value } as Let;
+    }
+    return this.classDecl();
+  }
+
+  private classDecl(): Expression {
+    if (this.peek('CLASS')) {
+      this.consume('CLASS');
+      const name = this.consume('IDENT').value;
+      this.consume('LBRACE');
+      const methods: MethodDecl[] = [];
+      while (!this.peek('RBRACE')) {
+        if (this.peek('OPERATOR')) {
+          this.consume('OPERATOR');
+          const opToken = this.consume(this.current().type);
+          const opSymbol = opToken.type;
+          this.consume('LPAREN');
+          const params: string[] = [];
+          if (!this.peek('RPAREN')) { do { params.push(this.consume('IDENT').value); } while (this.consumeOptional('COMMA')); }
+          this.consume('RPAREN');
+          if (this.peek('ARROW')) { this.consume('ARROW'); const body = this.expression(); methods.push({ type: 'MethodDecl', name: opSymbol, params, body, isOperator: true, decorators: [] }); }
+          else if (this.peek('LBRACE')) { this.consume('LBRACE'); const body = this.expression(); this.consume('RBRACE'); methods.push({ type: 'MethodDecl', name: opSymbol, params, body, isOperator: true, decorators: [] }); }
+          else throw new Error('Expected method body for operator');
+        } else {
+          const mName = this.consume('IDENT').value;
+          this.consume('LPAREN');
+          const params: string[] = [];
+          if (!this.peek('RPAREN')) { do { params.push(this.consume('IDENT').value); } while (this.consumeOptional('COMMA')); }
+          this.consume('RPAREN');
+          if (this.peek('ARROW')) { this.consume('ARROW'); const body = this.expression(); methods.push({ type: 'MethodDecl', name: mName, params, body, decorators: [] }); }
+          else if (this.peek('LBRACE')) { this.consume('LBRACE'); const body = this.expression(); this.consume('RBRACE'); methods.push({ type: 'MethodDecl', name: mName, params, body, decorators: [] }); }
+          else throw new Error('Expected method body');
+        }
+        if (this.peek('COMMA')) this.consume('COMMA');
+      }
+      this.consume('RBRACE');
+      return { type: 'ClassDecl', name, methods, decorators: [] } as ClassDecl;
+    }
+    return this.binary();
+  }
+
+  private binary(): Expression { return this.additive(); }
 
   private additive(): Expression {
     let expr = this.multiplicative();
     while (this.peek('+') || this.peek('-')) {
       const op = this.consume(this.current().type).value as ('+'|'-');
       const right = this.multiplicative();
-      expr = { type:'Binary', op, left: expr, right } as Binary;
+      expr = { type: 'Binary', op, left: expr, right } as Binary;
     }
     return expr;
   }
@@ -39,27 +162,68 @@ export class FunctionalParser {
     while (this.peek('*') || this.peek('/') || this.peek('%')) {
       const op = this.consume(this.current().type).value as ('*'|'/'|'%');
       const right = this.lambda();
-      expr = { type:'Binary', op, left: expr, right } as Binary;
+      expr = { type: 'Binary', op, left: expr, right } as Binary;
     }
     return expr;
   }
-  private lambda(): Expression { if (this.peek('FN')) { this.consume('FN'); this.consume('('); const params:string[]=[]; if(!this.peek(')')) { do { params.push(this.consume('IDENT').value); } while (this.consumeOptional(',')); } this.consume(')'); if (this.peek('=>')) { this.consume('=>'); const body=this.expression(); return { type:'Lambda', params, body } as Lambda; } if (this.peek('{')) { this.consume('{'); const body=this.expression(); this.consume('}'); return { type:'Lambda', params, body } as Lambda; } throw new Error('Expected => or { after lambda parameters'); } return this.call(); }
-  private call(): Expression { let expr=this.primary(); while(true) { if (this.peek('(')) { this.consume('('); const args: Expression[]=[]; if(!this.peek(')')) { do { args.push(this.expression()); } while (this.consumeOptional(',')); } this.consume(')'); expr = { type:'Call', callee: expr, args } as Call; continue; } if (this.peek('.')) { this.consume('.'); const name = this.consume('IDENT').value; expr = { type:'Prop', object: expr, name } as PropAccess; continue; } break; } return expr; }
-  private primary(): Expression { 
-    if (this.peek('NEW')) { 
-      this.consume('NEW'); 
-      const className = this.consume('IDENT').value; 
-      this.consume('('); const args: Expression[] = []; if (!this.peek(')')) { do { args.push(this.expression()); } while (this.consumeOptional(',')); } this.consume(')');
-      return { type:'New', className, args } as NewInstance; 
+
+  private lambda(): Expression {
+    if (this.peek('FN')) {
+      this.consume('FN');
+      this.consume('LPAREN');
+      const params: string[] = [];
+      if (!this.peek('RPAREN')) {
+        do {
+          const paramToken = this.consume('IDENT');
+          if (!paramToken || !paramToken.value) {
+            throw new Error(`Expected parameter name, got ${paramToken ? paramToken.type : 'null'}`);
+          }
+          params.push(paramToken.value);
+        } while (this.consumeOptional('COMMA'));
+      }
+      this.consume('RPAREN');
+      if (this.peek('ARROW')) {
+        this.consume('ARROW');
+        const body = this.expression();
+        return { type: 'Lambda', params, body } as Lambda;
+      }
+      if (this.peek('LBRACE')) {
+        this.consume('LBRACE');
+        const body = this.expression();
+        this.consume('RBRACE');
+        return { type: 'Lambda', params, body } as Lambda;
+      }
+      if (this.peek('EQUAL') || this.peek('EQUALS') || this.peek('EQUAL')) {
+        // some lexers use different tokens for '=', accept generically
+        this.consume(this.current().type);
+        const body = this.expression();
+        return { type: 'Lambda', params, body } as Lambda;
+      }
+      throw new Error(`Lambda parsing error: Expected '=>', '{', or '=' after parameters, got '${this.current().type}'`);
     }
-    if (this.peek('NUMBER')) { const v=Number(this.consume('NUMBER').value); return { type:'NumberLiteral', value:v } as NumberLiteral; } 
-    if (this.peek('TRUE')) { this.consume('TRUE'); return { type:'BooleanLiteral', value:true } as BooleanLiteral; } 
-    if (this.peek('FALSE')) { this.consume('FALSE'); return { type:'BooleanLiteral', value:false } as BooleanLiteral; } 
-    if (this.peek('IDENT')) { const name=this.consume('IDENT').value; return { type:'Identifier', name } as Identifier; } 
-    if (this.peek('(')) { this.consume('('); const e=this.expression(); this.consume(')'); return e; } 
-    throw new Error(`Unexpected token ${this.current().type}`); }
-  private current(): Token { return this.tokens[this.pos]; }
-  private peek(t: string) { return this.current().type === t; }
-  private consume(t: string) { if (!this.peek(t)) throw new Error(`Expected ${t} got ${this.current().type}`); return this.tokens[this.pos++]; }
-  private consumeOptional(t: string) { if (this.peek(t)) { this.pos++; return true; } return false; }
+    return this.call();
+  }
+
+  private call(): any {
+    let expr = this.primary();
+    while (true) {
+      if (this.peek('LPAREN')) {
+        this.consume('LPAREN'); const args:any[] = []; if (!this.peek('RPAREN')) { do { args.push(this.expression()); } while(this.consumeOptional('COMMA')); } this.consume('RPAREN'); expr = { type:'Call', callee: expr, args } as any; continue;
+      }
+      if (this.peek('DOT')) { this.consume('DOT'); const member = this.consume('IDENT').value; expr = { type:'Prop', object: expr, name: member } as any; continue; }
+      break;
+    }
+    return expr;
+  }
+
+  private primary(): any {
+    const t = this.current();
+    if (this.peek('NUMBER')) { this.consume('NUMBER'); return { type:'NumberLiteral', value: Number(t.value) }; }
+    if (this.peek('IDENT')) { this.consume('IDENT'); return { type:'Identifier', name: t.value }; }
+    if (this.peek('NEW')) { this.consume('NEW'); const cname = this.consume('IDENT').value; this.consume('LPAREN'); const args:any[] = []; if (!this.peek('RPAREN')) { do { args.push(this.expression()); } while(this.consumeOptional('COMMA')); } this.consume('RPAREN'); return { type:'New', className: cname, args } as any; }
+    if (this.peek('LPAREN')) { this.consume('LPAREN'); const e = this.expression(); this.consume('RPAREN'); return e; }
+    if (this.peek('LBRACE')) { this.consume('LBRACE'); const obj:any = {}; while(!this.peek('RBRACE')) { const k = this.consume('IDENT').value; this.consume('COLON'); const v = this.expression(); obj[k]=v; if (this.peek('COMMA')) this.consume('COMMA'); } this.consume('RBRACE'); return { type:'ObjectLiteral', properties: obj }; }
+    if (this.peek('LBRACKET')) { this.consume('LBRACKET'); const arr:any[] = []; while(!this.peek('RBRACKET')) { arr.push(this.expression()); if (this.peek('COMMA')) this.consume('COMMA'); } this.consume('RBRACKET'); return { type:'ArrayLiteral', elements: arr }; }
+    throw new Error(`Unexpected token ${this.current().type} at pos ${this.pos}`);
+  }
 }

@@ -1,10 +1,9 @@
-let DEBUG = false; // set true to enable verbose compiler diagnostics
+const DEBUG = false; // set true to enable verbose compiler diagnostics
 
 export class Compiler {
-  compile(ast: any) {
-  if (DEBUG) console.log("Starting JIT compilation with advanced language features...");
+  compile(ast: any): any {
+    if (DEBUG) console.log("Starting JIT compilation with advanced language features...");
     const bytecode = this.visitNode(ast);
-  // (Removed mock optimization passes)
     return bytecode;
   }
 
@@ -38,15 +37,17 @@ export class Compiler {
         return this.visitIntersectionType(node);
       case 'Macro':
         return this.visitMacro(node);
-      default:
-        throw new Error(`Unknown node type: ${node.type}`);
+      default: {
+        const n = node as { type?: string };
+        throw new Error(`Unknown node type: ${n.type}`);
+      }
     }
   }
 
   private visitProgram(node: any): any {
     return {
       type: 'Block',
-      body: node.body.map((stmt: any) => this.visitNode(stmt))
+      body: (node.body || []).map((stmt: any) => this.visitNode(stmt))
     };
   }
 
@@ -125,12 +126,12 @@ export class Compiler {
   private visitIntersectionType(node: any): any {
     return {
       type: 'IntersectionType',
-      types: node.types.map((type: any) => this.visitNode(type))
+      types: (node.types || []).map((type: any) => this.visitNode(type))
     };
   }
 
   private visitMacro(node: any): any {
-  if (DEBUG) console.log("Expanding macro:", node.name);
+    if (DEBUG) console.log("Expanding macro:", node.name);
     return this.expandMacro(node);
   }
 

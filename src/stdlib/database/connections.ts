@@ -1,11 +1,11 @@
 /* Optional database drivers loaded dynamically to avoid hard dependency failures. */
-let SqliteMod: any; // runtime-loaded sqlite3
-let PgPool: any;    // runtime-loaded pg Pool
-try { SqliteMod = require('sqlite3'); } catch { /* ignore */ }
-try { ({ Pool: PgPool } = require('pg')); } catch { /* ignore */ }
+let SqliteMod: { Database: new (path: string, cb: (err: Error | null) => void) => unknown } | undefined; // runtime-loaded sqlite3
+let PgPool: { new (config: { connectionString: string }): { end?: () => Promise<void> } } | undefined;    // runtime-loaded pg Pool
+// try { SqliteMod = require('sqlite3'); } catch { /* ignore */ }
+// try { ({ Pool: PgPool } = require('pg')); } catch { /* ignore */ }
 
 export class SQLiteConnection {
-  private db?: any;
+  private db?: { close: (cb: (err: Error | null) => void) => void };
 
   constructor(connectionString: string) {
     if (!connectionString.startsWith('sqlite://')) {
@@ -17,7 +17,7 @@ export class SQLiteConnection {
     const path = connectionString.replace('sqlite://', '');
     this.db = new SqliteMod.Database(path, (err: Error | null) => {
       if (err) console.error('Failed to open SQLite database:', err);
-    });
+    }) as { close: (cb: (err: Error | null) => void) => void };
   }
 
   close(): Promise<void> {
@@ -29,7 +29,7 @@ export class SQLiteConnection {
 }
 
 export class PostgresConnection {
-  private pool?: any;
+  private pool?: { end?: () => Promise<void> };
 
   constructor(connectionString: string) {
     if (!PgPool) {

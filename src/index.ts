@@ -19,7 +19,7 @@ export class Omniscript {
     try {
       const ast = this.parser.parse(source);
       const bytecode = this.compiler.compile(ast);
-      return this.runtime.execute(bytecode);
+      return this.runtime.execute(bytecode as any);
     } catch (err) {
       const fparser = new FunctionalParser();
       const prog = fparser.parse(source);
