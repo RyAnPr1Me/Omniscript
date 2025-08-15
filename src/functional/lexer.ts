@@ -1,5 +1,5 @@
 export interface Token { type: string; value: string }
-const KEYWORDS = new Set(['let','in','fn','true','false','if','then','else','match','class','operator','new']);
+const KEYWORDS = new Set(['let','in','fn','true','false','if','then','else','match','class','operator','new','extends','try','catch','finally','return','throw']);
 export function lex(input: string): Token[] {
   const tokens: Token[] = []; let i=0;
   const isAlpha = (c: string)=>/[A-Za-z_]/.test(c); const isNum=(c:string)=>/[0-9]/.test(c);

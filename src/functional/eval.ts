@@ -1,8 +1,10 @@
 import { Program, Expression, NumberLiteral, BooleanLiteral, Identifier, Lambda, Call, Let, IfExpr, Pipe, Binary, Match, ClassDecl, MethodDecl, NewInstance, PropAccess, createEnv, Env, envDefine, envLookup, LambdaValue, isLambdaValue } from './ast';
 
 export function evaluate(program: Program): any {
-	const globalEnv = createEnv();
-	installBuiltins(globalEnv);
+	// Put builtins in a parent environment so user code can shadow them with 'let'
+	const builtinsEnv = createEnv();
+	installBuiltins(builtinsEnv);
+	const globalEnv = createEnv(builtinsEnv);
 	let last: any;
 	for (const expr of program.body) last = evalExpr(expr, globalEnv);
 	return last;
@@ -154,10 +156,20 @@ function evalExpr(expr: Expression, env: Env): any {
 			// Bind methods as lambdas capturing self
 			Object.keys(cls.methods).forEach(k => {
 				const methodDef = cls.methods[k];
-				const lv: LambdaValue = { __tag: 'lambda', params: methodDef.params, body: methodDef.body, closure: createEnv(env) };
-				(lv as any).__boundSelf = instance;
-				instance[k] = lv;
-			});
+				if (typeof methodDef === 'function') {
+				  instance[k] = methodDef.bind(instance);
+				} else if (methodDef && methodDef.__tag === 'lambda') {
+				  // already a LambdaValue; bind self by wrapping
+				  const lv: LambdaValue = { __tag: 'lambda', params: methodDef.params, body: methodDef.body, closure: createEnv(env) };
+				  (lv as any).__boundSelf = instance;
+				  instance[k] = lv;
+				} else {
+				  // assume methodDef is AST-like { params, body }
+				  const lv: LambdaValue = { __tag: 'lambda', params: methodDef.params || [], body: methodDef.body, closure: createEnv(env) };
+				  (lv as any).__boundSelf = instance;
+				  instance[k] = lv;
+				}
+             });
 			return instance;
 		}
 	}
@@ -184,11 +196,26 @@ function installBuiltins(env: Env) {
 
 function invoke1(fn: LambdaValue, a: any) {
 	if ((fn as any).__native) return (fn as any).__native(a);
+	if ((fn as any).__boundSelf) {
+      const boundSelf = (fn as any).__boundSelf;
+      const env = createEnv(fn.closure);
+      envDefine(env, 'self', boundSelf);
+      if (fn.params.length !== 1) throw new Error('Arity mismatch');
+      envDefine(env, fn.params[0], a);
+      return evalExpr(fn.body, env);
+    }
 	if (fn.params.length !== 1) throw new Error('Arity mismatch');
 	const env = createEnv(fn.closure); envDefine(env, fn.params[0], a); return evalExpr(fn.body, env);
 }
 function invoke2(fn: LambdaValue, a: any, b: any) {
 	if ((fn as any).__native) return (fn as any).__native(a, b);
+	if ((fn as any).__boundSelf) {
+      const boundSelf = (fn as any).__boundSelf;
+      const env = createEnv(fn.closure);
+      envDefine(env, 'self', boundSelf);
+      if (fn.params.length !== 2) throw new Error('Arity mismatch');
+      envDefine(env, fn.params[0], a); envDefine(env, fn.params[1], b); return evalExpr(fn.body, env);
+    }
 	if (fn.params.length !== 2) throw new Error('Arity mismatch');
 	const env = createEnv(fn.closure); envDefine(env, fn.params[0], a); envDefine(env, fn.params[1], b); return evalExpr(fn.body, env);
 }

@@ -113,6 +113,9 @@ export class FunctionalParser {
     if (this.peek('CLASS')) {
       this.consume('CLASS');
       const name = this.consume('IDENT').value;
+      // optional inheritance
+      let parent: string | undefined;
+      if (this.peek('EXTENDS')) { this.consume('EXTENDS'); parent = this.consume('IDENT').value; }
       this.consume('LBRACE');
       const methods: MethodDecl[] = [];
       while (!this.peek('RBRACE')) {
@@ -140,7 +143,7 @@ export class FunctionalParser {
         if (this.peek('COMMA')) this.consume('COMMA');
       }
       this.consume('RBRACE');
-      return { type: 'ClassDecl', name, methods, decorators: [] } as ClassDecl;
+      return { type: 'ClassDecl', name, methods, decorators: [], parent } as ClassDecl;
     }
     return this.binary();
   }
@@ -182,24 +185,45 @@ export class FunctionalParser {
         } while (this.consumeOptional('COMMA'));
       }
       this.consume('RPAREN');
+      let lambdaNode: Expression;
       if (this.peek('ARROW')) {
         this.consume('ARROW');
         const body = this.expression();
-        return { type: 'Lambda', params, body } as Lambda;
-      }
-      if (this.peek('LBRACE')) {
+        lambdaNode = { type: 'Lambda', params, body } as Lambda;
+      } else if (this.peek('LBRACE')) {
         this.consume('LBRACE');
         const body = this.expression();
         this.consume('RBRACE');
-        return { type: 'Lambda', params, body } as Lambda;
-      }
-      if (this.peek('EQUAL') || this.peek('EQUALS') || this.peek('EQUAL')) {
-        // some lexers use different tokens for '=', accept generically
+        lambdaNode = { type: 'Lambda', params, body } as Lambda;
+      } else if (this.peek('EQUAL') || this.peek('EQUALS') || this.peek('EQUAL')) {
         this.consume(this.current().type);
         const body = this.expression();
-        return { type: 'Lambda', params, body } as Lambda;
+        lambdaNode = { type: 'Lambda', params, body } as Lambda;
+      } else {
+        throw new Error(`Lambda parsing error: Expected '=>', '{', or '=' after parameters, got '${this.current().type}'`);
       }
-      throw new Error(`Lambda parsing error: Expected '=>', '{', or '=' after parameters, got '${this.current().type}'`);
+      // allow immediate invocation or member access on the lambda: fn(x)=>... (5) or fn(x)=>....member
+      let expr: any = lambdaNode;
+      while (true) {
+        if (this.peek('LPAREN')) {
+          this.consume('LPAREN');
+          const args:any[] = [];
+          if (!this.peek('RPAREN')) {
+            do { args.push(this.expression()); } while (this.consumeOptional('COMMA'));
+          }
+          this.consume('RPAREN');
+          expr = { type:'Call', callee: expr, args } as any;
+          continue;
+        }
+        if (this.peek('DOT')) {
+          this.consume('DOT');
+          const member = this.consume('IDENT').value;
+          expr = { type:'Prop', object: expr, name: member } as any;
+          continue;
+        }
+        break;
+      }
+      return expr;
     }
     return this.call();
   }

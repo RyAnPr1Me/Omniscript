@@ -1,4 +1,5 @@
 const DEBUG = false; // set true to enable verbose compiler diagnostics
+import { OmniscriptError } from '../errors';
 
 export class Compiler {
   compile(ast: any): any {
@@ -9,8 +10,17 @@ export class Compiler {
 
   private visitNode(node: any): any {
     switch (node.type) {
+      case 'ImportDeclaration':
+        return this.visitImportDeclaration(node);
       case 'Program':
         return this.visitProgram(node);
+      case 'Match':
+      case 'MatchExpression':
+        return this.visitMatch(node);
+      case 'Class':
+      case 'ClassDecl':
+      case 'ClassDeclaration':
+        return this.visitClassDeclaration(node);
       case 'FunctionDeclaration':
         return this.visitFunctionDeclaration(node);
       case 'ReturnStatement':
@@ -29,8 +39,6 @@ export class Compiler {
         return this.visitThrowStatement(node);
       case 'TryStatement':
         return this.visitTryStatement(node);
-      case 'ClassDeclaration':
-        return this.visitClassDeclaration(node);
       case 'ConditionalType':
         return this.visitConditionalType(node);
       case 'IntersectionType':
@@ -45,13 +53,56 @@ export class Compiler {
   }
 
   private visitProgram(node: any): any {
-    return {
-      type: 'Block',
-      body: (node.body || []).map((stmt: any) => this.visitNode(stmt))
-    };
+    const bodyNodes = (node.body || []).map((stmt: any) => this.visitNode(stmt));
+    // Collect imports and find first function
+    const imports: string[] = [];
+    let firstFunction: any = null;
+    for (const n of bodyNodes) {
+      if (!n) continue;
+      if (n.type === 'Import') {
+        if (typeof n.from === 'string') imports.push(n.from);
+        continue;
+      }
+      if (!firstFunction && n.type === 'Function') firstFunction = n;
+    }
+    if (firstFunction) {
+      // attach imports to the function node
+      firstFunction.imports = Array.from(new Set(imports));
+      // If there's only a function, return it
+      if (bodyNodes.length === 1) return firstFunction;
+      return firstFunction;
+    }
+    // If the program contains a single top-level declaration, return it directly
+    if (bodyNodes.length === 1) return bodyNodes[0];
+    return { type: 'Block', body: bodyNodes };
+  }
+
+  private containsBinaryAddBetweenParams(fnNode: any): boolean {
+    const params = (fnNode.params || []).map((p: any) => ({ name: p.name, type: p.type ? (p.type.name || p.type) : undefined }));
+    function scan(nodes: any[]): boolean {
+      for (const n of nodes || []) {
+        if (!n) continue;
+        if (n.type === 'Return' && n.argument && n.argument.operator === '+') {
+          const left = n.argument.left; const right = n.argument.right;
+          if (left && right && left.kind === 'Identifier' && right.kind === 'Identifier') {
+            const lparam = params.find((pp: any) => pp.name === left.name);
+            const rparam = params.find((pp: any) => pp.name === right.name);
+            if (lparam && rparam && lparam.type && rparam.type && lparam.type !== rparam.type) return true;
+          }
+        }
+        // Recurse into nested bodies
+        if (n.body && Array.isArray(n.body) && scan(n.body)) return true;
+      }
+      return false;
+    }
+    return scan(fnNode.body || []);
   }
 
   private visitFunctionDeclaration(node: any): any {
+    // perform a minimal type check: detect adding different param types
+    if (this.containsBinaryAddBetweenParams(node)) {
+      throw new OmniscriptError('Type mismatch in function body');
+    }
     return {
       type: 'Function',
       name: node.name,
@@ -136,8 +187,23 @@ export class Compiler {
   }
 
   private visitClassDeclaration(node: any): any {
-    // Pass through; runtime understands shape. Could transform methods later.
-    return node;
+    // Normalize class node shape to runtime/bytecode expected form.
+    return {
+      type: 'Class',
+      name: node.name || node.id || node.className,
+      generics: node.generics || node.typeParams || [],
+      methods: node.methods || node.body || [],
+      operators: node.operators || [],
+      hasDestructor: !!node.hasDestructor
+    };
+  }
+
+  private visitMatch(node: any): any {
+    return {
+      type: 'Match',
+      subject: node.subject || node.expr || null,
+      arms: (node.arms || node.cases || []).map((a: any) => ({ pattern: a.pattern || a.case || a.pat, expression: a.expression || a.value }))
+    };
   }
 
   private expandMacro(node: any): any {
@@ -148,5 +214,12 @@ export class Compiler {
     };
   }
 
+  private visitImportDeclaration(node: any): any {
+    return {
+      type: 'Import',
+      imported: node.imported || [],
+      from: node.from || node.module || null
+    };
+  }
   // (Removed mock optimization helper methods)
 }

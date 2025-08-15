@@ -146,6 +146,24 @@ export class Parser {
       body.push({ type: 'MatchExpression', subject: { type: 'Expression', kind: ExpressionKind.Identifier, name: subjectName }, arms });
     }
 
+    // simple let/variable declarations: let x: Type = value;
+    const letRe = /let\s+([A-Za-z_]\w*)(?:\s*:\s*([A-ZaZ_]\w*))?\s*=\s*([^;\n]+)/g;
+    while ((m = letRe.exec(source)) !== null) {
+      const name = m[1];
+      const typeName = m[2] ? m[2] : undefined;
+      const val = m[3].trim();
+      const initializer = val.match(/^\d+$/) ? { type: 'Expression', kind: ExpressionKind.Literal, value: Number(val) } : { type: 'Expression', kind: ExpressionKind.Identifier, name: val };
+      body.push({ type: 'VariableDeclaration', name, varType: typeName, initializer });
+    }
+
+    // simple import statements: import { A } from 'module';
+    const importRe = /import\s+\{([^}]+)\}\s+from\s+['"]([^'"]+)['"]/g;
+    while ((m = importRe.exec(source)) !== null) {
+      const imported = m[1].split(',').map(s => s.trim());
+      const from = m[2];
+      body.push({ type: 'ImportDeclaration', imported, from });
+    }
+
     if (body.length > 0) return { type: 'Program', body };
     throw new Error('Fallback parser could not parse input');
   }

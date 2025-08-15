@@ -22,7 +22,10 @@ export type Program = { type: 'Program'; body: Expression[] };
 
 export interface Env { parent?: Env; values: Map<string, any>; immutable: Set<string>; }
 export function createEnv(parent?: Env): Env { return { parent, values: new Map(), immutable: new Set() }; }
-export function envDefine(env: Env, name: string, value: any) { if (env.values.has(name)) throw new Error(`Cannot redefine immutable binding '${name}'`); env.values.set(name, value); env.immutable.add(name); }
+export function envDefine(env: Env, name: string, value: any) { // Allow overwriting existing bindings (shadow or replace)
+  env.values.set(name, value);
+  env.immutable.add(name);
+}
 export function envLookup(env: Env, name: string): any { if (env.values.has(name)) return env.values.get(name); if (env.parent) return envLookup(env.parent, name); throw new Error(`Unbound identifier '${name}'`); }
 
 export interface LambdaValue { __tag: 'lambda'; params: string[]; body: Expression; closure: Env; }

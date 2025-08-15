@@ -21,9 +21,17 @@ export class Omniscript {
       const bytecode = this.compiler.compile(ast);
       return this.runtime.execute(bytecode as any);
     } catch (err) {
-      const fparser = new FunctionalParser();
-      const prog = fparser.parse(source);
-      return evalFunctional(prog);
+      // Preprocess: wrap immediately-invoked lambdas `fn(...)=>... (args)` -> `(fn(...)=>...)(args)`
+      try {
+        let src = source;
+        src = src.replace(/(fn\s*\([^)]*\)\s*=>\s*[^;\n()]+?)\s*\(([^)]*)\)/g, '($1)($2)');
+        const fparser = new FunctionalParser();
+        const prog = fparser.parse(src);
+        return evalFunctional(prog);
+      } catch (e) {
+        // If functional fallback also fails, rethrow original error
+        throw err;
+      }
     }
   }
 }
