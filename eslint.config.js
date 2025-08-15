@@ -1,7 +1,7 @@
 // eslint.config.js
 import js from '@eslint/js'; // ESLint's core recommended rules
 import tseslint from 'typescript-eslint'; // Recommended rules for TypeScript
-import prettierConfig from 'eslint-config-prettier/flat'; // Disables rules conflicting with Prettier
+import prettierConfig from 'eslint-config-prettier'; // Disables rules conflicting with Prettier
 
 export default [
   // Apply ESLint's recommended rules

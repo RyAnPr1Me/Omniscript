@@ -36,8 +36,8 @@ export class FunctionalParser {
 
   private multiplicative(): Expression {
     let expr = this.lambda();
-    while (this.peek('*') || this.peek('/')) {
-      const op = this.consume(this.current().type).value as ('*'|'/');
+    while (this.peek('*') || this.peek('/') || this.peek('%')) {
+      const op = this.consume(this.current().type).value as ('*'|'/'|'%');
       const right = this.lambda();
       expr = { type:'Binary', op, left: expr, right } as Binary;
     }
