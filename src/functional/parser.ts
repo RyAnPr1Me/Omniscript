@@ -204,6 +204,7 @@ export class FunctionalParser {
       }
       // allow immediate invocation or member access on the lambda: fn(x)=>... (5) or fn(x)=>....member
       let expr: any = lambdaNode;
+      // eslint-disable-next-line no-constant-condition
       while (true) {
         if (this.peek('LPAREN')) {
           this.consume('LPAREN');
@@ -230,6 +231,7 @@ export class FunctionalParser {
 
   private call(): any {
     let expr = this.primary();
+    // eslint-disable-next-line no-constant-condition
     while (true) {
       if (this.peek('LPAREN')) {
         this.consume('LPAREN'); const args:any[] = []; if (!this.peek('RPAREN')) { do { args.push(this.expression()); } while(this.consumeOptional('COMMA')); } this.consume('RPAREN'); expr = { type:'Call', callee: expr, args } as any; continue;

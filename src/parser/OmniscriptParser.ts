@@ -962,7 +962,7 @@ export default class OmniscriptParser extends Parser {
     const methods: any[] = [];
     while (this._input.LA(1) !== OmniscriptParser.RBRACE && this._input.LA(1) !== OmniscriptParser.EOF) {
       // operator method: identifier 'operator' SYMBOL
-      let mDecorators: any[] = [];
+      const mDecorators: any[] = [];
       while (this._input.LA(1) === OmniscriptParser.AT) mDecorators.push(this.decorator());
       let isAsync = false;
       if (this._input.LA(1) === OmniscriptParser.ASYNC) { this.match(OmniscriptParser.ASYNC); isAsync = true; }

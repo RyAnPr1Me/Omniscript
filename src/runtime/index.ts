@@ -578,7 +578,7 @@ export class Runtime {
     
     for (const matchCase of cases) {
       let matched = false;
-      let bindings: Record<string, any> = {};
+      const bindings: Record<string, any> = {};
       
       // Check if pattern matches
       if (matchCase.pattern.type === 'Wildcard') {

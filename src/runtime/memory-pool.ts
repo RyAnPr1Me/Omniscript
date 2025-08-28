@@ -68,7 +68,7 @@ export class MemoryPool<T = any> {
     } else if (typeof object === 'object' && object !== null && object.constructor === Object) {
       // Only clear properties for plain objects, not instances of custom classes
       for (const key in object) {
-        if (object.hasOwnProperty(key)) {
+        if (Object.prototype.hasOwnProperty.call(object, key)) {
           delete (object as any)[key];
         }
       }

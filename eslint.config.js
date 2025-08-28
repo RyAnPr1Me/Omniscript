@@ -16,6 +16,13 @@ module.exports = [
 
   // Optional: Add specific overrides or additional settings in a separate object
   {
+    files: ['**/*.ts', '**/*.tsx', '**/*.js'],
+    ignores: [
+      'demo.js',
+      'dist/**/*',
+      'node_modules/**/*',
+      '**/*.d.ts',
+    ],
     // Define the parser for your TypeScript files
     languageOptions: {
       parser: tseslint.parser, // Use the TypeScript parser provided by typescript-eslint
@@ -29,8 +36,11 @@ module.exports = [
     rules: {
       'no-console': 'warn',
       'no-debugger': 'warn',
+      '@typescript-eslint/no-explicit-any': 'off', // Allow 'any' type for flexibility during development
+      '@typescript-eslint/no-unused-vars': 'warn',
+      '@typescript-eslint/no-require-imports': 'off', // Allow require for demo files
+      'no-undef': 'off', // TypeScript handles this better
       // Add any other custom rules here
-      // Example: '@typescript-eslint/no-explicit-any': 'warn',
     },
   },
 ];
