@@ -62,7 +62,7 @@ export class ConstantFoldingPass implements OptimizationPass {
     if (typeof node === 'object') {
       const result: any = { ...node };
       for (const key in node) {
-        if (node.hasOwnProperty(key) && typeof node[key] === 'object') {
+        if (Object.prototype.hasOwnProperty.call(node, key) && typeof node[key] === 'object') {
           result[key] = this.foldConstants(node[key]);
         }
       }
@@ -114,7 +114,7 @@ export class DeadCodeEliminationPass implements OptimizationPass {
     if (typeof node === 'object') {
       const result: any = { ...node };
       for (const key in node) {
-        if (node.hasOwnProperty(key) && typeof node[key] === 'object') {
+        if (Object.prototype.hasOwnProperty.call(node, key) && typeof node[key] === 'object') {
           result[key] = this.eliminateDeadCode(node[key]);
         }
       }
@@ -163,7 +163,7 @@ export class InliningPass implements OptimizationPass {
     if (typeof node === 'object') {
       const result: any = { ...node };
       for (const key in node) {
-        if (node.hasOwnProperty(key) && typeof node[key] === 'object') {
+        if (Object.prototype.hasOwnProperty.call(node, key) && typeof node[key] === 'object') {
           result[key] = this.performInlining(node[key]);
         }
       }

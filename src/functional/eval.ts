@@ -1,4 +1,4 @@
-import { Program, Expression, NumberLiteral, BooleanLiteral, Identifier, Lambda, Call, Let, IfExpr, Pipe, Binary, Match, ClassDecl, MethodDecl, NewInstance, PropAccess, createEnv, Env, envDefine, envLookup, LambdaValue, isLambdaValue } from './ast';
+import { Program, Expression, NumberLiteral, StringLiteral, BooleanLiteral, Identifier, Lambda, Call, Let, IfExpr, Pipe, Binary, Match, ClassDecl, MethodDecl, NewInstance, PropAccess, AwaitExpr, createEnv, Env, envDefine, envLookup, LambdaValue, isLambdaValue } from './ast';
 
 export function evaluate(program: Program): any {
 	// Put builtins in a parent environment so user code can shadow them with 'let'
@@ -13,6 +13,7 @@ export function evaluate(program: Program): any {
 function evalExpr(expr: Expression, env: Env): any {
 	switch (expr.type) {
 		case 'NumberLiteral': return (expr as NumberLiteral).value;
+		case 'StringLiteral': return (expr as StringLiteral).value;
 		case 'BooleanLiteral': return (expr as BooleanLiteral).value;
 		case 'Identifier': return envLookup(env, (expr as Identifier).name);
 		case 'Prop': {
@@ -43,8 +44,25 @@ function evalExpr(expr: Expression, env: Env): any {
 					case '-': return left - right;
 					case '*': return left * right;
 					case '/': return left / right;
+					case '%': return left % right;
+					case '>': return left > right;
+					case '<': return left < right;
+					case '>=': return left >= right;
+					case '<=': return left <= right;
+					case '==': return left == right;
+					case '!=': return left != right;
+					default: throw new Error(`Unknown binary operator: ${b.op}`);
 				}
 			}
+		case 'Await': {
+			const a = expr as AwaitExpr;
+			const promise = evalExpr(a.expr, env);
+			// For simplicity, if it's a promise, await it; otherwise return the value
+			if (promise && typeof promise.then === 'function') {
+				return promise;
+			}
+			return promise;
+		}
 		case 'Call': {
 			const c = expr as Call;
 			const calleeVal = evalExpr(c.callee, env);
@@ -130,7 +148,18 @@ function evalExpr(expr: Expression, env: Env): any {
 				let caseEnv = env;
 				if (pat.type === 'Wildcard') ok = true;
 				else if (pat.type === 'NumberLiteral') ok = pat.value === value;
-				else if (pat.type === 'Identifier') { ok = true; caseEnv = createEnv(env); envDefine(caseEnv, pat.name, value); }
+				else if (pat.type === 'StringLiteral') ok = pat.value === value;
+				else if (pat.type === 'Identifier') { 
+					ok = true; 
+					caseEnv = createEnv(env); 
+					envDefine(caseEnv, pat.name, value); 
+				}
+				
+				// Check guard condition if present
+				if (ok && c.guard) {
+					ok = evalExpr(c.guard, caseEnv);
+				}
+				
 				if (ok) return evalExpr(c.value, caseEnv);
 			}
 			throw new Error('Non-exhaustive match');
@@ -162,8 +191,19 @@ function evalExpr(expr: Expression, env: Env): any {
 			const ni = expr as NewInstance;
 			const cls: any = envLookup(env, ni.className);
 			const instance: any = { __class: cls };
-			// Simple constructor: first arg becomes 'value'
-			if (ni.args && ni.args.length>0) instance.value = evalExpr(ni.args[0], env);
+			// Simple constructor: set properties based on arguments
+			if (ni.args && ni.args.length > 0) {
+				if (ni.args.length === 1) {
+					// Single argument becomes 'value'
+					instance.value = evalExpr(ni.args[0], env);
+				} else {
+					// Multiple arguments become x, y, z, etc.
+					const props = ['x', 'y', 'z', 'w'];
+					for (let i = 0; i < ni.args.length && i < props.length; i++) {
+						instance[props[i]] = evalExpr(ni.args[i], env);
+					}
+				}
+			}
 			// Bind methods as lambdas capturing self
 			Object.keys(cls.methods).forEach(k => {
 				const methodDef = cls.methods[k];

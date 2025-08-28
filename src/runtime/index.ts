@@ -424,8 +424,8 @@ export class Runtime {
   }
 
   // New: Create an actor from a function handling messages and state
-  createActor<TState>(actorFn: (message: any, state: TState) => TState | Promise<TState>, initialState: TState): Actor<TState> {
-    return new Actor(actorFn, initialState);
+  createActor<TState>(actorFn: (message: any, state: TState) => TState | Promise<TState>, initialState: TState, name?: string): Actor<TState> {
+    return new Actor(actorFn, initialState, name);
   }
 
   // New: Schedule a coroutine (async task) with enhanced logging support.
@@ -578,7 +578,7 @@ export class Runtime {
     
     for (const matchCase of cases) {
       let matched = false;
-      let bindings: Record<string, any> = {};
+      const bindings: Record<string, any> = {};
       
       // Check if pattern matches
       if (matchCase.pattern.type === 'Wildcard') {
@@ -749,22 +749,106 @@ export class Runtime {
 export class Actor<TState> {
   private mailbox: unknown[] = [];
   private busy = false;
+  private stopped = false;
+  private supervisors: Actor<any>[] = [];
+  private children: Set<Actor<any>> = new Set();
+  private errorHandler?: (error: Error, message: unknown, state: TState) => TState | Promise<TState>;
 
-  constructor(private actorFn: (message: unknown, state: TState) => TState | Promise<TState>, private state: TState) {}
+  constructor(
+    private actorFn: (message: unknown, state: TState) => TState | Promise<TState>, 
+    private state: TState,
+    private name?: string
+  ) {}
 
   send(message: unknown): void {
+    if (this.stopped) return;
     this.mailbox.push(message);
     this.schedule();
   }
 
-  private async schedule(): Promise<void> {
-    if (this.busy) return;
-    this.busy = true;
-    while (this.mailbox.length > 0) {
-      const msg = this.mailbox.shift();
-      this.state = await this.actorFn(msg, this.state);
-    }
+  // Supervision: add supervisor actor
+  supervise(supervisor: Actor<any>): void {
+    this.supervisors.push(supervisor);
+  }
+
+  // Supervision: add child actor
+  spawn<ChildState>(
+    childActorFn: (message: unknown, state: ChildState) => ChildState | Promise<ChildState>,
+    initialState: ChildState,
+    name?: string
+  ): Actor<ChildState> {
+    const child = new Actor(childActorFn, initialState, name);
+    child.supervise(this);
+    this.children.add(child);
+    return child;
+  }
+
+  // Error handling
+  onError(handler: (error: Error, message: unknown, state: TState) => TState | Promise<TState>): void {
+    this.errorHandler = handler;
+  }
+
+  // Lifecycle management
+  stop(): void {
+    this.stopped = true;
+    this.children.forEach(child => child.stop());
+    this.children.clear();
+  }
+
+  restart(): void {
+    this.stopped = false;
+    this.mailbox = [];
     this.busy = false;
+  }
+
+  getState(): TState {
+    return this.state;
+  }
+
+  getName(): string | undefined {
+    return this.name;
+  }
+
+  getMailboxSize(): number {
+    return this.mailbox.length;
+  }
+
+  private async schedule(): Promise<void> {
+    if (this.busy || this.stopped) return;
+    this.busy = true;
+    
+    while (this.mailbox.length > 0 && !this.stopped) {
+      const msg = this.mailbox.shift();
+      try {
+        this.state = await this.actorFn(msg, this.state);
+      } catch (error) {
+        if (this.errorHandler) {
+          try {
+            this.state = await this.errorHandler(error as Error, msg, this.state);
+          } catch (handlerError) {
+            // Escalate to supervisors
+            this.escalateError(handlerError as Error, msg);
+          }
+        } else {
+          // Escalate to supervisors
+          this.escalateError(error as Error, msg);
+        }
+      }
+    }
+    
+    this.busy = false;
+  }
+
+  private escalateError(error: Error, message: unknown): void {
+    this.supervisors.forEach(supervisor => {
+      supervisor.send({
+        type: 'child_error',
+        child: this,
+        error,
+        message,
+        timestamp: Date.now()
+      });
+    });
   }
 }
 

@@ -3,6 +3,7 @@ import {
   Program,
   Expression,
   NumberLiteral,
+  StringLiteral,
   Match,
   MatchCase,
   IfExpr,
@@ -86,11 +87,19 @@ export class FunctionalParser {
         } else {
           throw new Error('Invalid match pattern');
         }
+        
+        // Check for guard: pattern if condition
+        let guard: Expression | undefined;
+        if (this.peek('IF')) {
+          this.consume('IF');
+          guard = this.expression();
+        }
+        
         // allow ARROW or COLON as separators
         if (this.peek('ARROW')) this.consume('ARROW'); else if (this.peek('COLON')) this.consume('COLON'); else throw new Error('Expected => or : in match arm');
         const value = this.expression();
         if (this.peek('COMMA')) this.consume('COMMA');
-        cases.push({ pattern, value } as MatchCase);
+        cases.push({ pattern, guard, value } as MatchCase);
       }
       this.consume('RBRACE');
       return { type: 'Match', expr: target, cases } as Match;
@@ -148,7 +157,17 @@ export class FunctionalParser {
     return this.binary();
   }
 
-  private binary(): Expression { return this.additive(); }
+  private binary(): Expression { return this.comparison(); }
+
+  private comparison(): Expression {
+    let expr = this.additive();
+    while (this.peek('>') || this.peek('<') || this.peek('>=') || this.peek('<=') || this.peek('==') || this.peek('!=')) {
+      const op = this.consume(this.current().type).value as ('>'|'<'|'>='|'<='|'=='|'!=');
+      const right = this.additive();
+      expr = { type: 'Binary', op, left: expr, right } as Binary;
+    }
+    return expr;
+  }
 
   private additive(): Expression {
     let expr = this.multiplicative();
@@ -171,6 +190,12 @@ export class FunctionalParser {
   }
 
   private lambda(): Expression {
+    let isAsync = false;
+    if (this.peek('ASYNC')) {
+      this.consume('ASYNC');
+      isAsync = true;
+    }
+    
     if (this.peek('FN')) {
       this.consume('FN');
       this.consume('LPAREN');
@@ -189,21 +214,22 @@ export class FunctionalParser {
       if (this.peek('ARROW')) {
         this.consume('ARROW');
         const body = this.expression();
-        lambdaNode = { type: 'Lambda', params, body } as Lambda;
+        lambdaNode = { type: 'Lambda', params, body, isAsync } as Lambda;
       } else if (this.peek('LBRACE')) {
         this.consume('LBRACE');
         const body = this.expression();
         this.consume('RBRACE');
-        lambdaNode = { type: 'Lambda', params, body } as Lambda;
+        lambdaNode = { type: 'Lambda', params, body, isAsync } as Lambda;
       } else if (this.peek('EQUAL') || this.peek('EQUALS') || this.peek('EQUAL')) {
         this.consume(this.current().type);
         const body = this.expression();
-        lambdaNode = { type: 'Lambda', params, body } as Lambda;
+        lambdaNode = { type: 'Lambda', params, body, isAsync } as Lambda;
       } else {
         throw new Error(`Lambda parsing error: Expected '=>', '{', or '=' after parameters, got '${this.current().type}'`);
       }
       // allow immediate invocation or member access on the lambda: fn(x)=>... (5) or fn(x)=>....member
       let expr: any = lambdaNode;
+      // eslint-disable-next-line no-constant-condition
       while (true) {
         if (this.peek('LPAREN')) {
           this.consume('LPAREN');
@@ -230,6 +256,7 @@ export class FunctionalParser {
 
   private call(): any {
     let expr = this.primary();
+    // eslint-disable-next-line no-constant-condition
     while (true) {
       if (this.peek('LPAREN')) {
         this.consume('LPAREN'); const args:any[] = []; if (!this.peek('RPAREN')) { do { args.push(this.expression()); } while(this.consumeOptional('COMMA')); } this.consume('RPAREN'); expr = { type:'Call', callee: expr, args } as any; continue;
@@ -243,6 +270,8 @@ export class FunctionalParser {
   private primary(): any {
     const t = this.current();
     if (this.peek('NUMBER')) { this.consume('NUMBER'); return { type:'NumberLiteral', value: Number(t.value) }; }
+    if (this.peek('STRING')) { this.consume('STRING'); return { type:'StringLiteral', value: t.value }; }
+    if (this.peek('AWAIT')) { this.consume('AWAIT'); const expr = this.primary(); return { type:'Await', expr } as any; }
     if (this.peek('IDENT')) { this.consume('IDENT'); return { type:'Identifier', name: t.value }; }
     if (this.peek('NEW')) { this.consume('NEW'); const cname = this.consume('IDENT').value; this.consume('LPAREN'); const args:any[] = []; if (!this.peek('RPAREN')) { do { args.push(this.expression()); } while(this.consumeOptional('COMMA')); } this.consume('RPAREN'); return { type:'New', className: cname, args } as any; }
     if (this.peek('LPAREN')) { this.consume('LPAREN'); const e = this.expression(); this.consume('RPAREN'); return e; }

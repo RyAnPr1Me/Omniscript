@@ -60,4 +60,43 @@ describe('Advanced functional features', () => {
     const result = await omni.execute(src);
     expect(result).toBe(99);
   });
+
+  test('pattern match with guards', async () => {
+    const src = 'match 5 { n if n > 0 => "positive", n if n < 0 => "negative", _ => "zero" }';
+    const result = await omni.execute(src);
+    expect(result).toBe("positive");
+  });
+
+  test('pattern match with guards - negative case', async () => {
+    const src = 'match -3 { n if n > 0 => "positive", n if n < 0 => "negative", _ => "zero" }';
+    const result = await omni.execute(src);
+    expect(result).toBe("negative");
+  });
+
+  test('pattern match with guards - zero case', async () => {
+    const src = 'match 0 { n if n > 0 => "positive", n if n < 0 => "negative", _ => "zero" }';
+    const result = await omni.execute(src);
+    expect(result).toBe("zero");
+  });
+
+  test('Vector2D operator overloading example from README', async () => {
+    const src = `
+      class Vector2D {
+        operator +(other) => new Vector2D(add(self.x, other.x), add(self.y, other.y)),
+        operator *(scalar) => new Vector2D(mul(self.x, scalar), mul(self.y, scalar))
+      }
+      let v1 = new Vector2D(1, 2);
+      let v2 = new Vector2D(3, 4);
+      let v3 = v1 + v2;
+      v3.x
+    `;
+    const result = await omni.execute(src);
+    expect(result).toBe(4);
+  });
+
+  test('async function with await expression', async () => {
+    const src = 'let asyncFn = async fn(x) => x + 1; let result = await asyncFn(5); result';
+    const result = await omni.execute(src);
+    expect(result).toBe(6);
+  });
 });

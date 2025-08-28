@@ -1,0 +1,14 @@
+# Build output
+dist/
+
+# Demo files
+demo.js
+
+# Dependencies
+node_modules/
+
+# TypeScript declaration files
+**/*.d.ts
+
+# Generated files
+coverage/
