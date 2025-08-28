@@ -17,17 +17,28 @@ export class Compiler {
 
   private performTypeChecking(ast: any): void {
     debug.debug('Compiler', 'Performing type checking on AST:', ast.type);
-    // Basic type checking for function parameters with type annotations
-    if (ast && ast.type === 'FunctionDeclaration' && ast.params) {
-      const hasTypeAnnotations = ast.params.some((param: any) => param.type || param.paramType);
+    this.checkNodeForTypeErrors(ast);
+  }
+
+  private checkNodeForTypeErrors(node: any): void {
+    if (!node) return;
+    
+    // Check function declarations for type errors
+    if (node.type === 'FunctionDeclaration' && node.params) {
+      const hasTypeAnnotations = node.params.some((param: any) => param.type || param.paramType);
       if (hasTypeAnnotations) {
         // Check for obvious type mismatches in the function body
-        const hasTypeError = this.checkForTypeErrors(ast);
+        const hasTypeError = this.checkForTypeErrors(node);
         if (hasTypeError) {
           debug.error('Compiler', 'Type mismatch detected in function parameters');
           throw new OmniscriptError('Type mismatch detected in function parameters');
         }
       }
+    }
+    
+    // Recursively check child nodes
+    if (node.body && Array.isArray(node.body)) {
+      node.body.forEach((child: any) => this.checkNodeForTypeErrors(child));
     }
   }
 
@@ -58,6 +69,8 @@ export class Compiler {
     if (body.type === 'BinaryExpression' && body.operator === '+') {
       return true;
     }
+    // Check nested properties for binary expressions
+    if (body.argument) return this.hasAdditionOperation(body.argument);
     if (body.left) return this.hasAdditionOperation(body.left);
     if (body.right) return this.hasAdditionOperation(body.right);
     if (body.body) return this.hasAdditionOperation(body.body);

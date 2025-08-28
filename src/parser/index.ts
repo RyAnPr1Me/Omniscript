@@ -112,20 +112,88 @@ export class Parser {
     while ((m = fnRe.exec(source)) !== null) {
       const name = m[1];
       const paramsRaw = m[2].trim();
-      const params = paramsRaw ? paramsRaw.split(',').map(p => ({ name: p.trim().split(':')[0].trim() })) : [];
+      const params = paramsRaw ? paramsRaw.split(',').map(p => {
+        const parts = p.trim().split(':');
+        const paramName = parts[0].trim();
+        const paramType = parts[1] ? parts[1].trim() : undefined;
+        return { name: paramName, type: paramType, paramType: paramType };
+      }) : [];
       const bodySrc = m[3];
-      const retMatch = /return\s+([0-9]+)/.exec(bodySrc);
-      const retArg = retMatch ? { type: 'Expression', kind: ExpressionKind.Literal, value: Number(retMatch[1]) } : undefined;
+      
+      // Parse return statements with binary operations
+      const retMatch = /return\s+([^;]+)/.exec(bodySrc);
+      let retArg;
+      if (retMatch) {
+        const retExpr = retMatch[1].trim();
+        // Check for binary operations like a + b
+        const binaryMatch = /([A-Za-z_]\w*)\s*\+\s*([A-Za-z_]\w*)/.exec(retExpr);
+        if (binaryMatch) {
+          retArg = {
+            type: 'BinaryExpression',
+            operator: '+',
+            left: { type: 'Expression', kind: ExpressionKind.Identifier, name: binaryMatch[1] },
+            right: { type: 'Expression', kind: ExpressionKind.Identifier, name: binaryMatch[2] }
+          };
+        } else if (retExpr.match(/^\d+$/)) {
+          retArg = { type: 'Expression', kind: ExpressionKind.Literal, value: Number(retExpr) };
+        } else {
+          retArg = { type: 'Expression', kind: ExpressionKind.Identifier, name: retExpr };
+        }
+      }
+      
       const fnBody = retArg ? [{ type: 'ReturnStatement', argument: retArg }] : [];
       body.push({ type: 'FunctionDeclaration', name, params, body: fnBody });
     }
 
-    // classes (basic)
-    const classRe = /class\s+([A-Za-z_]\w*)(<[^>]+>)?\s*\{([\s\S]*?)\}/g;
-    while ((m = classRe.exec(source)) !== null) {
-      const name = m[1];
-      const generics = m[2] ? m[2].slice(1, -1).split(',').map(s => s.trim()) : undefined;
-      body.push({ type: 'ClassDeclaration', name, generics, methods: [] });
+    // classes (basic) - better handling of nested braces
+    const classRe = /class\s+([A-Za-z_]\w*)(<[^>]+>)?\s*\{/g;
+    let classMatch;
+    while ((classMatch = classRe.exec(source)) !== null) {
+      const name = classMatch[1];
+      let generics = undefined;
+      
+      // Parse generics with constraints
+      if (classMatch[2]) {
+        const genericsRaw = classMatch[2].slice(1, -1); // Remove < >
+        generics = genericsRaw.split(',').map(g => {
+          const trimmed = g.trim();
+          const extendsMatch = trimmed.match(/([A-Za-z_]\w*)\s+extends\s+([A-Za-z_]\w*)/);
+          if (extendsMatch) {
+            return {
+              name: extendsMatch[1],
+              constraint: extendsMatch[2]
+            };
+          }
+          return { name: trimmed };
+        });
+      }
+      
+      // Find the matching closing brace for the class
+      let braceCount = 1;
+      let pos = classMatch.index + classMatch[0].length;
+      let classBody = '';
+      
+      while (pos < source.length && braceCount > 0) {
+        const char = source[pos];
+        if (char === '{') braceCount++;
+        else if (char === '}') braceCount--;
+        
+        if (braceCount > 0) {
+          classBody += char;
+        }
+        pos++;
+      }
+      
+      // Parse methods within the class
+      const methods: any[] = [];
+      const methodRe = /([A-Za-z_]\w*)\s*\([^)]*\)\s*\{/g;
+      let methodMatch;
+      while ((methodMatch = methodRe.exec(classBody)) !== null) {
+        const methodName = methodMatch[1];
+        methods.push({ name: methodName, type: 'MethodDeclaration' });
+      }
+      
+      body.push({ type: 'ClassDeclaration', name, generics, methods });
     }
 
     // match expressions
