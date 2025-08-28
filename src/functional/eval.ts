@@ -48,7 +48,18 @@ function evalExpr(expr: Expression, env: Env): any {
 		case 'Call': {
 			const c = expr as Call;
 			const calleeVal = evalExpr(c.callee, env);
-			if (!isLambdaValue(calleeVal)) throw new Error('Attempted call on non-function');
+			// Allow both lambda values and regular JavaScript functions
+			if (!isLambdaValue(calleeVal) && typeof calleeVal !== 'function') {
+				throw new Error('Attempted call on non-function');
+			}
+			
+			// Handle regular JavaScript functions
+			if (typeof calleeVal === 'function' && !isLambdaValue(calleeVal)) {
+				const evaluated = c.args.map(a => evalExpr(a, env));
+				return calleeVal(...evaluated);
+			}
+			
+			// Handle lambda values
 			if (calleeVal.params.length !== c.args.length) throw new Error('Arity mismatch');
 			// Native fast-path
 			if ((calleeVal as any).__native) {
@@ -157,7 +168,8 @@ function evalExpr(expr: Expression, env: Env): any {
 			Object.keys(cls.methods).forEach(k => {
 				const methodDef = cls.methods[k];
 				if (typeof methodDef === 'function') {
-				  instance[k] = methodDef.bind(instance);
+				  // Wrap method to pass instance as first argument (self)
+				  instance[k] = (...args: any[]) => methodDef(instance, ...args);
 				} else if (methodDef && methodDef.__tag === 'lambda') {
 				  // already a LambdaValue; bind self by wrapping
 				  const lv: LambdaValue = { __tag: 'lambda', params: methodDef.params, body: methodDef.body, closure: createEnv(env) };

@@ -129,6 +129,7 @@ export class Runtime {
           return this.executeTry(bytecode as any);
         case 'Value':
           return bytecode.value;
+        case 'Class':
         case 'ClassDeclaration':
           return this.executeClassDeclaration(bytecode as any);
         default:
