@@ -22,6 +22,7 @@ coverage/
 # Temporary files
 *.tmp
 *.temp
+/tmp/
 
 # Environment variables
 .env

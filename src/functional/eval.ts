@@ -43,6 +43,7 @@ function evalExpr(expr: Expression, env: Env): any {
 					case '-': return left - right;
 					case '*': return left * right;
 					case '/': return left / right;
+					case '%': return left % right;
 				}
 			}
 		case 'Call': {
