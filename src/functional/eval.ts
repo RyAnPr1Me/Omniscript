@@ -1,4 +1,4 @@
-import { Program, Expression, NumberLiteral, BooleanLiteral, Identifier, Lambda, Call, Let, IfExpr, Pipe, Binary, Match, ClassDecl, MethodDecl, NewInstance, PropAccess, createEnv, Env, envDefine, envLookup, LambdaValue, isLambdaValue } from './ast';
+import { Program, Expression, NumberLiteral, StringLiteral, BooleanLiteral, Identifier, Lambda, Call, Let, IfExpr, Pipe, Binary, Match, ClassDecl, MethodDecl, NewInstance, PropAccess, createEnv, Env, envDefine, envLookup, LambdaValue, isLambdaValue } from './ast';
 
 export function evaluate(program: Program): any {
 	// Put builtins in a parent environment so user code can shadow them with 'let'
@@ -13,6 +13,7 @@ export function evaluate(program: Program): any {
 function evalExpr(expr: Expression, env: Env): any {
 	switch (expr.type) {
 		case 'NumberLiteral': return (expr as NumberLiteral).value;
+		case 'StringLiteral': return (expr as StringLiteral).value;
 		case 'BooleanLiteral': return (expr as BooleanLiteral).value;
 		case 'Identifier': return envLookup(env, (expr as Identifier).name);
 		case 'Prop': {
@@ -44,6 +45,12 @@ function evalExpr(expr: Expression, env: Env): any {
 					case '*': return left * right;
 					case '/': return left / right;
 					case '%': return left % right;
+					case '>': return left > right;
+					case '<': return left < right;
+					case '>=': return left >= right;
+					case '<=': return left <= right;
+					case '==': return left == right;
+					case '!=': return left != right;
 					default: throw new Error(`Unknown binary operator: ${b.op}`);
 				}
 			}
@@ -132,7 +139,18 @@ function evalExpr(expr: Expression, env: Env): any {
 				let caseEnv = env;
 				if (pat.type === 'Wildcard') ok = true;
 				else if (pat.type === 'NumberLiteral') ok = pat.value === value;
-				else if (pat.type === 'Identifier') { ok = true; caseEnv = createEnv(env); envDefine(caseEnv, pat.name, value); }
+				else if (pat.type === 'StringLiteral') ok = pat.value === value;
+				else if (pat.type === 'Identifier') { 
+					ok = true; 
+					caseEnv = createEnv(env); 
+					envDefine(caseEnv, pat.name, value); 
+				}
+				
+				// Check guard condition if present
+				if (ok && c.guard) {
+					ok = evalExpr(c.guard, caseEnv);
+				}
+				
 				if (ok) return evalExpr(c.value, caseEnv);
 			}
 			throw new Error('Non-exhaustive match');

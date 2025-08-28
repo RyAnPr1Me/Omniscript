@@ -60,4 +60,22 @@ describe('Advanced functional features', () => {
     const result = await omni.execute(src);
     expect(result).toBe(99);
   });
+
+  test('pattern match with guards', async () => {
+    const src = 'match 5 { n if n > 0 => "positive", n if n < 0 => "negative", _ => "zero" }';
+    const result = await omni.execute(src);
+    expect(result).toBe("positive");
+  });
+
+  test('pattern match with guards - negative case', async () => {
+    const src = 'match -3 { n if n > 0 => "positive", n if n < 0 => "negative", _ => "zero" }';
+    const result = await omni.execute(src);
+    expect(result).toBe("negative");
+  });
+
+  test('pattern match with guards - zero case', async () => {
+    const src = 'match 0 { n if n > 0 => "positive", n if n < 0 => "negative", _ => "zero" }';
+    const result = await omni.execute(src);
+    expect(result).toBe("zero");
+  });
 });
