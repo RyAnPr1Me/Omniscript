@@ -279,4 +279,132 @@ program
     }
   });
 
+program
+  .command('build')
+  .description('Build project for production')
+  .option('-o, --output <dir>', 'Output directory', 'dist')
+  .option('--target <target>', 'Build target (node, browser)', 'node')
+  .action(async (options: { output: string, target: string }) => {
+    console.log(`🔨 Building project for ${options.target}...`);
+    
+    try {
+      const fs = await import('fs/promises');
+      const path = await import('path');
+      
+      // Create output directory
+      await fs.mkdir(options.output, { recursive: true });
+      
+      // Find and compile Omniscript files
+      const mainFile = 'src/main.omni';
+      if (await fs.access(mainFile).then(() => true).catch(() => false)) {
+        console.log(`📄 Compiling ${mainFile}...`);
+        
+        const source = await fs.readFile(mainFile, 'utf-8');
+        const ast = omniscript['parser'].parse(source);
+        const bytecode = omniscript['compiler'].compile(ast);
+        
+        // Save compiled output
+        const outputFile = path.join(options.output, 'main.js');
+        const jsOutput = `// Compiled Omniscript\nmodule.exports = ${JSON.stringify(bytecode, null, 2)};`;
+        await fs.writeFile(outputFile, jsOutput);
+        
+        console.log(`✅ Build complete! Output saved to ${outputFile}`);
+      } else {
+        console.error(`❌ Could not find ${mainFile}. Make sure you're in an Omniscript project directory.`);
+      }
+      
+    } catch (error) {
+      console.error(`❌ Build failed: ${error}`);
+      process.exit(1);
+    }
+  });
+
+program
+  .command('test')
+  .description('Run tests using Jest')
+  .option('--watch', 'Run in watch mode')
+  .option('--coverage', 'Run with coverage report')
+  .action(async (options: { watch?: boolean, coverage?: boolean }) => {
+    console.log('🧪 Running tests...');
+    
+    try {
+      const { spawn } = await import('child_process');
+      
+      const jestArgs = ['--config', 'jest.config.ts'];
+      
+      if (options.watch) {
+        jestArgs.push('--watch');
+      }
+      
+      if (options.coverage) {
+        jestArgs.push('--coverage');
+      }
+      
+      const jestProcess = spawn('npx', ['jest', ...jestArgs], {
+        stdio: 'inherit',
+        shell: true
+      });
+      
+      jestProcess.on('close', (code) => {
+        if (code === 0) {
+          console.log('✅ All tests passed!');
+        } else {
+          console.log(`❌ Tests failed with exit code ${code}`);
+          process.exit(code || 1);
+        }
+      });
+      
+    } catch (error) {
+      console.error(`❌ Failed to run tests: ${error}`);
+      process.exit(1);
+    }
+  });
+
+program
+  .command('install')
+  .description('Install project dependencies')
+  .action(async () => {
+    console.log('📦 Installing dependencies...');
+    
+    try {
+      const { spawn } = await import('child_process');
+      
+      const npmProcess = spawn('npm', ['install'], {
+        stdio: 'inherit',
+        shell: true
+      });
+      
+      npmProcess.on('close', (code) => {
+        if (code === 0) {
+          console.log('✅ Dependencies installed successfully!');
+        } else {
+          console.log(`❌ Installation failed with exit code ${code}`);
+          process.exit(code || 1);
+        }
+      });
+      
+    } catch (error) {
+      console.error(`❌ Failed to install dependencies: ${error}`);
+      process.exit(1);
+    }
+  });
+
+program
+  .command('enable')
+  .description('Enable a standard library module')
+  .argument('<module>', 'Module name (e.g., http, database, crypto)')
+  .action(async (moduleName: string) => {
+    const { PackageManager } = await import('./package-manager');
+    const pm = new PackageManager();
+    
+    try {
+      await pm.loadConfig();
+      await pm.enableStdLib(moduleName);
+      console.log(`✅ Enabled stdlib module: ${moduleName}`);
+      console.log('📦 Package configuration updated');
+    } catch (error) {
+      console.error(`❌ Failed to enable module: ${error}`);
+    }
+  });
+
 program.parse();
