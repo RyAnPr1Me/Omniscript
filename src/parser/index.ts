@@ -147,13 +147,43 @@ export class Parser {
     }
 
     // simple let/variable declarations: let x: Type = value;
-    const letRe = /let\s+([A-Za-z_]\w*)(?:\s*:\s*([A-ZaZ_]\w*))?\s*=\s*([^;\n]+)/g;
+    const letRe = /let\s+([A-Za-z_]\w*)(?:\s*:\s*([A-Za-z_]\w*))?\s*=\s*([^;\n]+)/g;
     while ((m = letRe.exec(source)) !== null) {
       const name = m[1];
       const typeName = m[2] ? m[2] : undefined;
       const val = m[3].trim();
-      const initializer = val.match(/^\d+$/) ? { type: 'Expression', kind: ExpressionKind.Literal, value: Number(val) } : { type: 'Expression', kind: ExpressionKind.Identifier, name: val };
+      // Handle string literals with quotes
+      let initializer;
+      if (val.match(/^".*"$/)) {
+        initializer = { type: 'Expression', kind: ExpressionKind.Literal, value: val.slice(1, -1) };
+      } else if (val.match(/^\d+$/)) {
+        initializer = { type: 'Expression', kind: ExpressionKind.Literal, value: Number(val) };
+      } else {
+        initializer = { type: 'Expression', kind: ExpressionKind.Identifier, name: val };
+      }
       body.push({ type: 'VariableDeclaration', name, varType: typeName, initializer });
+    }
+
+    // try/catch/finally statements: try { ... } catch e { ... } finally { ... }
+    const tryRe = /try\s*\{([^}]*)\}\s*catch\s+([A-Za-z_]\w*)\s*\{([^}]*)\}(?:\s*finally\s*\{([^}]*)\})?/g;
+    while ((m = tryRe.exec(source)) !== null) {
+      const tryBlock = m[1].trim();
+      const catchVar = m[2];
+      const catchBlock = m[3].trim();
+      const finallyBlock = m[4] ? m[4].trim() : undefined;
+      
+      // Parse try block - simple expressions for now
+      const tryStmts = tryBlock ? [this.parseSimpleExpression(tryBlock)] : [];
+      const catchStmts = catchBlock ? [this.parseSimpleExpression(catchBlock)] : [];
+      const finallyStmts = finallyBlock ? [this.parseSimpleExpression(finallyBlock)] : undefined;
+      
+      body.push({ 
+        type: 'TryStatement', 
+        tryBlock: tryStmts, 
+        catchVar,
+        catchBlock: catchStmts,
+        finallyBlock: finallyStmts
+      });
     }
 
     // simple import statements: import { A } from 'module';
@@ -166,5 +196,25 @@ export class Parser {
 
     if (body.length > 0) return { type: 'Program', body };
     throw new Error('Fallback parser could not parse input');
+  }
+
+  private parseSimpleExpression(src: string): any {
+    src = src.trim();
+    // Handle throw statements
+    if (src.startsWith('throw ')) {
+      const expr = src.substring(6).trim();
+      const argument = expr.match(/^\d+$/) ? 
+        { type: 'Expression', kind: ExpressionKind.Literal, value: Number(expr) } :
+        { type: 'Expression', kind: ExpressionKind.Identifier, name: expr };
+      return { type: 'ThrowStatement', argument };
+    }
+    
+    // Handle simple expressions (numbers, identifiers)
+    if (src.match(/^\d+$/)) {
+      return { type: 'ExpressionStatement', expression: { type: 'Expression', kind: ExpressionKind.Literal, value: Number(src) } };
+    }
+    
+    // Default to identifier expression
+    return { type: 'ExpressionStatement', expression: { type: 'Expression', kind: ExpressionKind.Identifier, name: src } };
   }
 }

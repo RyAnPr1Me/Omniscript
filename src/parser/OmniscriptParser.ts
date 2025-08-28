@@ -245,7 +245,7 @@ export default class OmniscriptParser extends Parser {
   parseStatements(): Statement[] {
     const statements: Statement[] = [];
     try {
-      while (this._input.LA(1) !== OmniscriptParser.EOF) {
+      while (this._input && this._input.LA(1) !== OmniscriptParser.EOF) {
         const token = this._input.LT(1);
         if (!token) {
           throw new OmniscriptError('Unexpected end of input');

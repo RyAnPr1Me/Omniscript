@@ -96,6 +96,8 @@ export class Compiler {
         return this.visitThrowStatement(node);
       case 'TryStatement':
         return this.visitTryStatement(node);
+      case 'ExpressionStatement':
+        return this.visitExpressionStatement(node);
       case 'ConditionalType':
         return this.visitConditionalType(node);
       case 'IntersectionType':
