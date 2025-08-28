@@ -1,3 +1,5 @@
+import { debug as logger, DebugLevel } from '../debug';
+
 export interface Bytecode {
   type: string;
   name?: string;
@@ -105,6 +107,7 @@ export class Runtime {
   }
 
   execute(bytecode: Bytecode): unknown {
+    logger.debug('Runtime', `Executing bytecode: ${bytecode.type}`);
     try {
       switch (bytecode.type) {
         case 'Block':
@@ -234,6 +237,7 @@ export class Runtime {
   enableGarbageCollection(debug = false): void {
     // Always notify that GC was enabled (tests expect this log).
     console.log("Garbage collection enabled.");
+    logger.info('Runtime', 'Garbage collection enabled');
      const interval = setInterval(() => this.runGarbageCollector(), 10000); // Run every 10 seconds
      // Prevent leaving the Node.js event loop open during tests
      try { if ((interval as any).unref) (interval as any).unref(); } catch (e) { /* ignore */ }
