@@ -165,6 +165,8 @@ export class Runtime {
         case 'Class':
         case 'ClassDeclaration':
           return this.executeClassDeclaration(bytecode as any);
+        case 'Match':
+          return this.executeMatch(bytecode as any);
         default:
           throw new Error(`Unknown bytecode type: ${bytecode.type}`);
       }
@@ -565,6 +567,69 @@ export class Runtime {
       if (node.finallyBlock) this.execute(node.finallyBlock as any);
       throw err;
     }
+  }
+
+  private executeMatch(node: any): unknown {
+    logger.debug('Runtime', 'Executing pattern match');
+    logger.debug('Runtime', 'Match node structure:', JSON.stringify(node, null, 2));
+    
+    const matchValue = this.evalExpr(node.expr);
+    const cases = node.cases || [];
+    
+    for (const matchCase of cases) {
+      let matched = false;
+      let bindings: Record<string, any> = {};
+      
+      // Check if pattern matches
+      if (matchCase.pattern.type === 'Wildcard') {
+        matched = true;
+      } else if (matchCase.pattern.type === 'NumberLiteral') {
+        matched = matchCase.pattern.value === matchValue;
+      } else if (matchCase.pattern.type === 'BooleanLiteral') {
+        matched = matchCase.pattern.value === matchValue;
+      } else if (matchCase.pattern.type === 'Identifier') {
+        // Variable binding - always matches
+        matched = true;
+        bindings[matchCase.pattern.name] = matchValue;
+      }
+      
+      // Check guard condition if present
+      if (matched && matchCase.guard) {
+        this.pushEnv();
+        // Add bindings to environment
+        for (const [name, value] of Object.entries(bindings)) {
+          this.setVar(name, value);
+        }
+        
+        try {
+          const guardResult = this.evalExpr(matchCase.guard);
+          matched = !!guardResult;
+        } finally {
+          this.popEnv();
+        }
+      }
+      
+      // If pattern and guard match, execute the case value
+      if (matched) {
+        if (Object.keys(bindings).length > 0) {
+          this.pushEnv();
+          // Add bindings to environment
+          for (const [name, value] of Object.entries(bindings)) {
+            this.setVar(name, value);
+          }
+          
+          try {
+            return this.evalExpr(matchCase.value);
+          } finally {
+            this.popEnv();
+          }
+        } else {
+          return this.evalExpr(matchCase.value);
+        }
+      }
+    }
+    
+    throw new Error('Non-exhaustive pattern match');
   }
 
   // ------- Minimal expression evaluator for parser Expressions -------
