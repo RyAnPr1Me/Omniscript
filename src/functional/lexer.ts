@@ -15,6 +15,8 @@ export function lex(input: string): Token[] {
     if (c === ';' ) { tokens.push({type:'SEMI', value:';'}); i++; continue; }
     if (c === '(' ) { tokens.push({type:'LPAREN', value:'('}); i++; continue; }
     if (c === ')' ) { tokens.push({type:'RPAREN', value:')'}); i++; continue; }
+    if (c === '[' ) { tokens.push({type:'LBRACKET', value:'['}); i++; continue; }
+    if (c === ']' ) { tokens.push({type:'RBRACKET', value:']'}); i++; continue; }
     if (c==='-' && isNum(input[i+1])) { let num=c; i++; while(i<input.length && (isNum(input[i])||input[i]==='.') ) num+=input[i++]; tokens.push({type:'NUMBER', value:num}); continue; }
     if (isNum(c)) { let num=c; i++; while(i<input.length&&(isNum(input[i])||input[i]==='.')) num+=input[i++]; tokens.push({type:'NUMBER', value:num}); continue; }
     if (isAlpha(c)) { let ident=c; i++; while(i<input.length&&/[A-Za-z0-9_]/.test(input[i])) ident+=input[i++]; if (KEYWORDS.has(ident)) tokens.push({type:ident.toUpperCase(), value:ident}); else tokens.push({type:'IDENT', value:ident}); continue; }
