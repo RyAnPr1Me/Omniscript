@@ -3,6 +3,7 @@ import {
   Program,
   Expression,
   NumberLiteral,
+  StringLiteral,
   Match,
   MatchCase,
   IfExpr,
@@ -11,7 +12,8 @@ import {
   Binary,
   Lambda,
   ClassDecl,
-  MethodDecl
+  MethodDecl,
+  AwaitExpr
 } from './ast';
 
 export class FunctionalParser {
@@ -79,6 +81,8 @@ export class FunctionalParser {
         let pattern: any;
         if (this.peek('NUMBER')) {
           pattern = { type: 'NumberLiteral', value: Number(this.consume('NUMBER').value) } as NumberLiteral;
+        } else if (this.peek('STRING')) {
+          pattern = { type: 'StringLiteral', value: this.consume('STRING').value } as StringLiteral;
         } else if (this.peek('IDENT')) {
           const nameTok = this.consume('IDENT');
           if (nameTok.value === '_') pattern = { type: 'Wildcard' };
@@ -86,11 +90,19 @@ export class FunctionalParser {
         } else {
           throw new Error('Invalid match pattern');
         }
+        
+        // Check for guard condition (e.g., "n if n > 0")
+        let guard: Expression | undefined;
+        if (this.peek('IF')) {
+          this.consume('IF');
+          guard = this.expression();
+        }
+        
         // allow ARROW or COLON as separators
         if (this.peek('ARROW')) this.consume('ARROW'); else if (this.peek('COLON')) this.consume('COLON'); else throw new Error('Expected => or : in match arm');
         const value = this.expression();
         if (this.peek('COMMA')) this.consume('COMMA');
-        cases.push({ pattern, value } as MatchCase);
+        cases.push({ pattern, guard, value } as MatchCase);
       }
       this.consume('RBRACE');
       return { type: 'Match', expr: target, cases } as Match;
@@ -110,6 +122,14 @@ export class FunctionalParser {
   }
 
   private classDecl(): Expression {
+    // Parse decorators
+    const decorators: string[] = [];
+    while (this.peek('AT')) {
+      this.consume('AT');
+      const decoratorName = this.consume('IDENT').value;
+      decorators.push(decoratorName);
+    }
+    
     if (this.peek('CLASS')) {
       this.consume('CLASS');
       const name = this.consume('IDENT').value;
@@ -119,6 +139,14 @@ export class FunctionalParser {
       this.consume('LBRACE');
       const methods: MethodDecl[] = [];
       while (!this.peek('RBRACE')) {
+        // Parse method decorators
+        const methodDecorators: string[] = [];
+        while (this.peek('AT')) {
+          this.consume('AT');
+          const decoratorName = this.consume('IDENT').value;
+          methodDecorators.push(decoratorName);
+        }
+        
         if (this.peek('OPERATOR')) {
           this.consume('OPERATOR');
           const opToken = this.consume(this.current().type);
@@ -127,8 +155,8 @@ export class FunctionalParser {
           const params: string[] = [];
           if (!this.peek('RPAREN')) { do { params.push(this.consume('IDENT').value); } while (this.consumeOptional('COMMA')); }
           this.consume('RPAREN');
-          if (this.peek('ARROW')) { this.consume('ARROW'); const body = this.expression(); methods.push({ type: 'MethodDecl', name: opSymbol, params, body, isOperator: true, decorators: [] }); }
-          else if (this.peek('LBRACE')) { this.consume('LBRACE'); const body = this.expression(); this.consume('RBRACE'); methods.push({ type: 'MethodDecl', name: opSymbol, params, body, isOperator: true, decorators: [] }); }
+          if (this.peek('ARROW')) { this.consume('ARROW'); const body = this.expression(); methods.push({ type: 'MethodDecl', name: opSymbol, params, body, isOperator: true, decorators: methodDecorators }); }
+          else if (this.peek('LBRACE')) { this.consume('LBRACE'); const body = this.expression(); this.consume('RBRACE'); methods.push({ type: 'MethodDecl', name: opSymbol, params, body, isOperator: true, decorators: methodDecorators }); }
           else throw new Error('Expected method body for operator');
         } else {
           const mName = this.consume('IDENT').value;
@@ -136,19 +164,33 @@ export class FunctionalParser {
           const params: string[] = [];
           if (!this.peek('RPAREN')) { do { params.push(this.consume('IDENT').value); } while (this.consumeOptional('COMMA')); }
           this.consume('RPAREN');
-          if (this.peek('ARROW')) { this.consume('ARROW'); const body = this.expression(); methods.push({ type: 'MethodDecl', name: mName, params, body, decorators: [] }); }
-          else if (this.peek('LBRACE')) { this.consume('LBRACE'); const body = this.expression(); this.consume('RBRACE'); methods.push({ type: 'MethodDecl', name: mName, params, body, decorators: [] }); }
+          if (this.peek('ARROW')) { this.consume('ARROW'); const body = this.expression(); methods.push({ type: 'MethodDecl', name: mName, params, body, decorators: methodDecorators }); }
+          else if (this.peek('LBRACE')) { this.consume('LBRACE'); const body = this.expression(); this.consume('RBRACE'); methods.push({ type: 'MethodDecl', name: mName, params, body, decorators: methodDecorators }); }
           else throw new Error('Expected method body');
         }
         if (this.peek('COMMA')) this.consume('COMMA');
       }
       this.consume('RBRACE');
-      return { type: 'ClassDecl', name, methods, decorators: [], parent } as ClassDecl;
+      return { type: 'ClassDecl', name, methods, decorators, parent } as ClassDecl;
+    } else if (decorators.length > 0) {
+      // Decorators without class - could be function or variable decoration
+      throw new Error('Decorators without class not yet supported');
     }
     return this.binary();
   }
 
-  private binary(): Expression { return this.additive(); }
+  private binary(): Expression { return this.comparison(); }
+
+  private comparison(): Expression {
+    let expr = this.additive();
+    while (this.peek('>') || this.peek('<') || this.peek('>=') || this.peek('<=') || 
+           this.peek('==') || this.peek('!=') || this.peek('===') || this.peek('!==')) {
+      const op = this.consume(this.current().type).value as ('>'|'<'|'>='|'<='|'=='|'!='|'==='|'!==');
+      const right = this.additive();
+      expr = { type: 'Binary', op, left: expr, right } as Binary;
+    }
+    return expr;
+  }
 
   private additive(): Expression {
     let expr = this.multiplicative();
@@ -242,7 +284,13 @@ export class FunctionalParser {
 
   private primary(): any {
     const t = this.current();
+    if (this.peek('AWAIT')) {
+      this.consume('AWAIT');
+      const expr = this.primary();
+      return { type: 'Await', expr };
+    }
     if (this.peek('NUMBER')) { this.consume('NUMBER'); return { type:'NumberLiteral', value: Number(t.value) }; }
+    if (this.peek('STRING')) { this.consume('STRING'); return { type:'StringLiteral', value: t.value }; }
     if (this.peek('IDENT')) { this.consume('IDENT'); return { type:'Identifier', name: t.value }; }
     if (this.peek('NEW')) { this.consume('NEW'); const cname = this.consume('IDENT').value; this.consume('LPAREN'); const args:any[] = []; if (!this.peek('RPAREN')) { do { args.push(this.expression()); } while(this.consumeOptional('COMMA')); } this.consume('RPAREN'); return { type:'New', className: cname, args } as any; }
     if (this.peek('LPAREN')) { this.consume('LPAREN'); const e = this.expression(); this.consume('RPAREN'); return e; }

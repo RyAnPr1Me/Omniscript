@@ -1,18 +1,44 @@
-import { Program, Expression, NumberLiteral, BooleanLiteral, Identifier, Lambda, Call, Let, IfExpr, Pipe, Binary, Match, ClassDecl, MethodDecl, NewInstance, PropAccess, createEnv, Env, envDefine, envLookup, LambdaValue, isLambdaValue } from './ast';
+import {
+  Program,
+  Expression,
+  NumberLiteral,
+  StringLiteral,
+  BooleanLiteral,
+  Identifier,
+  Lambda,
+  Call,
+  Let,
+  IfExpr,
+  Pipe,
+  Binary,
+  Match,
+  ClassDecl,
+  MethodDecl,
+  NewInstance,
+  PropAccess,
+  AwaitExpr,
+  createEnv,
+  Env,
+  envDefine,
+  envLookup,
+  LambdaValue,
+  isLambdaValue
+} from './ast';
 
-export function evaluate(program: Program): any {
+export async function evaluate(program: Program): Promise<any> {
 	// Put builtins in a parent environment so user code can shadow them with 'let'
 	const builtinsEnv = createEnv();
 	installBuiltins(builtinsEnv);
 	const globalEnv = createEnv(builtinsEnv);
 	let last: any;
-	for (const expr of program.body) last = evalExpr(expr, globalEnv);
+	for (const expr of program.body) last = await evalExpr(expr, globalEnv);
 	return last;
 }
 
-function evalExpr(expr: Expression, env: Env): any {
+async function evalExpr(expr: Expression, env: Env): Promise<any> {
 	switch (expr.type) {
 		case 'NumberLiteral': return (expr as NumberLiteral).value;
+		case 'StringLiteral': return (expr as StringLiteral).value;
 		case 'BooleanLiteral': return (expr as BooleanLiteral).value;
 		case 'Identifier': return envLookup(env, (expr as Identifier).name);
 		case 'Prop': {
@@ -44,6 +70,14 @@ function evalExpr(expr: Expression, env: Env): any {
 					case '*': return left * right;
 					case '/': return left / right;
 					case '%': return left % right;
+					case '>': return left > right;
+					case '<': return left < right;
+					case '>=': return left >= right;
+					case '<=': return left <= right;
+					case '==': return left == right;
+					case '!=': return left != right;
+					case '===': return left === right;
+					case '!==': return left !== right;
 				}
 			}
 		case 'Call': {
@@ -129,16 +163,36 @@ function evalExpr(expr: Expression, env: Env): any {
 				let ok = false;
 				const pat: any = c.pattern;
 				let caseEnv = env;
-				if (pat.type === 'Wildcard') ok = true;
-				else if (pat.type === 'NumberLiteral') ok = pat.value === value;
-				else if (pat.type === 'Identifier') { ok = true; caseEnv = createEnv(env); envDefine(caseEnv, pat.name, value); }
+				if (pat.type === 'Wildcard') {
+					ok = true;
+				} else if (pat.type === 'NumberLiteral') {
+					ok = pat.value === value;
+				} else if (pat.type === 'StringLiteral') {
+					ok = pat.value === value;
+				} else if (pat.type === 'Identifier') {
+					ok = true;
+					caseEnv = createEnv(env);
+					envDefine(caseEnv, pat.name, value);
+				}
+				
+				// Check guard condition if present
+				if (ok && c.guard) {
+					const guardResult = evalExpr(c.guard, caseEnv);
+					ok = !!guardResult; // Convert to boolean
+				}
+				
 				if (ok) return evalExpr(c.value, caseEnv);
 			}
 			throw new Error('Non-exhaustive match');
 		}
 		case 'ClassDecl': {
 			const cd = expr as ClassDecl;
-			const classValue: any = { __tag: 'class', name: cd.name, methods: {}, __ops: {} };
+			const classValue: any = { __tag: 'class', name: cd.name, methods: {}, __ops: {}, __decorators: cd.decorators };
+			
+			// Apply class-level decorators
+			if (cd.decorators.includes('component')) {
+				classValue.__component = true;
+			}
 			for (const m of cd.methods) {
 				if (m.isOperator) {
 					classValue.__ops[m.name] = (self: any, other: any) => {
@@ -148,12 +202,28 @@ function evalExpr(expr: Expression, env: Env): any {
 						return evalExpr(m.body, closureEnv);
 					};
 				} else {
-					classValue.methods[m.name] = (self: any, ...args: any[]) => {
+					const methodFunc = (self: any, ...args: any[]) => {
 						const closureEnv = createEnv(env);
 						envDefine(closureEnv, 'self', self);
 						m.params.forEach((p,i)=> envDefine(closureEnv, p, args[i]));
 						return evalExpr(m.body, closureEnv);
 					};
+					
+					// Apply method decorators
+					if (m.decorators.includes('state')) {
+						// State decorator - makes property reactive
+						(methodFunc as any).__state = true;
+					}
+					if (m.decorators.includes('effect')) {
+						// Effect decorator - runs automatically
+						(methodFunc as any).__effect = true;
+					}
+					if (m.decorators.includes('computed')) {
+						// Computed decorator - caches result
+						(methodFunc as any).__computed = true;
+					}
+					
+					classValue.methods[m.name] = methodFunc;
 				}
 			}
 			envDefine(env, cd.name, classValue);
@@ -185,6 +255,12 @@ function evalExpr(expr: Expression, env: Env): any {
              });
 			return instance;
 		}
+		case 'Await': {
+			const a = expr as AwaitExpr;
+			const value = evalExpr(a.expr, env);
+			// If it's a promise, await it; otherwise return as-is
+			return Promise.resolve(value);
+		}
 	}
 }
 
@@ -194,6 +270,25 @@ function installBuiltins(env: Env) {
 		(lv as any).__native = impl;
 		envDefine(env, name, lv);
 	};
+	
+	// Database support - create a global 'db' object with mock data
+	const mockDatabase = {
+		users: {
+			findAll: () => Promise.resolve([
+				{ id: 1, name: 'John Doe', email: 'john@example.com', active: true },
+				{ id: 2, name: 'Jane Smith', email: 'jane@example.com', active: false }
+			]),
+			where: (predicate: any) => ({
+				orderBy: (field: any) => ({
+					take: (count: number) => Promise.resolve([
+						{ id: 1, name: 'John Doe', posts: [1, 2] }
+					])
+				})
+			})
+		}
+	};
+	envDefine(env, 'db', mockDatabase);
+	
 	// Arithmetic
 	make('add', ['a', 'b'], (a, b) => a + b);
 	make('sub', ['a', 'b'], (a, b) => a - b);
