@@ -1,7 +1,7 @@
 {
   "name": "omniscript",
   "version": "0.1.0",
-  "type": "module",
+  "type": "commonjs",
   "bin": {
     "omni": "./dist/cli.js",
     "omniscript-installer": "./dist/bin/installManager.js"
