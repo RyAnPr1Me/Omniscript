@@ -190,6 +190,12 @@ export class FunctionalParser {
   }
 
   private lambda(): Expression {
+    let isAsync = false;
+    if (this.peek('ASYNC')) {
+      this.consume('ASYNC');
+      isAsync = true;
+    }
+    
     if (this.peek('FN')) {
       this.consume('FN');
       this.consume('LPAREN');
@@ -208,16 +214,16 @@ export class FunctionalParser {
       if (this.peek('ARROW')) {
         this.consume('ARROW');
         const body = this.expression();
-        lambdaNode = { type: 'Lambda', params, body } as Lambda;
+        lambdaNode = { type: 'Lambda', params, body, isAsync } as Lambda;
       } else if (this.peek('LBRACE')) {
         this.consume('LBRACE');
         const body = this.expression();
         this.consume('RBRACE');
-        lambdaNode = { type: 'Lambda', params, body } as Lambda;
+        lambdaNode = { type: 'Lambda', params, body, isAsync } as Lambda;
       } else if (this.peek('EQUAL') || this.peek('EQUALS') || this.peek('EQUAL')) {
         this.consume(this.current().type);
         const body = this.expression();
-        lambdaNode = { type: 'Lambda', params, body } as Lambda;
+        lambdaNode = { type: 'Lambda', params, body, isAsync } as Lambda;
       } else {
         throw new Error(`Lambda parsing error: Expected '=>', '{', or '=' after parameters, got '${this.current().type}'`);
       }
@@ -265,6 +271,7 @@ export class FunctionalParser {
     const t = this.current();
     if (this.peek('NUMBER')) { this.consume('NUMBER'); return { type:'NumberLiteral', value: Number(t.value) }; }
     if (this.peek('STRING')) { this.consume('STRING'); return { type:'StringLiteral', value: t.value }; }
+    if (this.peek('AWAIT')) { this.consume('AWAIT'); const expr = this.primary(); return { type:'Await', expr } as any; }
     if (this.peek('IDENT')) { this.consume('IDENT'); return { type:'Identifier', name: t.value }; }
     if (this.peek('NEW')) { this.consume('NEW'); const cname = this.consume('IDENT').value; this.consume('LPAREN'); const args:any[] = []; if (!this.peek('RPAREN')) { do { args.push(this.expression()); } while(this.consumeOptional('COMMA')); } this.consume('RPAREN'); return { type:'New', className: cname, args } as any; }
     if (this.peek('LPAREN')) { this.consume('LPAREN'); const e = this.expression(); this.consume('RPAREN'); return e; }
