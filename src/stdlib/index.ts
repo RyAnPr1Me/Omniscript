@@ -5,6 +5,8 @@ export * from './crypto';
 export * from './datetime';
 export * from './math';
 export * from './threading';
+export * from './http';
+export * from './database';
 
 export { MathUtils as Math } from './math';
 
