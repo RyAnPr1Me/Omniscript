@@ -145,16 +145,32 @@ export class Parser {
       body.push({ type: 'FunctionDeclaration', name, params, body: fnBody });
     }
 
-    // classes (basic) - better handling of nested braces
-    const classRe = /class\s+([A-Za-z_]\w*)(<[^>]+>)?\s*\{/g;
+    // classes (basic) - better handling of nested braces and decorators
+    const classWithDecoratorsRe = /((?:@[A-Za-z_]\w*\s*)*)\s*class\s+([A-Za-z_]\w*)(<[^>]+>)?\s*\{/g;
     let classMatch;
-    while ((classMatch = classRe.exec(source)) !== null) {
-      const name = classMatch[1];
+    while ((classMatch = classWithDecoratorsRe.exec(source)) !== null) {
+      const decoratorsRaw = classMatch[1];
+      const name = classMatch[2];
       let generics = undefined;
       
+      // Parse decorators
+      const decorators: any[] = [];
+      if (decoratorsRaw) {
+        const decoratorMatches = decoratorsRaw.match(/@([A-Za-z_]\w*)/g);
+        if (decoratorMatches) {
+          for (const decoratorMatch of decoratorMatches) {
+            decorators.push({
+              name: decoratorMatch.substring(1), // Remove @
+              type: 'Decorator',
+              arguments: []
+            });
+          }
+        }
+      }
+      
       // Parse generics with constraints
-      if (classMatch[2]) {
-        const genericsRaw = classMatch[2].slice(1, -1); // Remove < >
+      if (classMatch[3]) {
+        const genericsRaw = classMatch[3].slice(1, -1); // Remove < >
         generics = genericsRaw.split(',').map(g => {
           const trimmed = g.trim();
           const extendsMatch = trimmed.match(/([A-Za-z_]\w*)\s+extends\s+([A-Za-z_]\w*)/);
@@ -193,7 +209,7 @@ export class Parser {
         methods.push({ name: methodName, type: 'MethodDeclaration' });
       }
       
-      body.push({ type: 'ClassDeclaration', name, generics, methods });
+      body.push({ type: 'ClassDeclaration', name, generics, methods, decorators });
     }
 
     // match expressions

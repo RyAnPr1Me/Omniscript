@@ -71,10 +71,28 @@ export class Runtime {
   }
 
   // Execute a class declaration (AST/bytecode hybrid node)
-  private executeClassDeclaration(node: { name: string; methods?: Array<{ name: string; body?: { body?: Bytecode[]; statements?: Bytecode[] }; params?: Array<{ name: string }>; isOperator?: boolean; operatorSymbol?: string }> }): unknown {
+  private executeClassDeclaration(node: { name: string; methods?: Array<{ name: string; body?: { body?: Bytecode[]; statements?: Bytecode[] }; params?: Array<{ name: string }>; isOperator?: boolean; operatorSymbol?: string }>; decorators?: Array<{ name: string; arguments?: any[] }> }): unknown {
     const runtime = this;
-  const methodMap: Record<string, (...args: unknown[]) => unknown> = {};
-  const operatorMap: Record<string, (other: unknown) => unknown> = {};
+    const methodMap: Record<string, (...args: unknown[]) => unknown> = {};
+    const operatorMap: Record<string, (other: unknown) => unknown> = {};
+    
+    // Process decorators and store metadata
+    const classMetadata: Record<string, any> = {};
+    if (node.decorators) {
+      for (const decorator of node.decorators) {
+        switch (decorator.name) {
+          case 'component':
+            classMetadata.isComponent = true;
+            break;
+          case 'state':
+            classMetadata.hasState = true;
+            break;
+          case 'computed':
+            classMetadata.hasComputed = true;
+            break;
+        }
+      }
+    }
     for (const m of node.methods || []) {
       const bodyStmts = m.body?.body || m.body?.statements || [];
   const fn = function(this: unknown, ...args: unknown[]) {
@@ -98,10 +116,11 @@ export class Runtime {
       }
     }
     const Klass: any = function(this: any, ...ctorArgs: any[]) {
-      Object.assign(this, { __class: node.name });
+      Object.assign(this, { __class: node.name, __metadata: classMetadata });
       if (methodMap['constructor']) methodMap['constructor'].apply(this, ctorArgs);
     };
     Klass.prototype = { ...methodMap, __ops: operatorMap };
+    Klass.__metadata = classMetadata;
     this.scope.set(node.name, Klass);
     return Klass;
   }

@@ -110,4 +110,173 @@ program
     }
   });
 
+program
+  .command('new')
+  .description('Create a new Omniscript project')
+  .argument('<name>', 'Project name')
+  .action(async (name: string) => {
+    const fs = await import('fs/promises');
+    const path = await import('path');
+    
+    const projectDir = path.join(process.cwd(), name);
+    
+    try {
+      // Create project directory
+      await fs.mkdir(projectDir, { recursive: true });
+      
+      // Create basic project structure
+      await fs.mkdir(path.join(projectDir, 'src'));
+      await fs.mkdir(path.join(projectDir, 'docs'));
+      
+      // Create main.omni file
+      const mainContent = `// Welcome to Omniscript!
+// This is your main application file.
+
+@component
+class App {
+  constructor() {
+    this.message = "Hello, Omniscript!";
+  }
+  
+  render() {
+    console.log(this.message + " - Built with Omniscript");
+  }
+}
+`;
+      await fs.writeFile(path.join(projectDir, 'src', 'main.omni'), mainContent);
+      
+      // Create package.json
+      const packageJson = {
+        name,
+        version: "1.0.0",
+        description: "An Omniscript application",
+        main: "src/main.omni",
+        scripts: {
+          "dev": "omni dev",
+          "build": "omni build",
+          "start": "omni run src/main.omni"
+        },
+        omniscript: {
+          stdlib: ["http", "collections"],
+          plugins: []
+        }
+      };
+      await fs.writeFile(path.join(projectDir, 'package.json'), JSON.stringify(packageJson, null, 2));
+      
+      // Create README
+      const readmeContent = `# ${name}
+
+An Omniscript application.
+
+## Getting Started
+
+\`\`\`bash
+cd ${name}
+omni dev
+\`\`\`
+
+## Available Commands
+
+- \`omni dev\` - Start development server
+- \`omni build\` - Build for production  
+- \`omni run src/main.omni\` - Run the application
+`;
+      await fs.writeFile(path.join(projectDir, 'README.md'), readmeContent);
+      
+      console.log(`✅ Created project '${name}' successfully!`);
+      console.log(`\nNext steps:`);
+      console.log(`  cd ${name}`);
+      console.log(`  omni dev`);
+      
+    } catch (error) {
+      console.error(`❌ Failed to create project: ${error}`);
+    }
+  });
+
+program
+  .command('dev')
+  .description('Start development server with watch mode')
+  .option('-p, --port <port>', 'Port to run on', '3000')
+  .action(async (options: { port: string }) => {
+    console.log(`🚀 Starting Omniscript development server on port ${options.port}...`);
+    console.log('📁 Watching for file changes...');
+    
+    // Basic file watching and execution
+    const fs = await import('fs');
+    const path = await import('path');
+    
+    const watchFile = 'src/main.omni';
+    
+    if (fs.existsSync(watchFile)) {
+      console.log(`👀 Watching ${watchFile}`);
+      
+      // Initial run
+      try {
+        const source = await fs.promises.readFile(watchFile, 'utf-8');
+        console.log('\n📄 Running initial build...');
+        const result = await omniscript.execute(source);
+        if (result !== undefined) {
+          console.log('✅ Output:', result);
+        }
+      } catch (error) {
+        console.error('❌ Error:', error);
+      }
+      
+      // Watch for changes
+      fs.watchFile(watchFile, async () => {
+        console.log('\n🔄 File changed, reloading...');
+        try {
+          const source = await fs.promises.readFile(watchFile, 'utf-8');
+          const result = await omniscript.execute(source);
+          if (result !== undefined) {
+            console.log('✅ Output:', result);
+          }
+        } catch (error) {
+          console.error('❌ Error:', error);
+        }
+      });
+      
+      // Keep process alive
+      console.log('\n⏸️  Press Ctrl+C to stop');
+      process.on('SIGINT', () => {
+        console.log('\n👋 Development server stopped');
+        process.exit(0);
+      });
+      
+      // Keep the process running
+      await new Promise(() => {});
+      
+    } else {
+      console.error(`❌ Could not find ${watchFile}. Make sure you're in an Omniscript project directory.`);
+      console.log('\nTo create a new project, run: omni new <project-name>');
+    }
+  });
+
+program
+  .command('add')
+  .description('Add a package or enable stdlib module')
+  .argument('<package>', 'Package name or stdlib module (e.g., stdlib/http)')
+  .action(async (packageName: string) => {
+    const { PackageManager } = await import('./package-manager');
+    const pm = new PackageManager();
+    
+    try {
+      await pm.loadConfig();
+      
+      if (packageName.startsWith('stdlib/')) {
+        const module = packageName.replace('stdlib/', '');
+        await pm.enableStdLib(module);
+        console.log(`✅ Enabled stdlib module: ${module}`);
+      } else {
+        // For now, just add to dependencies with latest version
+        await pm.installDependency(packageName, 'latest');
+        console.log(`✅ Added package: ${packageName}`);
+      }
+      
+      console.log('📦 Package configuration updated');
+    } catch (error) {
+      console.error(`❌ Failed to add package: ${error}`);
+    }
+  });
+
 program.parse();
