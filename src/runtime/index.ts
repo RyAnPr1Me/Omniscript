@@ -71,10 +71,28 @@ export class Runtime {
   }
 
   // Execute a class declaration (AST/bytecode hybrid node)
-  private executeClassDeclaration(node: { name: string; methods?: Array<{ name: string; body?: { body?: Bytecode[]; statements?: Bytecode[] }; params?: Array<{ name: string }>; isOperator?: boolean; operatorSymbol?: string }> }): unknown {
+  private executeClassDeclaration(node: { name: string; methods?: Array<{ name: string; body?: { body?: Bytecode[]; statements?: Bytecode[] }; params?: Array<{ name: string }>; isOperator?: boolean; operatorSymbol?: string }>; decorators?: Array<{ name: string; arguments?: any[] }> }): unknown {
     const runtime = this;
-  const methodMap: Record<string, (...args: unknown[]) => unknown> = {};
-  const operatorMap: Record<string, (other: unknown) => unknown> = {};
+    const methodMap: Record<string, (...args: unknown[]) => unknown> = {};
+    const operatorMap: Record<string, (other: unknown) => unknown> = {};
+    
+    // Process decorators and store metadata
+    const classMetadata: Record<string, any> = {};
+    if (node.decorators) {
+      for (const decorator of node.decorators) {
+        switch (decorator.name) {
+          case 'component':
+            classMetadata.isComponent = true;
+            break;
+          case 'state':
+            classMetadata.hasState = true;
+            break;
+          case 'computed':
+            classMetadata.hasComputed = true;
+            break;
+        }
+      }
+    }
     for (const m of node.methods || []) {
       const bodyStmts = m.body?.body || m.body?.statements || [];
   const fn = function(this: unknown, ...args: unknown[]) {
@@ -98,10 +116,11 @@ export class Runtime {
       }
     }
     const Klass: any = function(this: any, ...ctorArgs: any[]) {
-      Object.assign(this, { __class: node.name });
+      Object.assign(this, { __class: node.name, __metadata: classMetadata });
       if (methodMap['constructor']) methodMap['constructor'].apply(this, ctorArgs);
     };
     Klass.prototype = { ...methodMap, __ops: operatorMap };
+    Klass.__metadata = classMetadata;
     this.scope.set(node.name, Klass);
     return Klass;
   }
@@ -130,6 +149,8 @@ export class Runtime {
           return this.executeThrow(bytecode as any);
         case 'Try':
           return this.executeTry(bytecode as any);
+        case 'ExpressionStatement':
+          return this.executeExpressionStatement(bytecode as any);
         case 'Value':
           return bytecode.value;
         case 'Class':
@@ -389,6 +410,10 @@ export class Runtime {
     return val;
   }
 
+  private executeExpressionStatement(node: { expression: Bytecode }): unknown {
+    return this.evalExpr(node.expression);
+  }
+
   private executeIf(node: { condition: Bytecode; then?: Bytecode; else?: Bytecode }): unknown {
     const cond = this.evalExpr(node.condition);
     if (cond) return this.execute(node.then as any);
@@ -427,7 +452,11 @@ export class Runtime {
 
   private executeThrow(node: { argument: Bytecode }): never {
     const arg = this.evalExpr(node.argument);
-    throw arg instanceof Error ? arg : new Error(String(arg));
+    // Create a special exception wrapper that preserves the original value
+    const error = new Error();
+    (error as any).__omniscriptThrow = true;
+    (error as any).__value = arg;
+    throw error;
   }
 
   private executeTry(node: { tryBlock: Bytecode; catchBlock?: Bytecode; catchVar?: string; finallyBlock?: Bytecode }): unknown {
@@ -438,7 +467,11 @@ export class Runtime {
     } catch (err) {
       if (node.catchBlock) {
         this.pushEnv();
-        if (node.catchVar) this.setVar(node.catchVar, err);
+        if (node.catchVar) {
+          // Extract the original value from Omniscript throw statements
+          const catchValue = (err as any).__omniscriptThrow ? (err as any).__value : err;
+          this.setVar(node.catchVar, catchValue);
+        }
         try {
           const cr = this.execute(node.catchBlock as any);
           if (node.finallyBlock) this.execute(node.finallyBlock as any);

@@ -112,20 +112,104 @@ export class Parser {
     while ((m = fnRe.exec(source)) !== null) {
       const name = m[1];
       const paramsRaw = m[2].trim();
-      const params = paramsRaw ? paramsRaw.split(',').map(p => ({ name: p.trim().split(':')[0].trim() })) : [];
+      const params = paramsRaw ? paramsRaw.split(',').map(p => {
+        const parts = p.trim().split(':');
+        const paramName = parts[0].trim();
+        const paramType = parts[1] ? parts[1].trim() : undefined;
+        return { name: paramName, type: paramType, paramType: paramType };
+      }) : [];
       const bodySrc = m[3];
-      const retMatch = /return\s+([0-9]+)/.exec(bodySrc);
-      const retArg = retMatch ? { type: 'Expression', kind: ExpressionKind.Literal, value: Number(retMatch[1]) } : undefined;
+      
+      // Parse return statements with binary operations
+      const retMatch = /return\s+([^;]+)/.exec(bodySrc);
+      let retArg;
+      if (retMatch) {
+        const retExpr = retMatch[1].trim();
+        // Check for binary operations like a + b
+        const binaryMatch = /([A-Za-z_]\w*)\s*\+\s*([A-Za-z_]\w*)/.exec(retExpr);
+        if (binaryMatch) {
+          retArg = {
+            type: 'BinaryExpression',
+            operator: '+',
+            left: { type: 'Expression', kind: ExpressionKind.Identifier, name: binaryMatch[1] },
+            right: { type: 'Expression', kind: ExpressionKind.Identifier, name: binaryMatch[2] }
+          };
+        } else if (retExpr.match(/^\d+$/)) {
+          retArg = { type: 'Expression', kind: ExpressionKind.Literal, value: Number(retExpr) };
+        } else {
+          retArg = { type: 'Expression', kind: ExpressionKind.Identifier, name: retExpr };
+        }
+      }
+      
       const fnBody = retArg ? [{ type: 'ReturnStatement', argument: retArg }] : [];
       body.push({ type: 'FunctionDeclaration', name, params, body: fnBody });
     }
 
-    // classes (basic)
-    const classRe = /class\s+([A-Za-z_]\w*)(<[^>]+>)?\s*\{([\s\S]*?)\}/g;
-    while ((m = classRe.exec(source)) !== null) {
-      const name = m[1];
-      const generics = m[2] ? m[2].slice(1, -1).split(',').map(s => s.trim()) : undefined;
-      body.push({ type: 'ClassDeclaration', name, generics, methods: [] });
+    // classes (basic) - better handling of nested braces and decorators
+    const classWithDecoratorsRe = /((?:@[A-Za-z_]\w*\s*)*)\s*class\s+([A-Za-z_]\w*)(<[^>]+>)?\s*\{/g;
+    let classMatch;
+    while ((classMatch = classWithDecoratorsRe.exec(source)) !== null) {
+      const decoratorsRaw = classMatch[1];
+      const name = classMatch[2];
+      let generics = undefined;
+      
+      // Parse decorators
+      const decorators: any[] = [];
+      if (decoratorsRaw) {
+        const decoratorMatches = decoratorsRaw.match(/@([A-Za-z_]\w*)/g);
+        if (decoratorMatches) {
+          for (const decoratorMatch of decoratorMatches) {
+            decorators.push({
+              name: decoratorMatch.substring(1), // Remove @
+              type: 'Decorator',
+              arguments: []
+            });
+          }
+        }
+      }
+      
+      // Parse generics with constraints
+      if (classMatch[3]) {
+        const genericsRaw = classMatch[3].slice(1, -1); // Remove < >
+        generics = genericsRaw.split(',').map(g => {
+          const trimmed = g.trim();
+          const extendsMatch = trimmed.match(/([A-Za-z_]\w*)\s+extends\s+([A-Za-z_]\w*)/);
+          if (extendsMatch) {
+            return {
+              name: extendsMatch[1],
+              constraint: extendsMatch[2]
+            };
+          }
+          return { name: trimmed };
+        });
+      }
+      
+      // Find the matching closing brace for the class
+      let braceCount = 1;
+      let pos = classMatch.index + classMatch[0].length;
+      let classBody = '';
+      
+      while (pos < source.length && braceCount > 0) {
+        const char = source[pos];
+        if (char === '{') braceCount++;
+        else if (char === '}') braceCount--;
+        
+        if (braceCount > 0) {
+          classBody += char;
+        }
+        pos++;
+      }
+      
+      // Parse methods within the class
+      const methods: any[] = [];
+      const methodRe = /([A-Za-z_]\w*)\s*\([^)]*\)\s*\{/g;
+      let methodMatch;
+      while ((methodMatch = methodRe.exec(classBody)) !== null) {
+        const methodName = methodMatch[1];
+        methods.push({ name: methodName, type: 'MethodDeclaration' });
+      }
+      
+      body.push({ type: 'ClassDeclaration', name, generics, methods, decorators });
     }
 
     // match expressions
@@ -147,13 +231,43 @@ export class Parser {
     }
 
     // simple let/variable declarations: let x: Type = value;
-    const letRe = /let\s+([A-Za-z_]\w*)(?:\s*:\s*([A-ZaZ_]\w*))?\s*=\s*([^;\n]+)/g;
+    const letRe = /let\s+([A-Za-z_]\w*)(?:\s*:\s*([A-Za-z_]\w*))?\s*=\s*([^;\n]+)/g;
     while ((m = letRe.exec(source)) !== null) {
       const name = m[1];
       const typeName = m[2] ? m[2] : undefined;
       const val = m[3].trim();
-      const initializer = val.match(/^\d+$/) ? { type: 'Expression', kind: ExpressionKind.Literal, value: Number(val) } : { type: 'Expression', kind: ExpressionKind.Identifier, name: val };
+      // Handle string literals with quotes
+      let initializer;
+      if (val.match(/^".*"$/)) {
+        initializer = { type: 'Expression', kind: ExpressionKind.Literal, value: val.slice(1, -1) };
+      } else if (val.match(/^\d+$/)) {
+        initializer = { type: 'Expression', kind: ExpressionKind.Literal, value: Number(val) };
+      } else {
+        initializer = { type: 'Expression', kind: ExpressionKind.Identifier, name: val };
+      }
       body.push({ type: 'VariableDeclaration', name, varType: typeName, initializer });
+    }
+
+    // try/catch/finally statements: try { ... } catch e { ... } finally { ... }
+    const tryRe = /try\s*\{([^}]*)\}\s*catch\s+([A-Za-z_]\w*)\s*\{([^}]*)\}(?:\s*finally\s*\{([^}]*)\})?/g;
+    while ((m = tryRe.exec(source)) !== null) {
+      const tryBlock = m[1].trim();
+      const catchVar = m[2];
+      const catchBlock = m[3].trim();
+      const finallyBlock = m[4] ? m[4].trim() : undefined;
+      
+      // Parse try block - simple expressions for now
+      const tryStmts = tryBlock ? [this.parseSimpleExpression(tryBlock)] : [];
+      const catchStmts = catchBlock ? [this.parseSimpleExpression(catchBlock)] : [];
+      const finallyStmts = finallyBlock ? [this.parseSimpleExpression(finallyBlock)] : undefined;
+      
+      body.push({ 
+        type: 'TryStatement', 
+        tryBlock: tryStmts, 
+        catchVar,
+        catchBlock: catchStmts,
+        finallyBlock: finallyStmts
+      });
     }
 
     // simple import statements: import { A } from 'module';
@@ -166,5 +280,25 @@ export class Parser {
 
     if (body.length > 0) return { type: 'Program', body };
     throw new Error('Fallback parser could not parse input');
+  }
+
+  private parseSimpleExpression(src: string): any {
+    src = src.trim();
+    // Handle throw statements
+    if (src.startsWith('throw ')) {
+      const expr = src.substring(6).trim();
+      const argument = expr.match(/^\d+$/) ? 
+        { type: 'Expression', kind: ExpressionKind.Literal, value: Number(expr) } :
+        { type: 'Expression', kind: ExpressionKind.Identifier, name: expr };
+      return { type: 'ThrowStatement', argument };
+    }
+    
+    // Handle simple expressions (numbers, identifiers)
+    if (src.match(/^\d+$/)) {
+      return { type: 'ExpressionStatement', expression: { type: 'Expression', kind: ExpressionKind.Literal, value: Number(src) } };
+    }
+    
+    // Default to identifier expression
+    return { type: 'ExpressionStatement', expression: { type: 'Expression', kind: ExpressionKind.Identifier, name: src } };
   }
 }

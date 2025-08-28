@@ -29,7 +29,7 @@ describe('Functional language subset', () => {
   });
 
   test('map/filter/reduce pipeline', async () => {
-    const src = 'range(10) |> map(fn(x)=> x * 2) |> filter(fn(x)=> x % 4) |> reduce(0, fn(acc)=> fn(v)=> add(acc, v))';
+    const src = 'range(10) |> map(fn(x)=> x * 2) |> filter(fn(x)=> x % 4) |> reduce(0, fn(acc, v)=> add(acc, v))';
     const result = await omni.execute(src);
     expect(typeof result).toBe('number');
   });
