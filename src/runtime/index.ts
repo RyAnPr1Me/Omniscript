@@ -1,4 +1,6 @@
 import { debug as logger, DebugLevel } from '../debug';
+import { SIMDProcessor } from './simd';
+import { MemoryPoolManager } from './memory-pool';
 
 export interface Bytecode {
   type: string;
@@ -48,7 +50,9 @@ export class Runtime {
   private referenceCounts: Map<object, number>;
   private weakReferences: WeakMap<object, boolean>;
   private debugMode: boolean;
-    private envStack: Array<Map<string, unknown>> = [];
+  private envStack: Array<Map<string, unknown>> = [];
+  private simdProcessor: SIMDProcessor;
+  private memoryPoolManager: MemoryPoolManager;
 
     // Add missing operator overloading example and addVectors for tests
     public operatorOverloadingExample(): void {
@@ -68,6 +72,11 @@ export class Runtime {
     this.referenceCounts = new Map();
     this.weakReferences = new WeakMap();
     this.debugMode = false;
+    this.simdProcessor = new SIMDProcessor();
+    this.memoryPoolManager = new MemoryPoolManager();
+    
+    // Initialize default memory pools
+    this.initializeDefaultPools();
   }
 
   // Execute a class declaration (AST/bytecode hybrid node)
@@ -224,7 +233,80 @@ export class Runtime {
   }
 
   enableParallelExecution(debug = false): void {
-  // if (debug) console.log("Parallel execution enabled for supported operations.");
+    this.simdProcessor.enableParallelExecution();
+    if (debug) console.log("Parallel execution enabled for supported operations.");
+  }
+
+  // Initialize default memory pools
+  private initializeDefaultPools(): void {
+    // Create common memory pools
+    this.memoryPoolManager.createPool('objects', {
+      initialSize: 100,
+      maxSize: 1000,
+      objectType: Object
+    });
+
+    this.memoryPoolManager.createPool('arrays', {
+      initialSize: 50,
+      maxSize: 500,
+      objectType: Array
+    });
+
+    this.memoryPoolManager.createPool('buffers', {
+      initialSize: 20,
+      maxSize: 100,
+      objectType: Float32Array
+    });
+  }
+
+  // SIMD Operations API
+  public simdAdd(a: number[], b: number[]): number[] {
+    return this.simdProcessor.add(a, b);
+  }
+
+  public simdSubtract(a: number[], b: number[]): number[] {
+    return this.simdProcessor.subtract(a, b);
+  }
+
+  public simdMultiply(a: number[], b: number[]): number[] {
+    return this.simdProcessor.multiply(a, b);
+  }
+
+  public simdDivide(a: number[], b: number[]): number[] {
+    return this.simdProcessor.divide(a, b);
+  }
+
+  public simdDot(a: number[], b: number[]): number {
+    return this.simdProcessor.dot(a, b);
+  }
+
+  public simdMagnitude(a: number[]): number {
+    return this.simdProcessor.magnitude(a);
+  }
+
+  public simdNormalize(a: number[]): number[] {
+    return this.simdProcessor.normalize(a);
+  }
+
+  public matrixMultiply(a: number[][], b: number[][]): number[][] {
+    return this.simdProcessor.matrixMultiply(a, b);
+  }
+
+  // Memory Pool API
+  public createMemoryPool(name: string, initialSize: number, maxSize: number, objectType?: any) {
+    return this.memoryPoolManager.createPool(name, {
+      initialSize,
+      maxSize,
+      objectType
+    });
+  }
+
+  public getMemoryPool(name: string) {
+    return this.memoryPoolManager.getPool(name);
+  }
+
+  public getMemoryPoolStats() {
+    return this.memoryPoolManager.getAllStats();
   }
 
   allocate(object: object): void {
