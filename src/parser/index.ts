@@ -116,69 +116,105 @@ export class Parser {
       body.push({ type: 'ImportDeclaration', imported, from });
     }
     
-    // Parse function declarations with fn syntax - using proper brace matching
-    const fnRegex = /fn\s+([A-Za-z_]\w*)\s*\(([^)]*)\)\s*(?::\s*[^\s{]+)?\s*\{/g;
-    let fnMatch;
-    while ((fnMatch = fnRegex.exec(source)) !== null) {
-      const name = fnMatch[1];
-      const paramsRaw = fnMatch[2].trim();
-      const params = paramsRaw ? paramsRaw.split(',').map(p => {
-        const parts = p.trim().split(':');
-        const paramName = parts[0].trim();
-        const paramType = parts[1] ? parts[1].trim() : undefined;
-        return { name: paramName, type: paramType, paramType: paramType };
-      }) : [];
+    // Parse statements in order by finding boundaries more carefully
+    let remainingSource = source;
+    
+    // Extract classes first (they can contain semicolons, so handle them specially)
+    const classMatches: Array<{start: number, end: number, text: string}> = [];
+    const classStartRe = /class\s+[A-Za-z_]\w*\s*\{/g;
+    let classStartMatch;
+    while ((classStartMatch = classStartRe.exec(remainingSource)) !== null) {
+      const start = classStartMatch.index!;
+      const openBrace = start + classStartMatch[0].length - 1;
       
-      // Find the function body using proper brace matching
-      const startPos = fnMatch.index! + fnMatch[0].length;
+      // Find matching closing brace
       let braceCount = 1;
-      let endPos = startPos;
-      while (endPos < source.length && braceCount > 0) {
-        if (source[endPos] === '{') braceCount++;
-        else if (source[endPos] === '}') braceCount--;
-        endPos++;
+      let end = openBrace + 1;
+      while (end < remainingSource.length && braceCount > 0) {
+        if (remainingSource[end] === '{') braceCount++;
+        else if (remainingSource[end] === '}') braceCount--;
+        end++;
       }
       
       if (braceCount === 0) {
-        const bodySrc = source.substring(startPos, endPos - 1).trim();
-        
-        // Parse function body more comprehensively
-        const fnBodyStmts: any[] = [];
-        
-        // Parse variable declarations: let x = value;
-        const letRe = /let\s+([A-Za-z_]\w*)\s*=\s*([^;]+);?/g;
-        let letMatch;
-        while ((letMatch = letRe.exec(bodySrc)) !== null) {
-          const varName = letMatch[1];
-          const valueExpr = letMatch[2].trim();
+        classMatches.push({
+          start,
+          end,
+          text: remainingSource.substring(start, end)
+        });
+      }
+    }
+    
+    // Parse classes
+    for (const classMatch of classMatches) {
+      this.parseClassStatement(classMatch.text, body);
+    }
+    
+    // Remove classes from source for remaining parsing
+    let sourceWithoutClasses = remainingSource;
+    for (let i = classMatches.length - 1; i >= 0; i--) {
+      const match = classMatches[i];
+      sourceWithoutClasses = sourceWithoutClasses.substring(0, match.start) + 
+                            ' '.repeat(match.end - match.start) + 
+                            sourceWithoutClasses.substring(match.end);
+    }
+    
+    // Parse variable declarations from the remaining source
+    const varRe = /(let|const)\s+([A-Za-z_]\w*)\s*=\s*([^;]+)/g;
+    let varMatch;
+    while ((varMatch = varRe.exec(sourceWithoutClasses)) !== null) {
+      const varType = varMatch[1]; // let or const
+      const varName = varMatch[2];
+      const valueExpr = varMatch[3].trim();
+      
+      let initializer = undefined;
+      
+      // Parse new expressions like new User()
+      if (valueExpr.startsWith('new ')) {
+        const newMatch = valueExpr.match(/new\s+([A-Za-z_]\w*)(?:<[^>]*>)?\s*\(([^)]*)\)/);
+        if (newMatch) {
+          const className = newMatch[1];
+          const argsStr = newMatch[2].trim();
+          const args = argsStr ? this.parseArguments(argsStr) : [];
           
-          // Parse new expressions like new List<number>()
-          if (valueExpr.startsWith('new ')) {
-            const newMatch = valueExpr.match(/new\s+([A-Za-z_]\w*)(?:<[^>]*>)?\s*\(([^)]*)\)/);
-            if (newMatch) {
-              const className = newMatch[1];
-              const argsStr = newMatch[2].trim();
-              const args = argsStr ? this.parseArguments(argsStr) : [];
-              
-              fnBodyStmts.push({
-                type: 'VariableDeclaration',
-                name: varName,
-                initializer: {
-                  type: 'Expression',
-                  kind: ExpressionKind.Call,
-                  callee: { type: 'Expression', kind: ExpressionKind.Identifier, name: className },
-                  arguments: args,
-                  isConstructor: true
-                }
-              });
-            }
-          }
+          initializer = {
+            type: 'Expression',
+            kind: ExpressionKind.Call,
+            callee: { type: 'Expression', kind: ExpressionKind.Identifier, name: className },
+            arguments: args,
+            isConstructor: true
+          };
         }
-        
-        // Parse method calls: obj.method(args);
-        const methodCallRe = /([A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*)\s*\(\s*([^)]*)\s*\)\s*;?/g;
-        let callMatch;
-        while ((callMatch = methodCallRe.exec(bodySrc)) !== null) {
+      } else if (valueExpr.match(/^".*"$/)) {
+        // String literal
+        initializer = { type: 'Expression', kind: ExpressionKind.Literal, value: valueExpr.slice(1, -1) };
+      } else if (valueExpr.match(/^\d+$/)) {
+        // Number literal  
+        initializer = { type: 'Expression', kind: ExpressionKind.Literal, value: Number(valueExpr) };
+      } else {
+        // Identifier or expression
+        initializer = { type: 'Expression', kind: ExpressionKind.Identifier, name: valueExpr };
+      }
+      
+      body.push({
+        type: 'VariableDeclaration',
+        name: varName,
+        initializer: initializer
+      });
+    }
+    
+    // Parse remaining expressions at the end (like method calls)
+    const remainingLines = sourceWithoutClasses.split(';').map(s => s.trim()).filter(s => s.length > 0);
+    for (const line of remainingLines) {
+      if (line.match(/^(let|const)\s+/) || line.match(/^\s*$/)) {
+        // Skip variable declarations (already parsed) and empty lines
+        continue;
+      }
+      
+      if (line.includes('(') && line.includes(')')) {
+        // Method call
+        const callMatch = line.match(/([A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*)\(([^)]*)\)/);
+        if (callMatch) {
           const callExpr = callMatch[1];
           const argsStr = callMatch[2].trim();
           const args = argsStr ? this.parseArguments(argsStr) : [];
@@ -196,7 +232,7 @@ export class Parser {
             calleeObj = { type: 'Expression', kind: ExpressionKind.Identifier, name: callExpr };
           }
           
-          fnBodyStmts.push({
+          body.push({
             type: 'ExpressionStatement',
             expression: {
               type: 'Expression',
@@ -206,33 +242,12 @@ export class Parser {
             }
           });
         }
-        
-        // Parse return statements
-        const retMatch = /return\s+([^;]+)/.exec(bodySrc);
-        if (retMatch) {
-          const retExpr = retMatch[1].trim();
-          // Check for binary operations like a + b
-          const binaryMatch = /([A-Za-z_]\w*)\s*\+\s*([A-Za-z_]\w*)/.exec(retExpr);
-          let retArg;
-          if (binaryMatch) {
-            retArg = {
-              type: 'BinaryExpression',
-              operator: '+',
-              left: { type: 'Expression', kind: ExpressionKind.Identifier, name: binaryMatch[1] },
-              right: { type: 'Expression', kind: ExpressionKind.Identifier, name: binaryMatch[2] }
-            };
-          } else if (retExpr.match(/^\d+$/)) {
-            retArg = { type: 'Expression', kind: ExpressionKind.Literal, value: Number(retExpr) };
-          } else {
-            retArg = { type: 'Expression', kind: ExpressionKind.Identifier, name: retExpr };
-          }
-          fnBodyStmts.push({ type: 'ReturnStatement', argument: retArg });
-        }
-        
-        body.push({ type: 'FunctionDeclaration', name, params, body: fnBodyStmts });
-        
-        // Remove the parsed function from source to avoid double-parsing
-        source = source.substring(0, fnMatch.index!) + source.substring(endPos);
+      } else if (line.match(/^[A-Za-z_]\w*$/)) {
+        // Simple identifier
+        body.push({
+          type: 'ExpressionStatement',
+          expression: { type: 'Expression', kind: ExpressionKind.Identifier, name: line }
+        });
       }
     }
     
@@ -769,12 +784,16 @@ export class Parser {
     if (!argsStr.trim()) return [];
     
     const args = [];
-    const argParts = argsStr.split(',');
+    // Split arguments while respecting nested braces and quotes
+    const parts = this.smartSplit(argsStr, ',');
     
-    for (const arg of argParts) {
+    for (const arg of parts) {
       const trimmed = arg.trim();
       if (trimmed.match(/^".*"$/)) {
         // String literal
+        args.push({ type: 'Expression', kind: ExpressionKind.Literal, value: trimmed.slice(1, -1) });
+      } else if (trimmed.match(/^'.*'$/)) {
+        // Single-quoted string literal
         args.push({ type: 'Expression', kind: ExpressionKind.Literal, value: trimmed.slice(1, -1) });
       } else if (trimmed.match(/^\d+$/)) {
         // Number literal
@@ -783,15 +802,21 @@ export class Parser {
         // Object literal (basic parsing)
         const objContent = trimmed.slice(1, -1);
         const properties = [];
-        const propMatches = objContent.match(/([A-Za-z_]\w*)\s*:\s*"[^"]*"|([A-Za-z_]\w*)\s*:\s*[^,}]+/g);
-        if (propMatches) {
-          for (const propMatch of propMatches) {
-            const [key, value] = propMatch.split(':').map(s => s.trim());
+        const propParts = this.smartSplit(objContent, ',');
+        
+        for (const propStr of propParts) {
+          const colonIndex = propStr.indexOf(':');
+          if (colonIndex > 0) {
+            const key = propStr.substring(0, colonIndex).trim();
+            const valueStr = propStr.substring(colonIndex + 1).trim();
+            
             let propValue;
-            if (value.match(/^".*"$/)) {
-              propValue = { type: 'Expression', kind: ExpressionKind.Literal, value: value.slice(1, -1) };
+            if (valueStr.match(/^["'].*["']$/)) {
+              propValue = { type: 'Expression', kind: ExpressionKind.Literal, value: valueStr.slice(1, -1) };
+            } else if (valueStr.match(/^\d+$/)) {
+              propValue = { type: 'Expression', kind: ExpressionKind.Literal, value: Number(valueStr) };
             } else {
-              propValue = { type: 'Expression', kind: ExpressionKind.Identifier, name: value };
+              propValue = { type: 'Expression', kind: ExpressionKind.Identifier, name: valueStr };
             }
             properties.push({ key, value: propValue });
           }
@@ -804,5 +829,46 @@ export class Parser {
     }
     
     return args;
+  }
+  
+  // Split a string by delimiter while respecting nested braces and quotes
+  private smartSplit(str: string, delimiter: string): string[] {
+    const parts = [];
+    let current = '';
+    let braceDepth = 0;
+    let inQuotes = false;
+    let quoteChar = '';
+    
+    for (let i = 0; i < str.length; i++) {
+      const char = str[i];
+      
+      if (!inQuotes) {
+        if (char === '"' || char === "'") {
+          inQuotes = true;
+          quoteChar = char;
+        } else if (char === '{') {
+          braceDepth++;
+        } else if (char === '}') {
+          braceDepth--;
+        } else if (char === delimiter && braceDepth === 0) {
+          parts.push(current);
+          current = '';
+          continue;
+        }
+      } else {
+        if (char === quoteChar && (i === 0 || str[i-1] !== '\\')) {
+          inQuotes = false;
+          quoteChar = '';
+        }
+      }
+      
+      current += char;
+    }
+    
+    if (current.trim()) {
+      parts.push(current);
+    }
+    
+    return parts;
   }
 }

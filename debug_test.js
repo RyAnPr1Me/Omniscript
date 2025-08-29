@@ -1,35 +1,16 @@
-const { Parser, Compiler } = require('./dist/index.js');
+const { Omniscript } = require('./dist/index.js');
 
-const parser = new Parser();
-const compiler = new Compiler();
+const omni = new Omniscript();
 
-const source = `
-import { List, Map } from 'stdlib/collections';
+console.log('Testing fixed object literal...');
 
-fn main() {
-  let list = new List<number>();
-  list.push(42);
-}
-`;
+// Test the full scenario step by step
+const src = `class User { constructor(data) { this.name = data.name; this.email = data.email; } getName() { return this.name; } } let user = new User({ name: 'John Doe', email: 'john@example.com' }); user.getName()`;
 
-console.log('Testing detailed compilation...');
-try {
-  const ast = parser.parse(source);
-  console.log('AST body length:', ast.body.length);
-  ast.body.forEach((item, i) => {
-    console.log(`  AST[${i}]:`, item.type, item.name || item.from || '');
-  });
-
-  const bytecode = compiler.compile(ast);
-  console.log('\nBytecode type:', bytecode.type);
-  console.log('Bytecode imports:', bytecode.imports);
-  
-  if (bytecode.type === 'Block') {
-    console.log('Block body length:', bytecode.body.length);
-    bytecode.body.forEach((item, i) => {
-      console.log(`  Block[${i}]:`, item.type, item.name || '', 'imports:', item.imports || 'none');
-    });
-  }
-} catch (error) {
+omni.execute(src).then(result => {
+  console.log('Full test result:', result);
+  console.log('Type:', typeof result);
+}).catch(error => {
   console.error('Error:', error.message);
-}
+  console.error('Stack:', error.stack);
+});
