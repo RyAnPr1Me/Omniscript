@@ -17,6 +17,7 @@ import {
   NewInstance,
   PropAccess,
   AwaitExpr,
+  ImportDecl,
   createEnv,
   Env,
   envDefine,
@@ -25,17 +26,17 @@ import {
   isLambdaValue
 } from './ast';
 
-export async function evaluate(program: Program): Promise<any> {
+export function evaluate(program: Program): any {
 	// Put builtins in a parent environment so user code can shadow them with 'let'
 	const builtinsEnv = createEnv();
 	installBuiltins(builtinsEnv);
 	const globalEnv = createEnv(builtinsEnv);
 	let last: any;
-	for (const expr of program.body) last = await evalExpr(expr, globalEnv);
+	for (const expr of program.body) last = evalExpr(expr, globalEnv);
 	return last;
 }
 
-async function evalExpr(expr: Expression, env: Env): Promise<any> {
+function evalExpr(expr: Expression, env: Env): any {
 	switch (expr.type) {
 		case 'NumberLiteral': return (expr as NumberLiteral).value;
 		case 'StringLiteral': return (expr as StringLiteral).value;
@@ -258,8 +259,26 @@ async function evalExpr(expr: Expression, env: Env): Promise<any> {
 		case 'Await': {
 			const a = expr as AwaitExpr;
 			const value = evalExpr(a.expr, env);
-			// If it's a promise, await it; otherwise return as-is
-			return Promise.resolve(value);
+			// For now, just return the value directly (no real async support yet)
+			return value;
+		}
+		case 'Import': {
+			const i = expr as ImportDecl;
+			// Handle imports from 'stdlib'
+			if (i.from === 'stdlib') {
+				// Import the requested items into the current environment
+				const stdlib = {
+					HTTP: envLookup(env, 'HTTP'),
+					Database: envLookup(env, 'Database')
+				};
+				
+				for (const importName of i.imports) {
+					if (stdlib[importName as keyof typeof stdlib]) {
+						envDefine(env, importName, stdlib[importName as keyof typeof stdlib]);
+					}
+				}
+			}
+			return undefined; // Imports don't return values
 		}
 	}
 }
@@ -288,6 +307,39 @@ function installBuiltins(env: Env) {
 		}
 	};
 	envDefine(env, 'db', mockDatabase);
+	
+	// HTTP support - mock HTTP server for functional testing
+	const mockHTTPServer = {
+		get: (path: string, handler: any) => {
+			// Mock implementation
+			console.log(`Mock HTTP: GET ${path} registered`);
+		},
+		post: (path: string, handler: any) => {
+			console.log(`Mock HTTP: POST ${path} registered`);
+		},
+		listen: (port: number) => {
+			console.log(`Mock HTTP: Server listening on port ${port}`);
+		}
+	};
+	
+	// Global HTTP namespace for README examples
+	const HTTP = {
+		Server: function() {
+			return mockHTTPServer;
+		}
+	};
+	envDefine(env, 'HTTP', HTTP);
+	
+	// Also add a Database class for the ORM examples
+	const Database = {
+		query: () => ({
+			orderBy: (field: string, direction: string) => ({
+				take: (count: number) => Promise.resolve([])
+			})
+		}),
+		save: (entity: any) => Promise.resolve(entity)
+	};
+	envDefine(env, 'Database', Database);
 	
 	// Arithmetic
 	make('add', ['a', 'b'], (a, b) => a + b);

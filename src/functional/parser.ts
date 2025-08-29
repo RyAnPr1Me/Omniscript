@@ -13,7 +13,8 @@ import {
   Lambda,
   ClassDecl,
   MethodDecl,
-  AwaitExpr
+  AwaitExpr,
+  ImportDecl
 } from './ast';
 
 export class FunctionalParser {
@@ -28,11 +29,33 @@ export class FunctionalParser {
       // skip any leading semicolons
       while (this.peek('SEMI')) this.consume('SEMI');
       if (this.peek('EOF')) break;
-      body.push(this.expression());
+      
+      // Handle imports at the top level
+      if (this.peek('IMPORT')) {
+        body.push(this.importDecl());
+      } else {
+        body.push(this.expression());
+      }
+      
       // consume trailing semicolons
       while (this.peek('SEMI')) this.consume('SEMI');
     }
     return { type: 'Program', body };
+  }
+
+  private importDecl(): Expression {
+    this.consume('IMPORT');
+    this.consume('LBRACE');
+    const imports: string[] = [];
+    if (!this.peek('RBRACE')) {
+      do {
+        imports.push(this.consume('IDENT').value);
+      } while (this.consumeOptional('COMMA'));
+    }
+    this.consume('RBRACE');
+    this.consume('FROM');
+    const from = this.consume('STRING').value;
+    return { type: 'Import', imports, from };
   }
 
   // --- Helper token methods ---
