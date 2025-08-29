@@ -1,13 +1,9 @@
 import { 
   Stream, 
-  Subject, 
   BehaviorSubject, 
   ReactiveState,
   from,
-  interval,
-  timer,
-  merge,
-  combineLatest
+  timer
 } from '../../src/stdlib/reactive';
 
 describe('Advanced Reactive Programming', () => {
@@ -245,7 +241,7 @@ describe('Advanced Reactive Programming', () => {
     const state = new ReactiveState<State>({ count: 0 });
     
     // Add validation middleware
-    state.addMiddleware((oldState, newState, action) => {
+    state.addMiddleware((oldState, newState, _action) => {
       if (newState.count < 0) {
         return { ...newState, count: 0 }; // Prevent negative values
       }

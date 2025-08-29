@@ -203,7 +203,6 @@ program
     
     // Basic file watching and execution
     const fs = await import('fs');
-    const path = await import('path');
     
     const watchFile = 'src/main.omni';
     
@@ -244,7 +243,9 @@ program
       });
       
       // Keep the process running
-      await new Promise(() => {});
+      await new Promise(() => {
+        // Intentionally empty - keeps process alive
+      });
       
     } else {
       console.error(`❌ Could not find ${watchFile}. Make sure you're in an Omniscript project directory.`);

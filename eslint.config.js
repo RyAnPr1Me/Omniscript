@@ -50,6 +50,14 @@ module.exports = [
     },
   },
   
+  // Allow console statements in CLI and install files
+  {
+    files: ['src/cli.ts', 'src/bin/**/*.ts'],
+    rules: {
+      'no-console': 'off',
+    },
+  },
+  
   // Separate configuration for JavaScript files
   {
     files: ['**/*.js'],

@@ -1,4 +1,4 @@
-import { JITOptimizer, ConstantFoldingPass, DeadCodeEliminationPass, InliningPass } from '../../src/compiler/optimizer';
+import { JITOptimizer } from '../../src/compiler/optimizer';
 
 describe('JIT Optimizer', () => {
   let optimizer: JITOptimizer;

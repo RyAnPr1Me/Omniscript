@@ -1,5 +1,5 @@
 import { Runtime } from '../../src/runtime';
-import { MemoryPool, MemoryPoolManager } from '../../src/runtime/memory-pool';
+import { MemoryPoolManager } from '../../src/runtime/memory-pool';
 
 describe('Runtime - Memory Pool', () => {
   let runtime: Runtime;
@@ -236,7 +236,7 @@ describe('Runtime - Memory Pool', () => {
       });
 
       const obj1 = pool.allocate();
-      const obj2 = pool.allocate();
+      pool.allocate(); // obj2 allocated but not used in test
       
       let stats = pool.getStats();
       expect(stats.totalAllocated).toBe(2);
@@ -258,8 +258,8 @@ describe('Runtime - Memory Pool', () => {
         objectType: Object
       });
 
-      const obj1 = pool.allocate();
-      const obj2 = pool.allocate();
+      pool.allocate(); // obj1 allocated but not used in test
+      pool.allocate(); // obj2 allocated but not used in test
 
       const stats = pool.getStats();
       expect(stats.utilization).toBe(0.2); // 2/10 = 0.2

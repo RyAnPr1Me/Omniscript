@@ -129,7 +129,13 @@ describe('Event Sourcing System', () => {
   });
 
   test('projections', async () => {
-    let projectionData: any = {};
+    interface UserProjection {
+      name: string;
+      email: string;
+      active: boolean;
+    }
+    
+    const projectionData: Record<string, UserProjection> = {};
     
     eventBus.addProjection('userView', async (event: DomainEvent) => {
       if (event.type === 'UserRegistered') {
