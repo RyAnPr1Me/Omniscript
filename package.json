@@ -32,8 +32,8 @@
     "build": "tsc",
     "postbuild": "chmod +x dist/cli.js",
     "build:exe": "npm run build && pkg . --targets node18-win-x64,node18-linux-x64,node18-macos-x64 --output dist/bin/omniscript-installer",
-    "test": "jest",
-    "test:watch": "jest --watch",
+    "test": "jest --config jest.config.ts",
+    "test:watch": "jest --watch --config jest.config.ts",
     "lint": "eslint .",
     "format": "prettier --write ."
   },
