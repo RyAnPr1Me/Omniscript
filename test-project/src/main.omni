@@ -1,0 +1,13 @@
+// Welcome to Omniscript!
+// This is your main application file.
+
+@component
+class App {
+  constructor() {
+    this.message = "Hello, Omniscript!";
+  }
+  
+  render() {
+    console.log(this.message + " - Built with Omniscript");
+  }
+}

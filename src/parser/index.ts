@@ -241,6 +241,9 @@ export class Parser {
       } else if (valueExpr.match(/^\d+$/)) {
         // Number literal  
         initializer = { type: 'Expression', kind: ExpressionKind.Literal, value: Number(valueExpr) };
+      } else if (valueExpr.match(/^\{.*\}$/)) {
+        // Object literal: { key: value, key2: value2 }
+        initializer = this.parseObjectLiteral(valueExpr);
       } else {
         // Identifier or expression
         initializer = { type: 'Expression', kind: ExpressionKind.Identifier, name: valueExpr };
@@ -529,6 +532,9 @@ export class Parser {
         initializer = { type: 'Expression', kind: ExpressionKind.Literal, value: val.slice(1, -1) };
       } else if (val.match(/^\d+$/)) {
         initializer = { type: 'Expression', kind: ExpressionKind.Literal, value: Number(val) };
+      } else if (val.match(/^\{.*\}$/)) {
+        // Object literal: { key: value, key2: value2 }
+        initializer = this.parseObjectLiteral(val);
       } else if (val.match(/^new\s+([A-Za-z_]\w*)\s*\(([^)]*)\)$/)) {
         const newMatch = val.match(/^new\s+([A-Za-z_]\w*)\s*\(([^)]*)\)$/);
         if (newMatch) {
@@ -954,5 +960,78 @@ export class Parser {
     }
     
     return parts;
+  }
+  
+  private parseObjectLiteral(objStr: string): any {
+    // Parse object literal like: { key: value, key2: value2 }
+    const content = objStr.slice(1, -1).trim(); // Remove { and }
+    
+    if (!content) {
+      // Empty object
+      return { type: 'Expression', kind: ExpressionKind.ObjectLiteral, properties: [] };
+    }
+    
+    const properties = [];
+    const parts = this.smartSplit(content, ',');
+    
+    for (const part of parts) {
+      const colonIndex = part.indexOf(':');
+      if (colonIndex > 0) {
+        const key = part.substring(0, colonIndex).trim();
+        const valueStr = part.substring(colonIndex + 1).trim();
+        
+        // Parse key (remove quotes if present)
+        const cleanKey = key.replace(/^["']|["']$/g, '');
+        
+        // Parse value
+        let value;
+        if (valueStr.match(/^["'].*["']$/)) {
+          // String literal
+          value = { type: 'Expression', kind: ExpressionKind.Literal, value: valueStr.slice(1, -1) };
+        } else if (valueStr.match(/^\d+$/)) {
+          // Number literal
+          value = { type: 'Expression', kind: ExpressionKind.Literal, value: Number(valueStr) };
+        } else if (valueStr.match(/^\(.+\)\s*=>/)) {
+          // Arrow function
+          const arrowMatch = valueStr.match(/^\(([^)]*)\)\s*=>\s*(.+)$/);
+          if (arrowMatch) {
+            const params = arrowMatch[1].trim() ? arrowMatch[1].split(',').map(p => ({ name: p.trim() })) : [];
+            const body = arrowMatch[2].trim();
+            
+            // Parse function body
+            let bodyExpr;
+            if (body.match(/^\{.*\}$/)) {
+              // Block body
+              bodyExpr = { type: 'Block', body: [{ type: 'ExpressionStatement', expression: { type: 'Expression', kind: ExpressionKind.Identifier, name: 'undefined' } }] };
+            } else {
+              // Expression body
+              if (body.match(/^["'].*["']$/)) {
+                bodyExpr = { type: 'Expression', kind: ExpressionKind.Literal, value: body.slice(1, -1) };
+              } else if (body.match(/^\d+$/)) {
+                bodyExpr = { type: 'Expression', kind: ExpressionKind.Literal, value: Number(body) };
+              } else {
+                bodyExpr = { type: 'Expression', kind: ExpressionKind.Identifier, name: body };
+              }
+            }
+            
+            value = { 
+              type: 'Function', 
+              name: null,
+              params: params,
+              body: bodyExpr
+            };
+          } else {
+            value = { type: 'Expression', kind: ExpressionKind.Identifier, name: valueStr };
+          }
+        } else {
+          // Identifier or other expression
+          value = { type: 'Expression', kind: ExpressionKind.Identifier, name: valueStr };
+        }
+        
+        properties.push({ key: cleanKey, value });
+      }
+    }
+    
+    return { type: 'Expression', kind: ExpressionKind.ObjectLiteral, properties };
   }
 }
