@@ -9,6 +9,7 @@ export * from './http';
 export * from './database';
 
 export { MathUtils as Math } from './math';
+export { DateTime } from './datetime';
 
 import { SQLiteConnection, PostgresConnection } from './database/connections';
 
@@ -31,7 +32,8 @@ export { HTTPClient } from './http/client';
 export { PackageManager } from '../package-manager';
 
 // Export enhanced database features
-export class Database {
+export { Database } from './database/query-builder';
+export class DatabaseV2 {
   static async connect(connectionString: string) {
     if (connectionString.startsWith('sqlite://')) {
       return new SQLiteConnection(connectionString);
