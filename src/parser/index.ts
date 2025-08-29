@@ -106,7 +106,63 @@ export class Parser {
   // Very small fallback parser to handle common test cases when ANTLR parsing fails.
   private fallbackParse(source: string): any {
     const body: any[] = [];
-    // functions
+    
+    // Handle method calls at the beginning if that's all there is
+    const methodCallRe = /^([A-Za-z_]\w*)\.([A-Za-z_]\w*)\(([^)]*)\)\s*$/;
+    const methodMatch = methodCallRe.exec(source.trim());
+    if (methodMatch) {
+      const objName = methodMatch[1];
+      const methodName = methodMatch[2];
+      const argsStr = methodMatch[3].trim();
+      const args = argsStr ? this.parseArguments(argsStr) : [];
+      
+      body.push({
+        type: 'ExpressionStatement',
+        expression: {
+          type: 'Expression',
+          kind: ExpressionKind.Call,
+          callee: {
+            type: 'Expression',
+            kind: ExpressionKind.MemberAccess,
+            object: { type: 'Expression', kind: ExpressionKind.Identifier, name: objName },
+            member: methodName
+          },
+          arguments: args
+        }
+      });
+      return { type: 'Program', body };
+    }
+    // Handle sequences of statements separated by semicolons
+    if (source.includes(';')) {
+      const statements = source.split(';').map(s => s.trim()).filter(s => s.length > 0);
+      
+      for (const stmt of statements) {
+        // Try to parse each statement
+        if (stmt.match(/^class\s+/)) {
+          // Parse as a complete class (find the full statement including braces)
+          let remainingSource = source;
+          let pos = remainingSource.indexOf(stmt);
+          if (pos >= 0) {
+            remainingSource = remainingSource.substring(pos);
+            const classMatch = remainingSource.match(/(class\s+[^{]+\{[^}]*\})/);
+            if (classMatch) {
+              this.parseClassStatement(classMatch[1], body);
+              continue;
+            }
+          }
+        } else if (stmt.match(/^let\s+/)) {
+          this.parseLetStatement(stmt, body);
+        } else if (stmt.match(/^([A-Za-z_]\w*)\.([A-Za-z_]\w*)\(/)) {
+          // Method call
+          this.parseMethodCallStatement(stmt, body);
+        } else if (stmt.length > 0) {
+          // Try to parse as simple expression
+          this.parseExpressionStatement(stmt, body);
+        }
+      }
+      
+      if (body.length > 0) return { type: 'Program', body };
+    }
     const fnRe = /fn\s+([A-Za-z_]\w*)\s*\(([^)]*)\)\s*(?::\s*[^\s{]+)?\s*\{([\s\S]*?)\}/g;
     let m: RegExpExecArray | null;
     while ((m = fnRe.exec(source)) !== null) {
@@ -300,5 +356,274 @@ export class Parser {
     
     // Default to identifier expression
     return { type: 'ExpressionStatement', expression: { type: 'Expression', kind: ExpressionKind.Identifier, name: src } };
+  }
+
+  private parseMethodCallStatement(stmt: string, body: any[]): void {
+    const methodCallMatch = stmt.match(/^([A-Za-z_]\w*)\.([A-Za-z_]\w*)\(([^)]*)\)$/);
+    if (methodCallMatch) {
+      const objName = methodCallMatch[1];
+      const methodName = methodCallMatch[2];
+      const argsStr = methodCallMatch[3].trim();
+      const args = argsStr ? this.parseArguments(argsStr) : [];
+      
+      body.push({
+        type: 'ExpressionStatement',
+        expression: {
+          type: 'Expression',
+          kind: ExpressionKind.Call,
+          callee: {
+            type: 'Expression',
+            kind: ExpressionKind.MemberAccess,
+            object: { type: 'Expression', kind: ExpressionKind.Identifier, name: objName },
+            member: methodName
+          },
+          arguments: args
+        }
+      });
+    }
+  }
+
+  private parseLetStatement(stmt: string, body: any[]): void {
+    const letMatch = stmt.match(/let\s+([A-Za-z_]\w*)(?:\s*:\s*([A-Za-z_]\w*))?\s*=\s*(.+)/);
+    if (letMatch) {
+      const name = letMatch[1];
+      const typeName = letMatch[2] || undefined;
+      const val = letMatch[3].trim();
+      
+      let initializer;
+      if (val.match(/^".*"$/)) {
+        initializer = { type: 'Expression', kind: ExpressionKind.Literal, value: val.slice(1, -1) };
+      } else if (val.match(/^\d+$/)) {
+        initializer = { type: 'Expression', kind: ExpressionKind.Literal, value: Number(val) };
+      } else if (val.match(/^new\s+([A-Za-z_]\w*)\s*\(([^)]*)\)$/)) {
+        const newMatch = val.match(/^new\s+([A-Za-z_]\w*)\s*\(([^)]*)\)$/);
+        if (newMatch) {
+          const className = newMatch[1];
+          const argsStr = newMatch[2].trim();
+          const args = argsStr ? this.parseArguments(argsStr) : [];
+          initializer = { 
+            type: 'Expression', 
+            kind: ExpressionKind.Call, 
+            callee: { type: 'Expression', kind: ExpressionKind.Identifier, name: className },
+            arguments: args,
+            isConstructor: true
+          };
+        }
+      } else {
+        initializer = { type: 'Expression', kind: ExpressionKind.Identifier, name: val };
+      }
+      
+      if (!initializer) {
+        initializer = { type: 'Expression', kind: ExpressionKind.Identifier, name: val };
+      }
+      body.push({ type: 'VariableDeclaration', name, varType: typeName, initializer });
+    }
+  }
+
+  private parseClassStatement(stmt: string, body: any[]): void {
+    // Parse class with proper brace matching
+    const classMatch = stmt.match(/class\s+([A-Za-z_]\w*)\s*\{/);
+    if (classMatch) {
+      const name = classMatch[1];
+      
+      // Find the matching closing brace for the class
+      let braceCount = 1;
+      let pos = classMatch.index! + classMatch[0].length;
+      let classBody = '';
+      
+      while (pos < stmt.length && braceCount > 0) {
+        const char = stmt[pos];
+        if (char === '{') braceCount++;
+        else if (char === '}') braceCount--;
+        
+        if (braceCount > 0) {
+          classBody += char;
+        }
+        pos++;
+      }
+      
+      // Parse methods within the class - support both arrow and brace syntax
+      const methods: any[] = [];
+      
+      // Parse arrow function methods: methodName() => expression
+      const arrowMethodRe = /([A-Za-z_]\w*)\s*\(([^)]*)\)\s*=>\s*([^,}]+)/g;
+      let arrowMatch;
+      while ((arrowMatch = arrowMethodRe.exec(classBody)) !== null) {
+        const methodName = arrowMatch[1];
+        const paramsStr = arrowMatch[2].trim();
+        const expression = arrowMatch[3].trim();
+        
+        const params = paramsStr ? paramsStr.split(',').map(p => ({ name: p.trim() })) : [];
+        
+        // Create return statement for the expression
+        let returnValue;
+        if (expression.match(/^".*"$/)) {
+          returnValue = { type: 'Expression', kind: ExpressionKind.Literal, value: expression.slice(1, -1) };
+        } else if (expression.match(/^\d+$/)) {
+          returnValue = { type: 'Expression', kind: ExpressionKind.Literal, value: Number(expression) };
+        } else if (expression.includes('.')) {
+          const [obj, prop] = expression.split('.');
+          returnValue = {
+            type: 'Expression',
+            kind: ExpressionKind.MemberAccess,
+            object: { type: 'Expression', kind: ExpressionKind.Identifier, name: obj },
+            member: prop
+          };
+        } else {
+          returnValue = { type: 'Expression', kind: ExpressionKind.Identifier, name: expression };
+        }
+        
+        methods.push({ 
+          name: methodName, 
+          type: 'MethodDeclaration',
+          params: params,
+          body: { body: [{ type: 'Return', argument: returnValue }] }
+        });
+      }
+      
+      // Parse JavaScript-style brace methods: methodName() { statements }
+      const braceMethodRe = /([A-Za-z_]\w*)\s*\(([^)]*)\)\s*\{([^}]*)\}/g;
+      let braceMatch;
+      while ((braceMatch = braceMethodRe.exec(classBody)) !== null) {
+        const methodName = braceMatch[1];
+        const paramsStr = braceMatch[2].trim();
+        const methodBodyStr = braceMatch[3].trim();
+        
+        const params = paramsStr ? paramsStr.split(',').map(p => ({ name: p.trim() })) : [];
+        
+        const methodBodyStmts: any[] = [];
+        
+        // Handle constructor with assignments like: this.name = data.name; this.email = data.email;
+        if (methodName === 'constructor') {
+          const assignmentRe = /this\.([A-Za-z_]\w*)\s*=\s*([^;]+)/g;
+          let assignMatch;
+          while ((assignMatch = assignmentRe.exec(methodBodyStr)) !== null) {
+            const propName = assignMatch[1];
+            const valueExpr = assignMatch[2].trim();
+            
+            // Parse the value expression
+            let value;
+            if (valueExpr.match(/^".*"$/)) {
+              value = { type: 'Expression', kind: ExpressionKind.Literal, value: valueExpr.slice(1, -1) };
+            } else if (valueExpr.match(/^\d+$/)) {
+              value = { type: 'Expression', kind: ExpressionKind.Literal, value: Number(valueExpr) };
+            } else if (valueExpr.includes('.')) {
+              // Handle property access like data.name
+              const [obj, prop] = valueExpr.split('.');
+              value = {
+                type: 'Expression',
+                kind: ExpressionKind.MemberAccess,
+                object: { type: 'Expression', kind: ExpressionKind.Identifier, name: obj },
+                member: prop
+              };
+            } else {
+              value = { type: 'Expression', kind: ExpressionKind.Identifier, name: valueExpr };
+            }
+            
+            // Create assignment statement
+            methodBodyStmts.push({
+              type: 'Expr',
+              expr: {
+                type: 'Expression',
+                kind: ExpressionKind.Assignment,
+                left: {
+                  type: 'Expression',
+                  kind: ExpressionKind.MemberAccess,
+                  object: { type: 'Expression', kind: ExpressionKind.Identifier, name: 'this' },
+                  member: propName
+                },
+                right: value,
+                operator: '='
+              }
+            });
+          }
+        } else {
+          // Handle return statements in regular methods
+          if (methodBodyStr.includes('return')) {
+            const returnMatch = methodBodyStr.match(/return\s+(.+)/);
+            if (returnMatch) {
+              const returnExpr = returnMatch[1].trim();
+              // Handle semicolon at end
+              const cleanExpr = returnExpr.replace(/;$/, '');
+              let returnValue;
+              if (cleanExpr.match(/^".*"$/)) {
+                returnValue = { type: 'Expression', kind: ExpressionKind.Literal, value: cleanExpr.slice(1, -1) };
+              } else if (cleanExpr.includes('.')) {
+                const [obj, prop] = cleanExpr.split('.');
+                returnValue = {
+                  type: 'Expression',
+                  kind: ExpressionKind.MemberAccess,
+                  object: { type: 'Expression', kind: ExpressionKind.Identifier, name: obj },
+                  member: prop
+                };
+              } else {
+                returnValue = { type: 'Expression', kind: ExpressionKind.Identifier, name: cleanExpr };
+              }
+              methodBodyStmts.push({ type: 'Return', argument: returnValue });
+            }
+          }
+        }
+        
+        methods.push({ 
+          name: methodName, 
+          type: 'MethodDeclaration',
+          params: params,
+          body: { body: methodBodyStmts }
+        });
+      }
+      
+      body.push({ type: 'ClassDeclaration', name, methods, decorators: [] });
+    }
+  }
+
+  private parseExpressionStatement(stmt: string, body: any[]): void {
+    // Handle simple identifiers or expressions
+    if (stmt.match(/^[A-Za-z_]\w*$/)) {
+      body.push({
+        type: 'ExpressionStatement',
+        expression: { type: 'Expression', kind: ExpressionKind.Identifier, name: stmt }
+      });
+    }
+  }
+
+  private parseArguments(argsStr: string): any[] {
+    if (!argsStr.trim()) return [];
+    
+    const args = [];
+    const argParts = argsStr.split(',');
+    
+    for (const arg of argParts) {
+      const trimmed = arg.trim();
+      if (trimmed.match(/^".*"$/)) {
+        // String literal
+        args.push({ type: 'Expression', kind: ExpressionKind.Literal, value: trimmed.slice(1, -1) });
+      } else if (trimmed.match(/^\d+$/)) {
+        // Number literal
+        args.push({ type: 'Expression', kind: ExpressionKind.Literal, value: Number(trimmed) });
+      } else if (trimmed.match(/^\{.*\}$/)) {
+        // Object literal (basic parsing)
+        const objContent = trimmed.slice(1, -1);
+        const properties = [];
+        const propMatches = objContent.match(/([A-Za-z_]\w*)\s*:\s*"[^"]*"|([A-Za-z_]\w*)\s*:\s*[^,}]+/g);
+        if (propMatches) {
+          for (const propMatch of propMatches) {
+            const [key, value] = propMatch.split(':').map(s => s.trim());
+            let propValue;
+            if (value.match(/^".*"$/)) {
+              propValue = { type: 'Expression', kind: ExpressionKind.Literal, value: value.slice(1, -1) };
+            } else {
+              propValue = { type: 'Expression', kind: ExpressionKind.Identifier, name: value };
+            }
+            properties.push({ key, value: propValue });
+          }
+        }
+        args.push({ type: 'Expression', kind: ExpressionKind.ObjectLiteral, properties });
+      } else {
+        // Identifier
+        args.push({ type: 'Expression', kind: ExpressionKind.Identifier, name: trimmed });
+      }
+    }
+    
+    return args;
   }
 }

@@ -133,27 +133,33 @@ export class Compiler {
 
   private visitProgram(node: any): any {
     const bodyNodes = (node.body || []).map((stmt: any) => this.visitNode(stmt));
-    // Collect imports and find first function
+    // Collect imports and attach them to relevant nodes
     const imports: string[] = [];
-    let firstFunction: any = null;
+    const nonImportNodes: any[] = [];
+    
     for (const n of bodyNodes) {
       if (!n) continue;
       if (n.type === 'Import') {
         if (typeof n.from === 'string') imports.push(n.from);
         continue;
       }
-      if (!firstFunction && n.type === 'Function') firstFunction = n;
+      nonImportNodes.push(n);
     }
-    if (firstFunction) {
-      // attach imports to the function node
-      firstFunction.imports = Array.from(new Set(imports));
-      // If there's only a function, return it
-      if (bodyNodes.length === 1) return firstFunction;
-      return firstFunction;
+    
+    // Attach imports to function nodes if they exist
+    if (imports.length > 0) {
+      for (const node of nonImportNodes) {
+        if (node.type === 'Function') {
+          node.imports = Array.from(new Set(imports));
+        }
+      }
     }
+    
     // If the program contains a single top-level declaration, return it directly
-    if (bodyNodes.length === 1) return bodyNodes[0];
-    return { type: 'Block', body: bodyNodes };
+    if (nonImportNodes.length === 1) return nonImportNodes[0];
+    
+    // For multiple statements, return a block that will execute all statements
+    return { type: 'Block', body: nonImportNodes };
   }
 
   private containsBinaryAddBetweenParams(fnNode: any): boolean {

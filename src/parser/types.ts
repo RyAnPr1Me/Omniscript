@@ -15,8 +15,9 @@ export enum ExpressionKind {
 	ArrayLiteral = "ArrayLiteral",
 	ObjectLiteral = "ObjectLiteral",
 		Ternary = "Ternary", // New: ternary expressions
-		Match = "Match" // New: pattern matching expression
-		, Await = "Await" // New: await expression
+		Match = "Match", // New: pattern matching expression
+		Await = "Await", // New: await expression
+		Assignment = "Assignment" // New: assignment expression
 }
 
 /**

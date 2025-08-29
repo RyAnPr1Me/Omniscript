@@ -167,6 +167,8 @@ export class Runtime {
           return this.executeClassDeclaration(bytecode as any);
         case 'Match':
           return this.executeMatch(bytecode as any);
+        case 'Import':
+          return this.executeImport(bytecode as any);
         default:
           throw new Error(`Unknown bytecode type: ${bytecode.type}`);
       }
@@ -645,6 +647,43 @@ export class Runtime {
         return (expr as any).value;
       case 'Identifier':
         return this.getVar((expr as any).name);
+      case 'Call': {
+        const fn = this.evalExpr((expr as any).callee);
+        const args = (((expr as any).arguments) || []).map((a: any) => this.evalExpr(a));
+        if (typeof fn !== 'function') throw new Error('Call to non-function');
+        
+        // Handle constructor calls
+        if ((expr as any).isConstructor) {
+          return new (fn as any)(...args);
+        }
+        
+        return fn(...args);
+      }
+      case 'ObjectLiteral': {
+        const o: any = {};
+        for (const p of ((expr as any).properties || [])) o[p.key] = this.evalExpr(p.value);
+        return o;
+      }
+      case 'Assignment': {
+        const left = (expr as any).left;
+        const right = this.evalExpr((expr as any).right);
+        
+        // Handle member access assignment like this.name = value
+        if (left.kind === 'MemberAccess') {
+          const obj = this.evalExpr(left.object);
+          if (obj && typeof obj === 'object') {
+            (obj as any)[left.member] = right;
+          }
+        } else if (left.kind === 'Identifier') {
+          // Handle variable assignment
+          this.setVar(left.name, right);
+        }
+        return right;
+      }
+      case 'MemberAccess': {
+        const obj = this.evalExpr((expr as any).object);
+        return (obj as any)?.[(expr as any).member as any];
+      }
       case 'Unary':
         return this.evalUnary(expr as any);
       case 'Binary':
@@ -670,6 +709,12 @@ export class Runtime {
         const fn = this.evalExpr((expr as any).callee);
         const args = (((expr as any).arguments) || []).map((a: any) => this.evalExpr(a));
         if (typeof fn !== 'function') throw new Error('Call to non-function');
+        
+        // Handle constructor calls
+        if ((expr as any).isConstructor) {
+          return new (fn as any)(...args);
+        }
+        
         return fn(...args);
       case 'MemberAccess':
         const obj = this.evalExpr((expr as any).object);
@@ -698,6 +743,39 @@ export class Runtime {
     if ((pattern as any).kind === 'Identifier') return true; // simple binding (not stored yet)
     if ((pattern as any).kind === 'Number') return value === (pattern as any).value;
     return false;
+  }
+
+  private executeImport(node: { source: string; specifiers: Array<{ imported: string; local: string }> }): unknown {
+    logger.info('Runtime', `Importing from: ${node.source}`);
+    
+    // Handle stdlib imports
+    if (node.source === 'stdlib') {
+      // Import from our stdlib
+      const { Database, HTTP, DateTime, Console, HTTPClient, PackageManager, DOM } = require('../stdlib/index');
+      const stdlib = { Database, HTTP, DateTime, Console, HTTPClient, PackageManager, DOM };
+      
+      if (node.specifiers && node.specifiers.length > 0) {
+        // Named imports
+        const imported: Record<string, any> = {};
+        for (const spec of node.specifiers) {
+          if (stdlib[spec.imported as keyof typeof stdlib]) {
+            imported[spec.local] = stdlib[spec.imported as keyof typeof stdlib];
+            this.setVar(spec.local, stdlib[spec.imported as keyof typeof stdlib]);
+          } else {
+            logger.warn('Runtime', `Module '${spec.imported}' not found in stdlib`);
+          }
+        }
+        return imported;
+      } else {
+        // Default import or namespace import
+        this.setVar('stdlib', stdlib);
+        return stdlib;
+      }
+    }
+    
+    // Handle other module imports (could be extended)
+    logger.warn('Runtime', `Module imports from '${node.source}' not fully implemented`);
+    return {};
   }
 
   private evalUnary(expr: { left: Bytecode; operator: string }): unknown {
