@@ -107,21 +107,71 @@ export class Parser {
   private fallbackParse(source: string): any {
     const body: any[] = [];
     
-    // First, parse all imports
+    // Parse function declarations FIRST: fn name(params) { body }
+    const fnRe = /fn\s+([A-Za-z_]\w*)\s*\(([^)]*)\)\s*(?::\s*[^\s{]+)?\s*\{([\s\S]*?)\}/g;
+    let fnMatch: RegExpExecArray | null;
+    while ((fnMatch = fnRe.exec(source)) !== null) {
+      const name = fnMatch[1];
+      const paramsRaw = fnMatch[2].trim();
+      const params = paramsRaw ? paramsRaw.split(',').map(p => {
+        const parts = p.trim().split(':');
+        const paramName = parts[0].trim();
+        const paramType = parts[1] ? parts[1].trim() : undefined;
+        return { name: paramName, type: paramType, paramType: paramType };
+      }) : [];
+      const bodySrc = fnMatch[3];
+      
+      // Parse return statements with binary operations
+      const retMatch = /return\s+([^;]+)/.exec(bodySrc);
+      let retArg;
+      if (retMatch) {
+        const retExpr = retMatch[1].trim();
+        // Check for binary operations like a + b
+        const binaryMatch = /([A-Za-z_]\w*)\s*\+\s*([A-Za-z_]\w*)/.exec(retExpr);
+        if (binaryMatch) {
+          retArg = {
+            type: 'BinaryExpression',
+            operator: '+',
+            left: { type: 'Expression', kind: ExpressionKind.Identifier, name: binaryMatch[1] },
+            right: { type: 'Expression', kind: ExpressionKind.Identifier, name: binaryMatch[2] }
+          };
+        } else if (retExpr.match(/^\d+$/)) {
+          retArg = { type: 'Expression', kind: ExpressionKind.Literal, value: Number(retExpr) };
+        } else {
+          retArg = { type: 'Expression', kind: ExpressionKind.Identifier, name: retExpr };
+        }
+      }
+      
+      const fnBody = retArg ? [{ type: 'ReturnStatement', argument: retArg }] : [];
+      body.push({ type: 'FunctionDeclaration', name, params, body: fnBody });
+    }
+    
+    // Remove function declarations from source for remaining parsing
+    let sourceWithoutFns = source;
+    fnRe.lastIndex = 0; // Reset regex
+    while ((fnMatch = fnRe.exec(source)) !== null) {
+      const start = fnMatch.index!;
+      const end = start + fnMatch[0].length;
+      sourceWithoutFns = sourceWithoutFns.substring(0, start) + 
+                        ' '.repeat(end - start) + 
+                        sourceWithoutFns.substring(end);
+    }
+    
+    // Then parse all imports
     const importRe = /import\s+\{([^}]+)\}\s+from\s+['"]([^'"]+)['"]/g;
-    let m: RegExpExecArray | null;
-    while ((m = importRe.exec(source)) !== null) {
-      const imported = m[1].split(',').map(s => s.trim());
-      const from = m[2];
+    let importMatch: RegExpExecArray | null;
+    while ((importMatch = importRe.exec(sourceWithoutFns)) !== null) {
+      const imported = importMatch[1].split(',').map(s => s.trim());
+      const from = importMatch[2];
       body.push({ type: 'ImportDeclaration', imported, from });
     }
     
     // Parse statements in order by finding boundaries more carefully
-    let remainingSource = source;
+    let remainingSource = sourceWithoutFns;
     
     // Extract classes first (they can contain semicolons, so handle them specially)
     const classMatches: Array<{start: number, end: number, text: string}> = [];
-    const classStartRe = /class\s+[A-Za-z_]\w*\s*\{/g;
+    const classStartRe = /class\s+[A-Za-z_]\w*(?:<[^>]*>)?\s*\{/g;
     let classStartMatch;
     while ((classStartMatch = classStartRe.exec(remainingSource)) !== null) {
       const start = classStartMatch.index!;
@@ -278,160 +328,30 @@ export class Parser {
     }
     
     // Handle sequences of statements separated by semicolons
-    if (source.includes(';')) {
-      const statements = source.split(';').map(s => s.trim()).filter(s => s.length > 0);
+    if (sourceWithoutFns.includes(';')) {
+      const statements = sourceWithoutFns.split(';').map(s => s.trim()).filter(s => s.length > 0);
       
       for (const stmt of statements) {
-        // Try to parse each statement
-        if (stmt.match(/^class\s+/)) {
-          // Parse as a complete class (find the full statement including braces)
-          let remainingSource = source;
-          let pos = remainingSource.indexOf(stmt);
-          if (pos >= 0) {
-            remainingSource = remainingSource.substring(pos);
-            // Use proper brace matching instead of [^}]*
-            const classStart = remainingSource.indexOf('{');
-            if (classStart >= 0) {
-              let braceCount = 1;
-              let endPos = classStart + 1;
-              while (endPos < remainingSource.length && braceCount > 0) {
-                if (remainingSource[endPos] === '{') braceCount++;
-                else if (remainingSource[endPos] === '}') braceCount--;
-                endPos++;
-              }
-              if (braceCount === 0) {
-                const classText = remainingSource.substring(0, endPos);
-                this.parseClassStatement(classText, body);
-                continue;
-              }
-            }
-          }
-        } else if (stmt.match(/^let\s+/)) {
+        // Try to parse each statement (skip classes - already parsed)
+        if (stmt.match(/^let\s+/)) {
           this.parseLetStatement(stmt, body);
         } else if (stmt.match(/^([A-Za-z_]\w*)\.([A-Za-z_]\w*)\(/)) {
           // Method call
           this.parseMethodCallStatement(stmt, body);
-        } else if (stmt.length > 0) {
-          // Try to parse as simple expression
+        } else if (stmt.length > 0 && !stmt.match(/^class\s+/)) {
+          // Try to parse as simple expression (but skip classes)
           this.parseExpressionStatement(stmt, body);
         }
       }
       
       if (body.length > 0) return { type: 'Program', body };
     }
-    // DISABLED: duplicate function parsing
-    /*
-    const fnRe = /fn\s+([A-Za-z_]\w*)\s*\(([^)]*)\)\s*(?::\s*[^\s{]+)?\s*\{([\s\S]*?)\}/g;
-    let m: RegExpExecArray | null;
-    while ((m = fnRe.exec(source)) !== null) {
-      const name = m[1];
-      const paramsRaw = m[2].trim();
-      const params = paramsRaw ? paramsRaw.split(',').map(p => {
-        const parts = p.trim().split(':');
-        const paramName = parts[0].trim();
-        const paramType = parts[1] ? parts[1].trim() : undefined;
-        return { name: paramName, type: paramType, paramType: paramType };
-      }) : [];
-      const bodySrc = m[3];
-      
-      // Parse return statements with binary operations
-      const retMatch = /return\s+([^;]+)/.exec(bodySrc);
-      let retArg;
-      if (retMatch) {
-        const retExpr = retMatch[1].trim();
-        // Check for binary operations like a + b
-        const binaryMatch = /([A-Za-z_]\w*)\s*\+\s*([A-Za-z_]\w*)/.exec(retExpr);
-        if (binaryMatch) {
-          retArg = {
-            type: 'BinaryExpression',
-            operator: '+',
-            left: { type: 'Expression', kind: ExpressionKind.Identifier, name: binaryMatch[1] },
-            right: { type: 'Expression', kind: ExpressionKind.Identifier, name: binaryMatch[2] }
-          };
-        } else if (retExpr.match(/^\d+$/)) {
-          retArg = { type: 'Expression', kind: ExpressionKind.Literal, value: Number(retExpr) };
-        } else {
-          retArg = { type: 'Expression', kind: ExpressionKind.Identifier, name: retExpr };
-        }
-      }
-      
-      const fnBody = retArg ? [{ type: 'ReturnStatement', argument: retArg }] : [];
-      body.push({ type: 'FunctionDeclaration', name, params, body: fnBody });
-    }
-    */ // End DISABLED section
-
-    // classes (basic) - better handling of nested braces and decorators
-    const classWithDecoratorsRe = /((?:@[A-Za-z_]\w*\s*)*)\s*class\s+([A-Za-z_]\w*)(<[^>]+>)?\s*\{/g;
-    let classMatch;
-    while ((classMatch = classWithDecoratorsRe.exec(source)) !== null) {
-      const decoratorsRaw = classMatch[1];
-      const name = classMatch[2];
-      let generics = undefined;
-      
-      // Parse decorators
-      const decorators: any[] = [];
-      if (decoratorsRaw) {
-        const decoratorMatches = decoratorsRaw.match(/@([A-Za-z_]\w*)/g);
-        if (decoratorMatches) {
-          for (const decoratorMatch of decoratorMatches) {
-            decorators.push({
-              name: decoratorMatch.substring(1), // Remove @
-              type: 'Decorator',
-              arguments: []
-            });
-          }
-        }
-      }
-      
-      // Parse generics with constraints
-      if (classMatch[3]) {
-        const genericsRaw = classMatch[3].slice(1, -1); // Remove < >
-        generics = genericsRaw.split(',').map(g => {
-          const trimmed = g.trim();
-          const extendsMatch = trimmed.match(/([A-Za-z_]\w*)\s+extends\s+([A-Za-z_]\w*)/);
-          if (extendsMatch) {
-            return {
-              name: extendsMatch[1],
-              constraint: extendsMatch[2]
-            };
-          }
-          return { name: trimmed };
-        });
-      }
-      
-      // Find the matching closing brace for the class
-      let braceCount = 1;
-      let pos = classMatch.index + classMatch[0].length;
-      let classBody = '';
-      
-      while (pos < source.length && braceCount > 0) {
-        const char = source[pos];
-        if (char === '{') braceCount++;
-        else if (char === '}') braceCount--;
-        
-        if (braceCount > 0) {
-          classBody += char;
-        }
-        pos++;
-      }
-      
-      // Parse methods within the class
-      const methods: any[] = [];
-      const methodRe = /([A-Za-z_]\w*)\s*\([^)]*\)\s*\{/g;
-      let methodMatch;
-      while ((methodMatch = methodRe.exec(classBody)) !== null) {
-        const methodName = methodMatch[1];
-        methods.push({ name: methodName, type: 'MethodDeclaration' });
-      }
-      
-      body.push({ type: 'ClassDeclaration', name, generics, methods, decorators });
-    }
-
     // match expressions
     const matchRe = /match\s+([A-Za-z_]\w*)\s*\{([\s\S]*?)\}/g;
-    while ((m = matchRe.exec(source)) !== null) {
-      const subjectName = m[1];
-      const armsSrc = m[2];
+    let matchMatch: RegExpExecArray | null;
+    while ((matchMatch = matchRe.exec(sourceWithoutFns)) !== null) {
+      const subjectName = matchMatch[1];
+      const armsSrc = matchMatch[2];
       const arms: any[] = [];
       const armRe = /([0-9_]+|_)\s*=>\s*("[^"]*"|[^,\n]+)/g;
       let a: RegExpExecArray | null;
@@ -447,10 +367,11 @@ export class Parser {
 
     // simple let/variable declarations: let x: Type = value;
     const letRe = /let\s+([A-Za-z_]\w*)(?:\s*:\s*([A-Za-z_]\w*))?\s*=\s*([^;\n]+)/g;
-    while ((m = letRe.exec(source)) !== null) {
-      const name = m[1];
-      const typeName = m[2] ? m[2] : undefined;
-      const val = m[3].trim();
+    let letMatch: RegExpExecArray | null;
+    while ((letMatch = letRe.exec(sourceWithoutFns)) !== null) {
+      const name = letMatch[1];
+      const typeName = letMatch[2] ? letMatch[2] : undefined;
+      const val = letMatch[3].trim();
       // Handle string literals with quotes
       let initializer;
       if (val.match(/^".*"$/)) {
@@ -465,11 +386,12 @@ export class Parser {
 
     // try/catch/finally statements: try { ... } catch e { ... } finally { ... }
     const tryRe = /try\s*\{([^}]*)\}\s*catch\s+([A-Za-z_]\w*)\s*\{([^}]*)\}(?:\s*finally\s*\{([^}]*)\})?/g;
-    while ((m = tryRe.exec(source)) !== null) {
-      const tryBlock = m[1].trim();
-      const catchVar = m[2];
-      const catchBlock = m[3].trim();
-      const finallyBlock = m[4] ? m[4].trim() : undefined;
+    let tryMatch: RegExpExecArray | null;
+    while ((tryMatch = tryRe.exec(sourceWithoutFns)) !== null) {
+      const tryBlock = tryMatch[1].trim();
+      const catchVar = tryMatch[2];
+      const catchBlock = tryMatch[3].trim();
+      const finallyBlock = tryMatch[4] ? tryMatch[4].trim() : undefined;
       
       // Parse try block - simple expressions for now
       const tryStmts = tryBlock ? [this.parseSimpleExpression(tryBlock)] : [];
@@ -583,10 +505,27 @@ export class Parser {
   }
 
   private parseClassStatement(stmt: string, body: any[]): void {
-    // Parse class with proper brace matching
-    const classMatch = stmt.match(/class\s+([A-Za-z_]\w*)\s*\{/);
+    // Parse class with generics and proper brace matching
+    const classMatch = stmt.match(/class\s+([A-Za-z_]\w*)(?:<([^>]+)>)?\s*\{/);
     if (classMatch) {
       const name = classMatch[1];
+      const genericsStr = classMatch[2];
+      
+      // Parse generics
+      let generics: any[] = [];
+      if (genericsStr) {
+        generics = genericsStr.split(',').map(g => {
+          const trimmed = g.trim();
+          const extendsMatch = trimmed.match(/([A-Za-z_]\w*)\s+extends\s+([A-Za-z_]\w*)/);
+          if (extendsMatch) {
+            return {
+              name: extendsMatch[1],
+              constraint: extendsMatch[2]
+            };
+          }
+          return { name: trimmed };
+        });
+      }
       
       // Find the matching closing brace for the class
       let braceCount = 1;
@@ -643,6 +582,84 @@ export class Parser {
         });
       }
       
+      // Parse property declarations: propertyName: Type;
+      const propRe = /([A-Za-z_]\w*)\s*:\s*([A-Za-z_]\w*)(?:<[^>]*>)?\s*;/g;
+      let propMatch;
+      while ((propMatch = propRe.exec(classBody)) !== null) {
+        const propName = propMatch[1];
+        const propType = propMatch[2];
+        methods.push({
+          name: propName,
+          type: 'PropertyDeclaration',
+          propertyType: propType
+        });
+      }
+      
+      // Parse operator overloading methods: operator +(other: Complex): Complex { ... }
+      const operatorRe = /operator\s*([+\-*\/])\s*\(([^)]*)\)\s*:\s*([^{]+)\s*\{([^}]*)\}/g;
+      let operatorMatch;
+      const operators: any[] = [];
+      while ((operatorMatch = operatorRe.exec(classBody)) !== null) {
+        const op = operatorMatch[1];
+        const paramsStr = operatorMatch[2].trim();
+        const returnType = operatorMatch[3].trim();
+        const methodBodyStr = operatorMatch[4].trim();
+        
+        const params = paramsStr ? paramsStr.split(',').map(p => {
+          const colonIndex = p.indexOf(':');
+          if (colonIndex > 0) {
+            const paramName = p.substring(0, colonIndex).trim();
+            const paramType = p.substring(colonIndex + 1).trim();
+            return { name: paramName, type: paramType };
+          }
+          return { name: p.trim() };
+        }) : [];
+        
+        // Parse method body (simplified)
+        const methodBodyStmts: any[] = [];
+        if (methodBodyStr.includes('return')) {
+          const returnMatch = methodBodyStr.match(/return\s+(.+)/);
+          if (returnMatch) {
+            const returnExpr = returnMatch[1].trim().replace(/;$/, '');
+            // Parse new expressions: new Complex(...)
+            if (returnExpr.match(/^new\s+/)) {
+              const newMatch = returnExpr.match(/new\s+([A-Za-z_]\w*)\s*\(([^)]*)\)/);
+              if (newMatch) {
+                const className = newMatch[1];
+                const argsStr = newMatch[2].trim();
+                const args = argsStr ? this.parseArguments(argsStr) : [];
+                methodBodyStmts.push({
+                  type: 'Return',
+                  argument: {
+                    type: 'Expression',
+                    kind: ExpressionKind.Call,
+                    callee: { type: 'Expression', kind: ExpressionKind.Identifier, name: className },
+                    arguments: args,
+                    isConstructor: true
+                  }
+                });
+              }
+            }
+          }
+        }
+        
+        operators.push({
+          operator: op,
+          params: params,
+          returnType: returnType,
+          body: methodBodyStmts
+        });
+        
+        methods.push({
+          name: `operator${op}`,
+          type: 'OperatorOverload',
+          operator: op,
+          params: params,
+          returnType: returnType,
+          body: { body: methodBodyStmts }
+        });
+      }
+      
       // Parse JavaScript-style brace methods: methodName() { statements }
       const braceMethodRe = /([A-Za-z_]\w*)\s*\(([^)]*)\)\s*\{([^}]*)\}/g;
       let braceMatch;
@@ -651,7 +668,15 @@ export class Parser {
         const paramsStr = braceMatch[2].trim();
         const methodBodyStr = braceMatch[3].trim();
         
-        const params = paramsStr ? paramsStr.split(',').map(p => ({ name: p.trim() })) : [];
+        const params = paramsStr ? paramsStr.split(',').map(p => {
+          const colonIndex = p.indexOf(':');
+          if (colonIndex > 0) {
+            const paramName = p.substring(0, colonIndex).trim();
+            const paramType = p.substring(colonIndex + 1).trim();
+            return { name: paramName, type: paramType };
+          }
+          return { name: p.trim() };
+        }) : [];
         
         const methodBodyStmts: any[] = [];
         
@@ -766,7 +791,14 @@ export class Parser {
         });
       }
       
-      body.push({ type: 'ClassDeclaration', name, methods, decorators: [] });
+      body.push({ 
+        type: 'ClassDeclaration', 
+        name, 
+        generics, 
+        methods, 
+        operators,
+        decorators: [] 
+      });
     }
   }
 
