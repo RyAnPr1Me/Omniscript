@@ -1,9 +1,9 @@
 // eslint.config.js
-import js from '@eslint/js'; // ESLint's core recommended rules
-import tseslint from 'typescript-eslint'; // Recommended rules for TypeScript
-import prettierConfig from 'eslint-config-prettier'; // Disables rules conflicting with Prettier
+const js = require('@eslint/js'); // ESLint's core recommended rules
+const tseslint = require('typescript-eslint'); // Recommended rules for TypeScript
+const prettierConfig = require('eslint-config-prettier'); // Disables rules conflicting with Prettier
 
-export default [
+module.exports = [
   // Apply ESLint's recommended rules
   js.configs.recommended,
 
@@ -29,8 +29,9 @@ export default [
     rules: {
       'no-console': 'warn',
       'no-debugger': 'warn',
-      // Add any other custom rules here
-      // Example: '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/no-unused-vars': 'warn',
+      '@typescript-eslint/no-empty-function': 'warn',
     },
   },
 ];

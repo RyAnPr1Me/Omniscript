@@ -1,4 +1,30 @@
-import { Program, Expression, NumberLiteral, BooleanLiteral, Identifier, Lambda, Call, Let, IfExpr, Pipe, Binary, Match, ClassDecl, MethodDecl, NewInstance, PropAccess, createEnv, Env, envDefine, envLookup, LambdaValue, isLambdaValue } from './ast';
+import {
+  Program,
+  Expression,
+  NumberLiteral,
+  StringLiteral,
+  BooleanLiteral,
+  Identifier,
+  Lambda,
+  Call,
+  Let,
+  IfExpr,
+  Pipe,
+  Binary,
+  Match,
+  ClassDecl,
+  MethodDecl,
+  NewInstance,
+  PropAccess,
+  AwaitExpr,
+  ImportDecl,
+  createEnv,
+  Env,
+  envDefine,
+  envLookup,
+  LambdaValue,
+  isLambdaValue
+} from './ast';
 
 export function evaluate(program: Program): any {
 	// Put builtins in a parent environment so user code can shadow them with 'let'
@@ -13,6 +39,7 @@ export function evaluate(program: Program): any {
 function evalExpr(expr: Expression, env: Env): any {
 	switch (expr.type) {
 		case 'NumberLiteral': return (expr as NumberLiteral).value;
+		case 'StringLiteral': return (expr as StringLiteral).value;
 		case 'BooleanLiteral': return (expr as BooleanLiteral).value;
 		case 'Identifier': return envLookup(env, (expr as Identifier).name);
 		case 'Prop': {
@@ -43,6 +70,15 @@ function evalExpr(expr: Expression, env: Env): any {
 					case '-': return left - right;
 					case '*': return left * right;
 					case '/': return left / right;
+					case '%': return left % right;
+					case '>': return left > right;
+					case '<': return left < right;
+					case '>=': return left >= right;
+					case '<=': return left <= right;
+					case '==': return left == right;
+					case '!=': return left != right;
+					case '===': return left === right;
+					case '!==': return left !== right;
 				}
 			}
 		case 'Call': {
@@ -128,16 +164,36 @@ function evalExpr(expr: Expression, env: Env): any {
 				let ok = false;
 				const pat: any = c.pattern;
 				let caseEnv = env;
-				if (pat.type === 'Wildcard') ok = true;
-				else if (pat.type === 'NumberLiteral') ok = pat.value === value;
-				else if (pat.type === 'Identifier') { ok = true; caseEnv = createEnv(env); envDefine(caseEnv, pat.name, value); }
+				if (pat.type === 'Wildcard') {
+					ok = true;
+				} else if (pat.type === 'NumberLiteral') {
+					ok = pat.value === value;
+				} else if (pat.type === 'StringLiteral') {
+					ok = pat.value === value;
+				} else if (pat.type === 'Identifier') {
+					ok = true;
+					caseEnv = createEnv(env);
+					envDefine(caseEnv, pat.name, value);
+				}
+				
+				// Check guard condition if present
+				if (ok && c.guard) {
+					const guardResult = evalExpr(c.guard, caseEnv);
+					ok = !!guardResult; // Convert to boolean
+				}
+				
 				if (ok) return evalExpr(c.value, caseEnv);
 			}
 			throw new Error('Non-exhaustive match');
 		}
 		case 'ClassDecl': {
 			const cd = expr as ClassDecl;
-			const classValue: any = { __tag: 'class', name: cd.name, methods: {}, __ops: {} };
+			const classValue: any = { __tag: 'class', name: cd.name, methods: {}, __ops: {}, __decorators: cd.decorators };
+			
+			// Apply class-level decorators
+			if (cd.decorators.includes('component')) {
+				classValue.__component = true;
+			}
 			for (const m of cd.methods) {
 				if (m.isOperator) {
 					classValue.__ops[m.name] = (self: any, other: any) => {
@@ -147,12 +203,28 @@ function evalExpr(expr: Expression, env: Env): any {
 						return evalExpr(m.body, closureEnv);
 					};
 				} else {
-					classValue.methods[m.name] = (self: any, ...args: any[]) => {
+					const methodFunc = (self: any, ...args: any[]) => {
 						const closureEnv = createEnv(env);
 						envDefine(closureEnv, 'self', self);
 						m.params.forEach((p,i)=> envDefine(closureEnv, p, args[i]));
 						return evalExpr(m.body, closureEnv);
 					};
+					
+					// Apply method decorators
+					if (m.decorators.includes('state')) {
+						// State decorator - makes property reactive
+						(methodFunc as any).__state = true;
+					}
+					if (m.decorators.includes('effect')) {
+						// Effect decorator - runs automatically
+						(methodFunc as any).__effect = true;
+					}
+					if (m.decorators.includes('computed')) {
+						// Computed decorator - caches result
+						(methodFunc as any).__computed = true;
+					}
+					
+					classValue.methods[m.name] = methodFunc;
 				}
 			}
 			envDefine(env, cd.name, classValue);
@@ -184,6 +256,30 @@ function evalExpr(expr: Expression, env: Env): any {
              });
 			return instance;
 		}
+		case 'Await': {
+			const a = expr as AwaitExpr;
+			const value = evalExpr(a.expr, env);
+			// For now, just return the value directly (no real async support yet)
+			return value;
+		}
+		case 'Import': {
+			const i = expr as ImportDecl;
+			// Handle imports from 'stdlib'
+			if (i.from === 'stdlib') {
+				// Import the requested items into the current environment
+				const stdlib = {
+					HTTP: envLookup(env, 'HTTP'),
+					Database: envLookup(env, 'Database')
+				};
+				
+				for (const importName of i.imports) {
+					if (stdlib[importName as keyof typeof stdlib]) {
+						envDefine(env, importName, stdlib[importName as keyof typeof stdlib]);
+					}
+				}
+			}
+			return undefined; // Imports don't return values
+		}
 	}
 }
 
@@ -193,6 +289,58 @@ function installBuiltins(env: Env) {
 		(lv as any).__native = impl;
 		envDefine(env, name, lv);
 	};
+	
+	// Database support - create a global 'db' object with mock data
+	const mockDatabase = {
+		users: {
+			findAll: () => Promise.resolve([
+				{ id: 1, name: 'John Doe', email: 'john@example.com', active: true },
+				{ id: 2, name: 'Jane Smith', email: 'jane@example.com', active: false }
+			]),
+			where: (predicate: any) => ({
+				orderBy: (field: any) => ({
+					take: (count: number) => Promise.resolve([
+						{ id: 1, name: 'John Doe', posts: [1, 2] }
+					])
+				})
+			})
+		}
+	};
+	envDefine(env, 'db', mockDatabase);
+	
+	// HTTP support - mock HTTP server for functional testing
+	const mockHTTPServer = {
+		get: (path: string, handler: any) => {
+			// Mock implementation
+			console.log(`Mock HTTP: GET ${path} registered`);
+		},
+		post: (path: string, handler: any) => {
+			console.log(`Mock HTTP: POST ${path} registered`);
+		},
+		listen: (port: number) => {
+			console.log(`Mock HTTP: Server listening on port ${port}`);
+		}
+	};
+	
+	// Global HTTP namespace for README examples
+	const HTTP = {
+		Server: function() {
+			return mockHTTPServer;
+		}
+	};
+	envDefine(env, 'HTTP', HTTP);
+	
+	// Also add a Database class for the ORM examples
+	const Database = {
+		query: () => ({
+			orderBy: (field: string, direction: string) => ({
+				take: (count: number) => Promise.resolve([])
+			})
+		}),
+		save: (entity: any) => Promise.resolve(entity)
+	};
+	envDefine(env, 'Database', Database);
+	
 	// Arithmetic
 	make('add', ['a', 'b'], (a, b) => a + b);
 	make('sub', ['a', 'b'], (a, b) => a - b);

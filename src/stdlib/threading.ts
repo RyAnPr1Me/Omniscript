@@ -5,6 +5,10 @@ export interface ThreadPoolOptions {
   maxThreads?: number;
   idleTimeout?: number;
   taskTimeout?: number;
+  enableLoadBalancing?: boolean;
+  priority?: 'low' | 'normal' | 'high';
+  retryAttempts?: number;
+  enableMetrics?: boolean;
 }
 
 export interface Task<T = any, R = any> {
@@ -13,6 +17,30 @@ export interface Task<T = any, R = any> {
   resolve: (value: R) => void;
   reject: (error: Error) => void;
   createdAt: number;
+  priority?: number;
+  retryCount?: number;
+  maxRetries?: number;
+  dependencies?: string[];
+}
+
+export interface WorkerMetrics {
+  tasksCompleted: number;
+  tasksInProgress: number;
+  averageExecutionTime: number;
+  errorCount: number;
+  cpuUsage: number;
+  memoryUsage: number;
+}
+
+export interface ThreadPoolMetrics {
+  activeThreads: number;
+  idleThreads: number;
+  totalTasks: number;
+  completedTasks: number;
+  failedTasks: number;
+  queueLength: number;
+  averageWaitTime: number;
+  throughput: number;
 }
 
 export class WorkerThread {
@@ -20,6 +48,14 @@ export class WorkerThread {
   private currentTask: Task | null = null;
   private isIdle: boolean = true;
   private lastUsed: number = Date.now();
+  private metrics: WorkerMetrics = {
+    tasksCompleted: 0,
+    tasksInProgress: 0,
+    averageExecutionTime: 0,
+    errorCount: 0,
+    cpuUsage: 0,
+    memoryUsage: 0
+  };
 
   constructor(private scriptURL: string) {
     this.initialize();
@@ -144,7 +180,11 @@ export class ThreadPool {
       minThreads: options.minThreads || 2,
       maxThreads: options.maxThreads || 8,
       idleTimeout: options.idleTimeout || 60000, // 1 minute
-      taskTimeout: options.taskTimeout || 30000  // 30 seconds
+      taskTimeout: options.taskTimeout || 30000,  // 30 seconds
+      enableLoadBalancing: options.enableLoadBalancing || false,
+      priority: options.priority || 'normal',
+      retryAttempts: options.retryAttempts || 3,
+      enableMetrics: options.enableMetrics || false
     };
 
     this.initializeWorkers();
