@@ -107,8 +107,9 @@ export class Runtime {
   const fn = function(this: unknown, ...args: unknown[]) {
         runtime.pushEnv();
         try {
-    runtime.setVar('self', this);
-    (m.params || []).forEach((p, i: number) => runtime.setVar(p.name, args[i]));
+          runtime.setVar('this', this);  // Set 'this' variable to current context
+          runtime.setVar('self', this); // Also set 'self' for compatibility
+          (m.params || []).forEach((p, i: number) => runtime.setVar(p.name, args[i]));
           try {
             return runtime.execute({ type: 'Block', body: bodyStmts });
           } catch (e) {
@@ -648,16 +649,39 @@ export class Runtime {
       case 'Identifier':
         return this.getVar((expr as any).name);
       case 'Call': {
-        const fn = this.evalExpr((expr as any).callee);
+        const callee = (expr as any).callee;
         const args = (((expr as any).arguments) || []).map((a: any) => this.evalExpr(a));
-        if (typeof fn !== 'function') throw new Error('Call to non-function');
         
-        // Handle constructor calls
-        if ((expr as any).isConstructor) {
-          return new (fn as any)(...args);
+        // Handle method calls (obj.method()) vs function calls (func())
+        if (callee.kind === 'MemberAccess') {
+          // Method call: need to bind 'this' context
+          const obj = this.evalExpr(callee.object);
+          const methodName = callee.member;
+          const method = (obj as any)?.[methodName];
+          
+          if (typeof method !== 'function') {
+            throw new Error(`Call to non-function: ${methodName}`);
+          }
+          
+          // Handle constructor calls
+          if ((expr as any).isConstructor) {
+            return new (method as any)(...args);
+          }
+          
+          // Call method with proper 'this' binding
+          return method.call(obj, ...args);
+        } else {
+          // Function call: no 'this' binding needed
+          const fn = this.evalExpr(callee);
+          if (typeof fn !== 'function') throw new Error('Call to non-function');
+          
+          // Handle constructor calls
+          if ((expr as any).isConstructor) {
+            return new (fn as any)(...args);
+          }
+          
+          return fn(...args);
         }
-        
-        return fn(...args);
       }
       case 'ObjectLiteral': {
         const o: any = {};

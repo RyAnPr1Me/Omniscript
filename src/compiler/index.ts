@@ -158,6 +158,35 @@ export class Compiler {
     // If the program contains a single top-level declaration, return it directly
     if (nonImportNodes.length === 1) return nonImportNodes[0];
     
+    // Special handling: if we have multiple nodes but one is clearly the main declaration 
+    // (e.g., a class), and others are just parsing artifacts, return the main one
+    const classNodes = nonImportNodes.filter(n => n.type === 'Class');
+    const functionNodes = nonImportNodes.filter(n => n.type === 'Function');
+    
+    // If we have duplicate class nodes (same name), deduplicate them
+    if (classNodes.length > 1) {
+      const uniqueClasses = [];
+      const seenNames = new Set();
+      for (const cls of classNodes) {
+        if (!seenNames.has(cls.name)) {
+          seenNames.add(cls.name);
+          uniqueClasses.push(cls);
+        }
+      }
+      if (uniqueClasses.length === 1 && nonImportNodes.length === uniqueClasses.length) {
+        return uniqueClasses[0];
+      }
+    }
+    
+    // Only return a single class/function if it's the ONLY thing in the program
+    if (classNodes.length === 1 && nonImportNodes.length === 1) {
+      return classNodes[0];
+    }
+    
+    if (functionNodes.length === 1 && nonImportNodes.length === 1) {
+      return functionNodes[0];
+    }
+    
     // For multiple statements, return a block that will execute all statements
     return { type: 'Block', body: nonImportNodes };
   }
