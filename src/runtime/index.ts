@@ -770,10 +770,6 @@ export class Runtime {
         return this.evalExpr((expr as any).condition) ? this.evalExpr((expr as any).trueExpr) : this.evalExpr((expr as any).falseExpr);
       case 'ArrayLiteral':
         return (((expr as any).elements) || []).map((e: any) => this.evalExpr(e));
-      case 'ObjectLiteral':
-        const o: any = {};
-        for (const p of ((expr as any).properties || [])) o[p.key] = this.evalExpr(p.value);
-        return o;
       case 'MemberAccess':
         const obj = this.evalExpr((expr as any).object);
         return (obj as any)?.[(expr as any).member as any];
