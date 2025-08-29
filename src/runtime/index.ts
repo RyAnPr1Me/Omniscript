@@ -647,6 +647,43 @@ export class Runtime {
         return (expr as any).value;
       case 'Identifier':
         return this.getVar((expr as any).name);
+      case 'Call': {
+        const fn = this.evalExpr((expr as any).callee);
+        const args = (((expr as any).arguments) || []).map((a: any) => this.evalExpr(a));
+        if (typeof fn !== 'function') throw new Error('Call to non-function');
+        
+        // Handle constructor calls
+        if ((expr as any).isConstructor) {
+          return new (fn as any)(...args);
+        }
+        
+        return fn(...args);
+      }
+      case 'ObjectLiteral': {
+        const o: any = {};
+        for (const p of ((expr as any).properties || [])) o[p.key] = this.evalExpr(p.value);
+        return o;
+      }
+      case 'Assignment': {
+        const left = (expr as any).left;
+        const right = this.evalExpr((expr as any).right);
+        
+        // Handle member access assignment like this.name = value
+        if (left.kind === 'MemberAccess') {
+          const obj = this.evalExpr(left.object);
+          if (obj && typeof obj === 'object') {
+            (obj as any)[left.member] = right;
+          }
+        } else if (left.kind === 'Identifier') {
+          // Handle variable assignment
+          this.setVar(left.name, right);
+        }
+        return right;
+      }
+      case 'MemberAccess': {
+        const obj = this.evalExpr((expr as any).object);
+        return (obj as any)?.[(expr as any).member as any];
+      }
       case 'Unary':
         return this.evalUnary(expr as any);
       case 'Binary':
@@ -672,6 +709,12 @@ export class Runtime {
         const fn = this.evalExpr((expr as any).callee);
         const args = (((expr as any).arguments) || []).map((a: any) => this.evalExpr(a));
         if (typeof fn !== 'function') throw new Error('Call to non-function');
+        
+        // Handle constructor calls
+        if ((expr as any).isConstructor) {
+          return new (fn as any)(...args);
+        }
+        
         return fn(...args);
       case 'MemberAccess':
         const obj = this.evalExpr((expr as any).object);
