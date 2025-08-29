@@ -173,18 +173,17 @@ export class Compiler {
           uniqueClasses.push(cls);
         }
       }
-      if (uniqueClasses.length === 1) {
+      if (uniqueClasses.length === 1 && nonImportNodes.length === uniqueClasses.length) {
         return uniqueClasses[0];
       }
     }
     
-    if (classNodes.length === 1 && nonImportNodes.length <= 3) {
-      // If we have a class and some other small artifacts, return just the class
+    // Only return a single class/function if it's the ONLY thing in the program
+    if (classNodes.length === 1 && nonImportNodes.length === 1) {
       return classNodes[0];
     }
     
-    if (functionNodes.length === 1 && nonImportNodes.length <= 2) {
-      // If we have a function and some other small artifacts, return just the function
+    if (functionNodes.length === 1 && nonImportNodes.length === 1) {
       return functionNodes[0];
     }
     

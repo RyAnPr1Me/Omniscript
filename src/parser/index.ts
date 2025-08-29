@@ -327,6 +327,56 @@ export class Parser {
       return { type: 'Program', body };
     }
     
+    // Handle member access expressions like user.name at the end
+    const memberAccessRe = /([A-Za-z_]\w*)\.([A-Za-z_]\w*)\s*$/;
+    const memberAccessMatch = memberAccessRe.exec(sourceWithoutFns.trim());
+    if (memberAccessMatch && !memberAccessMatch[0].includes('(')) {
+      const objName = memberAccessMatch[1];
+      const memberName = memberAccessMatch[2];
+      
+      body.push({
+        type: 'ExpressionStatement',
+        expression: {
+          type: 'Expression',
+          kind: ExpressionKind.MemberAccess,
+          object: { type: 'Expression', kind: ExpressionKind.Identifier, name: objName },
+          member: memberName
+        }
+      });
+    }
+    
+    // Handle simple identifiers at the end if no other parsing caught them
+    const trailingLines = sourceWithoutClasses.split(/[;\n]/).map(s => s.trim()).filter(s => s.length > 0);
+    for (const line of trailingLines) {
+      if (line.match(/^[A-Za-z_]\w*\.[A-Za-z_]\w*$/) && !body.some(b => 
+        b.type === 'ExpressionStatement' && 
+        b.expression?.kind === ExpressionKind.MemberAccess &&
+        b.expression?.object?.name + '.' + b.expression?.member === line
+      )) {
+        // Member access not already added
+        const [obj, member] = line.split('.');
+        body.push({
+          type: 'ExpressionStatement',
+          expression: {
+            type: 'Expression',
+            kind: ExpressionKind.MemberAccess,
+            object: { type: 'Expression', kind: ExpressionKind.Identifier, name: obj },
+            member: member
+          }
+        });
+      } else if (line.match(/^[A-Za-z_]\w*$/) && !line.match(/^(let|const|class|function|fn|import|export)/) && !body.some(b => 
+        b.type === 'ExpressionStatement' && 
+        b.expression?.kind === ExpressionKind.Identifier &&
+        b.expression?.name === line
+      )) {
+        // Simple identifier not already added
+        body.push({
+          type: 'ExpressionStatement',
+          expression: { type: 'Expression', kind: ExpressionKind.Identifier, name: line }
+        });
+      }
+    }
+    
     // Handle sequences of statements separated by semicolons
     if (sourceWithoutFns.includes(';')) {
       const statements = sourceWithoutFns.split(';').map(s => s.trim()).filter(s => s.length > 0);
@@ -690,7 +740,8 @@ export class Parser {
             
             // Parse the value expression
             let value;
-            if (valueExpr.match(/^".*"$/)) {
+            if (valueExpr.match(/^["'].*["']$/)) {
+              // Handle both single and double quotes
               value = { type: 'Expression', kind: ExpressionKind.Literal, value: valueExpr.slice(1, -1) };
             } else if (valueExpr.match(/^\d+$/)) {
               value = { type: 'Expression', kind: ExpressionKind.Literal, value: Number(valueExpr) };
@@ -765,7 +816,8 @@ export class Parser {
               // Handle semicolon at end
               const cleanExpr = returnExpr.replace(/;$/, '');
               let returnValue;
-              if (cleanExpr.match(/^".*"$/)) {
+              if (cleanExpr.match(/^["'].*["']$/)) {
+                // Handle both single and double quotes
                 returnValue = { type: 'Expression', kind: ExpressionKind.Literal, value: cleanExpr.slice(1, -1) };
               } else if (cleanExpr.includes('.')) {
                 const [obj, prop] = cleanExpr.split('.');
