@@ -37,7 +37,7 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 Name: "quicklaunchicon"; Description: "{cm:CreateQuickLaunchIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked; OnlyBelowVersion: 6.1
-Name: "addtopath"; Description: "Add Omniscript to system PATH"; GroupDescription: "Environment:"; Flags: checked
+Name: "addtopath"; Description: "Add Omniscript to system PATH"; GroupDescription: "Environment:"; Flags: unchecked
 
 [Files]
 Source: "dist\cli.js"; DestDir: "{app}"; Flags: ignoreversion
