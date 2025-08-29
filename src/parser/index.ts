@@ -421,43 +421,146 @@ export class Parser {
   }
 
   private parseClassStatement(stmt: string, body: any[]): void {
-    // This is a simplified version - just handle basic class declarations
-    const classMatch = stmt.match(/class\s+([A-Za-z_]\w*)\s*\{([^}]*)\}/);
+    // Parse class with proper brace matching
+    const classMatch = stmt.match(/class\s+([A-Za-z_]\w*)\s*\{/);
     if (classMatch) {
       const name = classMatch[1];
-      const classBody = classMatch[2];
       
-      // Parse methods within the class
+      // Find the matching closing brace for the class
+      let braceCount = 1;
+      let pos = classMatch.index! + classMatch[0].length;
+      let classBody = '';
+      
+      while (pos < stmt.length && braceCount > 0) {
+        const char = stmt[pos];
+        if (char === '{') braceCount++;
+        else if (char === '}') braceCount--;
+        
+        if (braceCount > 0) {
+          classBody += char;
+        }
+        pos++;
+      }
+      
+      // Parse methods within the class - support both arrow and brace syntax
       const methods: any[] = [];
-      const methodRe = /([A-Za-z_]\w*)\s*\(([^)]*)\)\s*\{([^}]*)\}/g;
-      let methodMatch;
-      while ((methodMatch = methodRe.exec(classBody)) !== null) {
-        const methodName = methodMatch[1];
-        const paramsStr = methodMatch[2].trim();
-        const methodBodyStr = methodMatch[3].trim();
+      
+      // Parse arrow function methods: methodName() => expression
+      const arrowMethodRe = /([A-Za-z_]\w*)\s*\(([^)]*)\)\s*=>\s*([^,}]+)/g;
+      let arrowMatch;
+      while ((arrowMatch = arrowMethodRe.exec(classBody)) !== null) {
+        const methodName = arrowMatch[1];
+        const paramsStr = arrowMatch[2].trim();
+        const expression = arrowMatch[3].trim();
+        
+        const params = paramsStr ? paramsStr.split(',').map(p => ({ name: p.trim() })) : [];
+        
+        // Create return statement for the expression
+        let returnValue;
+        if (expression.match(/^".*"$/)) {
+          returnValue = { type: 'Expression', kind: ExpressionKind.Literal, value: expression.slice(1, -1) };
+        } else if (expression.match(/^\d+$/)) {
+          returnValue = { type: 'Expression', kind: ExpressionKind.Literal, value: Number(expression) };
+        } else if (expression.includes('.')) {
+          const [obj, prop] = expression.split('.');
+          returnValue = {
+            type: 'Expression',
+            kind: ExpressionKind.MemberAccess,
+            object: { type: 'Expression', kind: ExpressionKind.Identifier, name: obj },
+            member: prop
+          };
+        } else {
+          returnValue = { type: 'Expression', kind: ExpressionKind.Identifier, name: expression };
+        }
+        
+        methods.push({ 
+          name: methodName, 
+          type: 'MethodDeclaration',
+          params: params,
+          body: { body: [{ type: 'Return', argument: returnValue }] }
+        });
+      }
+      
+      // Parse JavaScript-style brace methods: methodName() { statements }
+      const braceMethodRe = /([A-Za-z_]\w*)\s*\(([^)]*)\)\s*\{([^}]*)\}/g;
+      let braceMatch;
+      while ((braceMatch = braceMethodRe.exec(classBody)) !== null) {
+        const methodName = braceMatch[1];
+        const paramsStr = braceMatch[2].trim();
+        const methodBodyStr = braceMatch[3].trim();
         
         const params = paramsStr ? paramsStr.split(',').map(p => ({ name: p.trim() })) : [];
         
         const methodBodyStmts: any[] = [];
-        if (methodBodyStr && methodBodyStr.includes('return')) {
-          const returnMatch = methodBodyStr.match(/return\s+(.+)/);
-          if (returnMatch) {
-            const returnExpr = returnMatch[1].trim();
-            let returnValue;
-            if (returnExpr.match(/^".*"$/)) {
-              returnValue = { type: 'Expression', kind: ExpressionKind.Literal, value: returnExpr.slice(1, -1) };
-            } else if (returnExpr.includes('.')) {
-              const [obj, prop] = returnExpr.split('.');
-              returnValue = {
+        
+        // Handle constructor with assignments like: this.name = data.name; this.email = data.email;
+        if (methodName === 'constructor') {
+          const assignmentRe = /this\.([A-Za-z_]\w*)\s*=\s*([^;]+)/g;
+          let assignMatch;
+          while ((assignMatch = assignmentRe.exec(methodBodyStr)) !== null) {
+            const propName = assignMatch[1];
+            const valueExpr = assignMatch[2].trim();
+            
+            // Parse the value expression
+            let value;
+            if (valueExpr.match(/^".*"$/)) {
+              value = { type: 'Expression', kind: ExpressionKind.Literal, value: valueExpr.slice(1, -1) };
+            } else if (valueExpr.match(/^\d+$/)) {
+              value = { type: 'Expression', kind: ExpressionKind.Literal, value: Number(valueExpr) };
+            } else if (valueExpr.includes('.')) {
+              // Handle property access like data.name
+              const [obj, prop] = valueExpr.split('.');
+              value = {
                 type: 'Expression',
                 kind: ExpressionKind.MemberAccess,
                 object: { type: 'Expression', kind: ExpressionKind.Identifier, name: obj },
                 member: prop
               };
             } else {
-              returnValue = { type: 'Expression', kind: ExpressionKind.Identifier, name: returnExpr };
+              value = { type: 'Expression', kind: ExpressionKind.Identifier, name: valueExpr };
             }
-            methodBodyStmts.push({ type: 'Return', argument: returnValue });
+            
+            // Create assignment statement
+            methodBodyStmts.push({
+              type: 'Expr',
+              expr: {
+                type: 'Expression',
+                kind: ExpressionKind.Assignment,
+                left: {
+                  type: 'Expression',
+                  kind: ExpressionKind.MemberAccess,
+                  object: { type: 'Expression', kind: ExpressionKind.Identifier, name: 'this' },
+                  member: propName
+                },
+                right: value,
+                operator: '='
+              }
+            });
+          }
+        } else {
+          // Handle return statements in regular methods
+          if (methodBodyStr.includes('return')) {
+            const returnMatch = methodBodyStr.match(/return\s+(.+)/);
+            if (returnMatch) {
+              const returnExpr = returnMatch[1].trim();
+              // Handle semicolon at end
+              const cleanExpr = returnExpr.replace(/;$/, '');
+              let returnValue;
+              if (cleanExpr.match(/^".*"$/)) {
+                returnValue = { type: 'Expression', kind: ExpressionKind.Literal, value: cleanExpr.slice(1, -1) };
+              } else if (cleanExpr.includes('.')) {
+                const [obj, prop] = cleanExpr.split('.');
+                returnValue = {
+                  type: 'Expression',
+                  kind: ExpressionKind.MemberAccess,
+                  object: { type: 'Expression', kind: ExpressionKind.Identifier, name: obj },
+                  member: prop
+                };
+              } else {
+                returnValue = { type: 'Expression', kind: ExpressionKind.Identifier, name: cleanExpr };
+              }
+              methodBodyStmts.push({ type: 'Return', argument: returnValue });
+            }
           }
         }
         
