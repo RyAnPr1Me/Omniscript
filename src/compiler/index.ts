@@ -158,6 +158,11 @@ export class Compiler {
       }
     }
     
+    // Special case: if we have imports + single function, return the function with imports attached
+    if (imports.length > 0 && nonImportNodes.length === 1 && nonImportNodes[0].type === 'Function') {
+      return nonImportNodes[0];
+    }
+    
     // If we have multiple statements including imports, return a Block
     if (allNodes.length > 1) {
       return { type: 'Block', body: allNodes };
