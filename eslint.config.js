@@ -14,6 +14,19 @@ module.exports = [
   // Disable rules that conflict with Prettier
   prettierConfig,
 
+  // Ignore patterns
+  {
+    ignores: [
+      'dist/**/*',
+      'node_modules/**/*',
+      'coverage/**/*',
+      '*.log',
+      '.omni/**/*',
+      'demo.js',
+      'eslint.config.js'
+    ]
+  },
+
   // Optional: Add specific overrides or additional settings in a separate object
   {
     // Define the parser for your TypeScript files
@@ -25,6 +38,8 @@ module.exports = [
         // Add project: ['tsconfig.json'] or similar if you need type-aware linting
       },
     },
+    // Only apply TypeScript rules to TypeScript files
+    files: ['**/*.ts', '**/*.tsx'],
     // Define custom rules or overrides
     rules: {
       'no-console': 'warn',
@@ -32,6 +47,30 @@ module.exports = [
       '@typescript-eslint/no-explicit-any': 'warn',
       '@typescript-eslint/no-unused-vars': 'warn',
       '@typescript-eslint/no-empty-function': 'warn',
+    },
+  },
+  
+  // Separate configuration for JavaScript files
+  {
+    files: ['**/*.js'],
+    languageOptions: {
+      ecmaVersion: 2021,
+      sourceType: 'commonjs',
+      globals: {
+        'console': 'readonly',
+        'require': 'readonly',
+        'module': 'readonly',
+        'exports': 'readonly',
+        '__dirname': 'readonly',
+        '__filename': 'readonly',
+        'process': 'readonly',
+        'Buffer': 'readonly',
+        'global': 'readonly'
+      }
+    },
+    rules: {
+      'no-console': 'off',  // Allow console in demo files
+      'no-undef': 'error',
     },
   },
 ];

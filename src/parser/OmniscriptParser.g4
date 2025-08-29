@@ -5,11 +5,11 @@ program
     ;
 
 moduleDeclaration
-    : 'module' qualifiedName ';'
+    : MODULE qualifiedName SEMICOLON
     ;
 
 importDeclaration
-    : 'import' ('{' IDENTIFIER (',' IDENTIFIER)* '}' 'from')? STRING ';'
+    : IMPORT (LBRACE IDENTIFIER (COMMA IDENTIFIER)* RBRACE FROM)? STRING SEMICOLON
     ;
 
 statement
@@ -25,19 +25,19 @@ statement
     | forStatement
     | tryStatement
     | throwStatement
-    | ';'                                 // Empty statement
+    | SEMICOLON                                 // Empty statement
     ;
 
 variableDeclaration
-    : ('let' | 'const') IDENTIFIER typeAnnotation? ('=' expression)? ';'
+    : (LET | CONST) IDENTIFIER typeAnnotation? (ASSIGN expression)? SEMICOLON
     ;
 
 decorator
-    : '@' qualifiedName ('(' argumentList? ')')?
+    : AT qualifiedName (LPAREN argumentList? RPAREN)?
     ;
 
 typeAnnotation
-    : ':' type
+    : COLON type
     ;
 
 type
@@ -57,15 +57,15 @@ primitiveType
     ;
 
 arrayType
-    : type '[]'
+    : type LBRACKET RBRACKET
     ;
 
 functionType
-    : '(' (type (',' type)*)? ')' '=>' type
+    : LPAREN (type (COMMA type)*)? RPAREN ARROW type
     ;
 
 objectType
-    : '{' (objectTypeProperty (',' objectTypeProperty)*)? '}'
+    : LBRACE (objectTypeProperty (COMMA objectTypeProperty)*)? RBRACE
     ;
 
 objectTypeProperty
@@ -73,25 +73,25 @@ objectTypeProperty
     ;
 
 qualifiedName
-    : IDENTIFIER ('.' IDENTIFIER)*
+    : IDENTIFIER (DOT IDENTIFIER)*
     ;
 
 argumentList
-    : expression (',' expression)*
+    : expression (COMMA expression)*
     ;
 
 expression
     : primary
-    | expression '.' IDENTIFIER                          // Member access
-    | expression '(' argumentList? ')'                   // Function call
-    | 'await' expression                                // Await expression
-    | 'new' IDENTIFIER '(' argumentList? ')'            // Object creation
+    | expression DOT IDENTIFIER                          // Member access
+    | expression LPAREN argumentList? RPAREN                   // Function call
+    | AWAIT expression                                // Await expression
+    | NEW IDENTIFIER LPAREN argumentList? RPAREN            // Object creation
     | expression binaryOperator expression              // Binary operation
     | unaryOperator expression                          // Unary operation
-    | expression '?' expression ':' expression          // Ternary
-    | expression '??' expression                        // Nullish coalescing
-    | expression '||' expression                        // Logical OR
-    | expression '&&' expression                        // Logical AND
+    | expression QUESTION expression COLON expression          // Ternary
+    | expression NULLISH_COALESCING expression                        // Nullish coalescing
+    | expression LOGICAL_OR expression                        // Logical OR
+    | expression LOGICAL_AND expression                        // Logical AND
     ;
 
 primary
@@ -100,30 +100,215 @@ primary
     | arrayLiteral
     | objectLiteral
     | templateString
-    | '(' expression ')'
+    | LPAREN expression RPAREN
     ;
 
 templateString
-    : '`' templateStringContent* '`'
+    : BACKTICK templateStringContent* BACKTICK
     ;
 
 templateStringContent
     : TEXT
-    | '${' expression '}'
+    | DOLLAR_LBRACE expression RBRACE
     ;
 
 arrayLiteral
-    : '[' (expression (',' expression)*)? ']'
+    : LBRACKET (expression (COMMA expression)*)? RBRACKET
     ;
 
 objectLiteral
-    : '{' (objectProperty (',' objectProperty)*)? '}'
+    : LBRACE (objectProperty (COMMA objectProperty)*)? RBRACE
     ;
 
 objectProperty
-    : IDENTIFIER ':' expression
+    : IDENTIFIER COLON expression
     | IDENTIFIER
     ;
+
+// Missing rule definitions
+literal
+    : NUMBER
+    | STRING
+    | TRUE
+    | FALSE
+    | NULL
+    | UNDEFINED
+    ;
+
+binaryOperator
+    : PLUS
+    | MINUS 
+    | MULTIPLY
+    | DIVIDE
+    | MODULO
+    | EQUALS
+    | NOT_EQUALS
+    | STRICT_EQUALS
+    | STRICT_NOT_EQUALS
+    | LESS_THAN
+    | LESS_EQUAL
+    | GREATER_THAN
+    | GREATER_EQUAL
+    | LOGICAL_AND
+    | LOGICAL_OR
+    | NULLISH_COALESCING
+    ;
+
+unaryOperator
+    : NOT
+    | MINUS
+    | BITWISE_NOT
+    | INCREMENT
+    | DECREMENT
+    ;
+
+functionDeclaration
+    : ASYNC? FN IDENTIFIER LPAREN parameterList? RPAREN typeAnnotation? blockStatement
+    ;
+
+parameterList
+    : parameter (COMMA parameter)*
+    ;
+
+parameter
+    : IDENTIFIER typeAnnotation?
+    ;
+
+blockStatement
+    : LBRACE statement* RBRACE
+    ;
+
+classDeclaration
+    : decorator* CLASS IDENTIFIER (EXTENDS IDENTIFIER)? LBRACE classMember* RBRACE
+    ;
+
+classMember
+    : methodDeclaration
+    | propertyDeclaration
+    | operatorDeclaration
+    ;
+
+methodDeclaration
+    : decorator* ASYNC? IDENTIFIER LPAREN parameterList? RPAREN typeAnnotation? blockStatement
+    ;
+
+propertyDeclaration
+    : decorator* IDENTIFIER typeAnnotation? (ASSIGN expression)? SEMICOLON
+    ;
+
+operatorDeclaration
+    : decorator* OPERATOR binaryOperator LPAREN parameterList RPAREN typeAnnotation? blockStatement
+    ;
+
+interfaceDeclaration
+    : INTERFACE IDENTIFIER LBRACE interfaceMember* RBRACE
+    ;
+
+interfaceMember
+    : IDENTIFIER typeAnnotation SEMICOLON
+    ;
+
+returnStatement
+    : RETURN expression? SEMICOLON
+    ;
+
+ifStatement
+    : IF LPAREN expression RPAREN statement (ELSE statement)?
+    ;
+
+whileStatement
+    : WHILE LPAREN expression RPAREN statement
+    ;
+
+forStatement
+    : FOR LPAREN variableDeclaration expression SEMICOLON expression RPAREN statement
+    ;
+
+tryStatement
+    : TRY blockStatement (CATCH LPAREN IDENTIFIER RPAREN blockStatement)? (FINALLY blockStatement)?
+    ;
+
+throwStatement
+    : THROW expression SEMICOLON
+    ;
+
+// Keywords (need to be defined before IDENTIFIER)
+LET: 'let';
+CONST: 'const';
+FN: 'fn';
+CLASS: 'class';
+INTERFACE: 'interface';
+EXTENDS: 'extends';
+IF: 'if';
+THEN: 'then';
+ELSE: 'else';
+MATCH: 'match';
+RETURN: 'return';
+THROW: 'throw';
+TRY: 'try';
+CATCH: 'catch';
+FINALLY: 'finally';
+WHILE: 'while';
+FOR: 'for';
+ASYNC: 'async';
+AWAIT: 'await';
+NEW: 'new';
+IMPORT: 'import';
+FROM: 'from';
+MODULE: 'module';
+OPERATOR: 'operator';
+TRUE: 'true';
+FALSE: 'false';
+NULL: 'null';
+UNDEFINED: 'undefined';
+IN: 'in';
+
+// Operators and punctuation
+ARROW: '=>';
+PIPE_ARROW: '|>';
+EQUALS: '==';
+NOT_EQUALS: '!=';
+STRICT_EQUALS: '===';
+STRICT_NOT_EQUALS: '!==';
+LESS_EQUAL: '<=';
+GREATER_EQUAL: '>=';
+LOGICAL_AND: '&&';
+LOGICAL_OR: '||';
+NULLISH_COALESCING: '??';
+NULLISH_ASSIGN: '??=';
+INCREMENT: '++';
+DECREMENT: '--';
+PLUS_ASSIGN: '+=';
+MINUS_ASSIGN: '-=';
+MULT_ASSIGN: '*=';
+DIV_ASSIGN: '/=';
+MOD_ASSIGN: '%=';
+
+// Single character tokens
+PLUS: '+';
+MINUS: '-';
+MULTIPLY: '*';
+DIVIDE: '/';
+MODULO: '%';
+LESS_THAN: '<';
+GREATER_THAN: '>';
+ASSIGN: '=';
+NOT: '!';
+BITWISE_NOT: '~';
+QUESTION: '?';
+COLON: ':';
+SEMICOLON: ';';
+COMMA: ',';
+DOT: '.';
+AT: '@';
+LPAREN: '(';
+RPAREN: ')';
+LBRACE: '{';
+RBRACE: '}';
+LBRACKET: '[';
+RBRACKET: ']';
+BACKTICK: '`';
+DOLLAR_LBRACE: '${';
 
 // Tokens
 IDENTIFIER: [a-zA-Z_][a-zA-Z0-9_]*;
