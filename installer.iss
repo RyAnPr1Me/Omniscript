@@ -36,14 +36,12 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
-Name: "quicklaunchicon"; Description: "{cm:CreateQuickLaunchIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
+Name: "quicklaunchicon"; Description: "{cm:CreateQuickLaunchIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked; OnlyBelowVersion: 6.1
 Name: "addtopath"; Description: "Add Omniscript to system PATH"; GroupDescription: "Environment:"; Flags: unchecked
 
 [Files]
-; Ensure build output in /dist
 Source: "dist\cli.js"; DestDir: "{app}\bin"; Flags: ignoreversion
 Source: "dist\*"; DestDir: "{app}\lib"; Excludes: "bin,cli.js"; Flags: ignoreversion recursesubdirs
-Source: "src\*"; DestDir: "{app}\src"; Flags: ignoreversion recursesubdirs
 Source: "LICENSE"; DestDir: "{app}"; Flags: ignoreversion
 Source: "README.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "package.json"; DestDir: "{app}"; Flags: ignoreversion
@@ -58,12 +56,19 @@ Name: "{autodesktop}\Omniscript"; Filename: "node"; Parameters: """{app}\bin\cli
 Name: "{userappdata}\Microsoft\Internet Explorer\Quick Launch\Omniscript"; Filename: "node"; Parameters: """{app}\bin\cli.js"""; WorkingDir: "{app}"; Comment: "Omniscript CLI"; Tasks: quicklaunchicon
 
 [Run]
-; Create omni.bat to link .os files to CLI
-Filename: "{cmd}"; Parameters: "/c echo @echo off > ""{app}\omni.bat"""; Flags: runhidden waituntilterminated
+Filename: "{cmd}"; Parameters: "/c echo @echo off > ""{app}\omni.bat"""; Flags: runhidden waituntilterminated; StatusMsg: "Creating omni command..."
 Filename: "{cmd}"; Parameters: "/c echo node ""{app}\bin\cli.js"" %%* >> ""{app}\omni.bat"""; Flags: runhidden waituntilterminated
 Filename: "node"; Parameters: """{app}\bin\cli.js"" --version"; Description: "Verify Omniscript installation"; Flags: postinstall skipifsilent runhidden; StatusMsg: "Verifying installation..."
 
 [Registry]
-; Add Omniscript install folder to PATH
-Root: HKA; Subkey: "SYSTEM\CurrentControl
+; Add Omni install folder to PATH
+Root: HKLM; Subkey: "SYSTEM\CurrentControlSet\Control\Session Manager\Environment"; ValueType: expandsz; ValueName: "Path"; ValueData: "{olddata};{app}\bin"; Flags: preservestringtype uninsdeletevalue; Tasks: addtopath; Check: IsAdminInstallMode
+Root: HKCU; Subkey: "Environment"; ValueType: expandsz; ValueName: "Path"; ValueData: "{olddata};{app}\bin"; Flags: preservestringtype uninsdeletevalue; Tasks: addtopath; Check: not IsAdminInstallMode
+
+; File association for .os files
+Root: HKCU; Subkey: "Software\Classes\.os"; ValueType: string; ValueName: ""; ValueData: "OmniscriptFile"; Flags: uninsdeletevalue
+Root: HKCU; Subkey: "Software\Classes\OmniscriptFile\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """node"" ""{app}\bin\cli.js"" ""%1"" %*"; Flags: uninsdeletevalue
+
+[UninstallDelete]
+Type: filesandordirs; Name: "{app}"
 
