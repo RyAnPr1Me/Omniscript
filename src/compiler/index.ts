@@ -133,17 +133,20 @@ export class Compiler {
 
   private visitProgram(node: any): any {
     const bodyNodes = (node.body || []).map((stmt: any) => this.visitNode(stmt));
-    // Collect imports and attach them to relevant nodes
+    
+    // Keep all nodes including imports - they need to be executed
+    const allNodes = bodyNodes.filter((n: any) => n != null);
+    
+    // Collect imports for function metadata
     const imports: string[] = [];
     const nonImportNodes: any[] = [];
     
-    for (const n of bodyNodes) {
-      if (!n) continue;
+    for (const n of allNodes) {
       if (n.type === 'Import') {
         if (typeof n.from === 'string') imports.push(n.from);
-        continue;
+      } else {
+        nonImportNodes.push(n);
       }
-      nonImportNodes.push(n);
     }
     
     // Attach imports to function nodes if they exist
@@ -155,8 +158,13 @@ export class Compiler {
       }
     }
     
-    // If the program contains a single top-level declaration, return it directly
-    if (nonImportNodes.length === 1) return nonImportNodes[0];
+    // If we have multiple statements including imports, return a Block
+    if (allNodes.length > 1) {
+      return { type: 'Block', body: allNodes };
+    }
+    
+    // If the program contains a single statement, return it directly
+    if (allNodes.length === 1) return allNodes[0];
     
     // Special handling: if we have multiple nodes but one is clearly the main declaration 
     // (e.g., a class), and others are just parsing artifacts, return the main one
@@ -174,21 +182,22 @@ export class Compiler {
         }
       }
       if (uniqueClasses.length === 1 && nonImportNodes.length === uniqueClasses.length) {
-        return uniqueClasses[0];
+        // Still need to include imports, so return a Block
+        return { type: 'Block', body: allNodes };
       }
     }
     
-    // Only return a single class/function if it's the ONLY thing in the program
-    if (classNodes.length === 1 && nonImportNodes.length === 1) {
+    // Only return a single class/function if it's the ONLY thing in the program AND no imports
+    if (classNodes.length === 1 && allNodes.length === 1) {
       return classNodes[0];
     }
     
-    if (functionNodes.length === 1 && nonImportNodes.length === 1) {
+    if (functionNodes.length === 1 && allNodes.length === 1) {
       return functionNodes[0];
     }
     
-    // For multiple statements, return a block that will execute all statements
-    return { type: 'Block', body: nonImportNodes };
+    // For any case with multiple statements or imports, return a block
+    return { type: 'Block', body: allNodes };
   }
 
   private containsBinaryAddBetweenParams(fnNode: any): boolean {
