@@ -22,8 +22,11 @@ export class Omniscript {
                                /if\s+\w+\s+then\s+/.test(source) ||
                                /match\s+\w+\s*\{/.test(source) ||
                                /\blet\s+\w+\s*=/.test(source) ||  // Also detect let bindings
+                               /\bconst\s+\w+\s*=/.test(source) ||  // Also detect const bindings
                                /\bclass\s+\w+\s*\{/.test(source) ||  // Also detect class definitions
-                               /|>/.test(source);  // Also detect pipeline operations
+                               /\\\|>/.test(source) ||  // Also detect pipeline operations
+                               /\b(curry|memoize|just|nothing|left|right|head|tail|cons|flip|add|inc)\s*\(/.test(source) || // Detect functional builtins
+                               /\)\s*\(/.test(source); // Detect curried function calls like add(2)(3)
     
     if (hasFunctionalSyntax) {
       // Use functional parser directly for functional syntax
