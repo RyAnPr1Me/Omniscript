@@ -407,4 +407,55 @@ program
     }
   });
 
+program
+  .command('docs')
+  .description('Generate API documentation')
+  .option('-o, --output <path>', 'Output directory', './docs/api')
+  .option('-f, --format <format>', 'Output format (markdown)', 'markdown')
+  .action(async (options) => {
+    try {
+      const { TypeScriptDocGenerator, MarkdownDocGenerator } = await import('./docs-generator');
+      const fs = await import('fs');
+      const path = await import('path');
+      
+      console.log('📚 Generating API documentation...');
+      
+      const docGen = new TypeScriptDocGenerator();
+      const modules = docGen.generateDocumentation();
+      
+      if (modules.length === 0) {
+        console.log('⚠️  No modules found to document');
+        return;
+      }
+      
+      console.log(`📖 Found ${modules.length} modules to document`);
+      
+      // Ensure output directory exists
+      const outputDir = path.resolve(options.output);
+      if (!fs.existsSync(outputDir)) {
+        fs.mkdirSync(outputDir, { recursive: true });
+      }
+      
+      if (options.format === 'markdown') {
+        const markdown = MarkdownDocGenerator.generateMarkdown(modules);
+        const outputFile = path.join(outputDir, 'API.md');
+        fs.writeFileSync(outputFile, markdown);
+        console.log(`✅ Generated markdown documentation: ${outputFile}`);
+      }
+      
+      // Also generate individual module files
+      for (const module of modules) {
+        const moduleMarkdown = MarkdownDocGenerator.generateMarkdown([module]);
+        const moduleFile = path.join(outputDir, `${module.name}.md`);
+        fs.writeFileSync(moduleFile, moduleMarkdown);
+      }
+      
+      console.log(`📝 Generated ${modules.length} individual module documentation files`);
+      console.log('🎉 Documentation generation complete!');
+      
+    } catch (error) {
+      console.error(`❌ Failed to generate documentation: ${error}`);
+    }
+  });
+
 program.parse();

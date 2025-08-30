@@ -23,7 +23,7 @@ This document enumerates tasks required to reach 100% of the public README featu
 - [x] Collections (List/Map/Set + algorithms) - **ENHANCED**
 - [x] Reactive system (signals, effects, computed) - **ENHANCED**
 - [x] Networking (HTTP server/client, WebSocket) - **ENHANCED**
-- [ ] Crypto (hash, HMAC, symmetric/asymmetric)
+- [x] Crypto (hash, HMAC, symmetric/asymmetric) - **ENHANCED** ⭐
 - [x] DateTime utilities - **ENHANCED**
 - [x] Math (linear algebra, statistics) - **ENHANCED**
 - [x] Threading / actors / channels - **ADVANCED** ⭐
@@ -51,7 +51,7 @@ This document enumerates tasks required to reach 100% of the public README featu
 ## 7. Frontend/Full-Stack Model
 - [x] Virtual DOM or reactive DOM binding - **ENHANCED**
 - [x] Server/client boundary & data sync - **ENHANCED**
-- [ ] SSR pipeline
+- [x] SSR pipeline - **NEW ADVANCED FEATURE** ⭐
 
 ## 8. ORM
 - [x] Model definition decorators (@id, @field, @relation, @timestamp) - **ENHANCED**
@@ -67,8 +67,8 @@ This document enumerates tasks required to reach 100% of the public README featu
 
 ## 10. Documentation Alignment
 - [x] README status badge & feature matrix - **UPDATED**
+- [x] API reference generator - **NEW ADVANCED FEATURE** ⭐
 - [ ] Versioned docs site
-- [ ] API reference generator
 
 ## 11. Distribution
 - [x] Prebuilt binaries for major platforms - **IMPLEMENTED**
@@ -76,9 +76,9 @@ This document enumerates tasks required to reach 100% of the public README featu
 - [x] Version management (semver tagging, changelog) - **IMPLEMENTED**
 
 ## 12. Security / Stability
-- [ ] Sandboxed execution mode
-- [ ] Resource limits (CPU, memory, IO)
-- [ ] Audit logging hooks
+- [x] Sandboxed execution mode - **NEW ADVANCED FEATURE** ⭐
+- [x] Resource limits (CPU, memory, IO) - **NEW ADVANCED FEATURE** ⭐ 
+- [x] Audit logging hooks - **NEW ADVANCED FEATURE** ⭐
 
 ---
 
@@ -120,6 +120,30 @@ This document enumerates tasks required to reach 100% of the public README featu
 - **Pattern Match Compilation**: Efficient pattern matching code generation
 - **Type-guided Optimizations**: Performance improvements based on type information
 - **Memory Management**: Advanced garbage collection and memory pooling
+
+### 🔒 **Security & Sandboxing**
+- **Sandboxed Execution Mode**: Secure code execution with resource limits and policy enforcement
+- **Resource Monitoring**: Real-time monitoring of CPU, memory, and IO usage with violation detection
+- **Security Policies**: Granular control over file system, network, and module access
+- **Audit Logging**: Comprehensive security event logging with filtering and analysis
+- **Restricted Environments**: Safe execution of untrusted code with configurable constraints
+
+### 📚 **Documentation & Tooling**
+- **API Documentation Generator**: Automatic TypeScript code analysis and markdown generation
+- **JSDoc Comment Extraction**: Complete documentation parsing with examples and parameters
+- **CLI Documentation Command**: Built-in `omni docs` command for generating documentation
+- **Multi-format Output**: Support for markdown with plans for HTML and JSON formats
+- **Module-based Documentation**: Individual documentation files per module for better organization
+
+### 🌐 **Server-Side Rendering (SSR)**
+- **SSR Renderer**: Complete server-side rendering system for full-stack applications
+- **Static Site Generation**: Generate static HTML files for improved performance and SEO
+- **Component Hydration**: Client-side hydration support for interactive components
+- **Custom Templates**: Support for custom HTML templates with variable substitution
+- **Middleware Integration**: Express.js-compatible middleware for server integration
+- **Route Handling**: Automatic route matching and component rendering
+- **Meta Tag Generation**: SEO-friendly meta tag generation and management
+- **Sitemap Generation**: Automatic XML sitemap creation for static sites
 
 ---
 

@@ -1,6 +1,7 @@
 import { debug as logger, DebugLevel } from '../debug';
 import { SIMDProcessor } from './simd';
 import { MemoryPoolManager } from './memory-pool';
+import { SecurityManager, SandboxedEnvironment, SecurityPolicy } from '../security';
 
 export interface Bytecode {
   type: string;
@@ -514,11 +515,11 @@ export class Runtime {
   // ------- Execution helpers for new bytecode -------
   private pushEnv() { this.envStack.push(new Map()); }
   private popEnv() { this.envStack.pop(); }
-  private setVar(name: string, value: unknown) {
+  public setVar(name: string, value: unknown) {
     if (this.envStack.length) this.envStack[this.envStack.length - 1].set(name, value);
     else this.scope.set(name, value);
   }
-  private getVar(name: string): unknown {
+  public getVar(name: string): unknown {
     for (let i = this.envStack.length - 1; i >= 0; i--) {
       if (this.envStack[i].has(name)) return this.envStack[i].get(name);
     }
@@ -895,6 +896,32 @@ export class Runtime {
       return value;
     }
     throw new Error('Unsupported assignment target');
+  }
+
+  // Security and sandboxing methods
+  createSecureSandbox(policy?: Partial<SecurityPolicy>): SandboxedEnvironment {
+    const securityManager = SecurityManager.getInstance();
+    return securityManager.createSandbox(policy);
+  }
+
+  async executeSecure(code: string, policy?: Partial<SecurityPolicy>): Promise<any> {
+    const sandbox = this.createSecureSandbox(policy);
+    try {
+      const result = await sandbox.execute(code);
+      return result;
+    } finally {
+      sandbox.destroy();
+    }
+  }
+
+  getSecurityAuditLog(since?: number): Array<any> {
+    const securityManager = SecurityManager.getInstance();
+    return securityManager.getAuditLog(since);
+  }
+
+  clearSecurityAuditLog(): void {
+    const securityManager = SecurityManager.getInstance();
+    securityManager.clearAuditLog();
   }
 }
 
