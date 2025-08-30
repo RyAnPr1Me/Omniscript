@@ -180,8 +180,17 @@ export class JITOptimizer {
     new DeadCodeEliminationPass(),
     new InliningPass()
   ];
+  private fastMode = false;
+
+  constructor(fastMode: boolean = false) {
+    this.fastMode = fastMode;
+  }
 
   optimize(bytecode: any): any {
+    if (this.fastMode) {
+      return this.fastOptimize(bytecode);
+    }
+
     debug.info('Optimizer', 'Starting JIT optimization passes');
     debug.time('Optimizer', 'optimization');
 
@@ -197,6 +206,14 @@ export class JITOptimizer {
     debug.debug('Optimizer', 'Optimization complete');
     
     return optimized;
+  }
+
+  fastOptimize(bytecode: any): any {
+    // Only run the most essential optimization - constant folding
+    // Skip expensive passes like inlining and dead code elimination
+    debug.debug('Optimizer', 'Fast optimization - running essential passes only');
+    const constantFolding = new ConstantFoldingPass();
+    return constantFolding.optimize(bytecode);
   }
 
   addPass(pass: OptimizationPass): void {
