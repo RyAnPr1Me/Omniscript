@@ -515,11 +515,11 @@ export class Runtime {
   // ------- Execution helpers for new bytecode -------
   private pushEnv() { this.envStack.push(new Map()); }
   private popEnv() { this.envStack.pop(); }
-  private setVar(name: string, value: unknown) {
+  public setVar(name: string, value: unknown) {
     if (this.envStack.length) this.envStack[this.envStack.length - 1].set(name, value);
     else this.scope.set(name, value);
   }
-  private getVar(name: string): unknown {
+  public getVar(name: string): unknown {
     for (let i = this.envStack.length - 1; i >= 0; i--) {
       if (this.envStack[i].has(name)) return this.envStack[i].get(name);
     }
