@@ -10,6 +10,7 @@ import {
   Let,
   Pipe,
   Binary,
+  Unary,
   Lambda,
   ClassDecl,
   MethodDecl,
@@ -226,13 +227,32 @@ export class FunctionalParser {
   }
 
   private multiplicative(): Expression {
-    let expr = this.lambda();
+    let expr = this.unary();
     while (this.peek('*') || this.peek('/') || this.peek('%')) {
       const op = this.consume(this.current().type).value as ('*'|'/'|'%');
-      const right = this.lambda();
+      const right = this.unary();
       expr = { type: 'Binary', op, left: expr, right } as Binary;
     }
     return expr;
+  }
+
+  private unary(): Expression {
+    if (this.peek('TYPEOF')) {
+      this.consume('TYPEOF');
+      const expr = this.unary();
+      return { type: 'Unary', operator: 'typeof', operand: expr } as any;
+    }
+    if (this.peek('-')) {
+      this.consume('-');
+      const expr = this.unary();
+      return { type: 'Unary', operator: '-', operand: expr } as any;
+    }
+    if (this.peek('!')) {
+      this.consume('!');
+      const expr = this.unary();
+      return { type: 'Unary', operator: '!', operand: expr } as any;
+    }
+    return this.lambda();
   }
 
   private lambda(): Expression {

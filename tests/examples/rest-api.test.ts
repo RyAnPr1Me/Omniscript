@@ -11,7 +11,7 @@ describe('REST API Example Tests', () => {
   });
 
   test('Database mock object functionality', async () => {
-    const src = `let Database = { save: (entity) => { entity.id = 1; return entity; } }; typeof Database.save`;
+    const src = `let Database = { save: fn(entity) => entity }; typeof Database.save`;
     
     const result = await omni.execute(src);
     expect(result).toBe('function');

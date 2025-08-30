@@ -303,6 +303,7 @@ export class Runtime {
       this.scope.set('console', console);
       this.scope.set('setTimeout', setTimeout);
       this.scope.set('setInterval', setInterval);
+      this.scope.set('Object', Object);
       
     } catch (error) {
       logger.warn('Runtime', `Failed to initialize stdlib globals: ${error}`);

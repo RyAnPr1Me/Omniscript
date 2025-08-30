@@ -30,8 +30,8 @@ export class Omniscript {
       try {
         let src = source;
         // Convert arrow function syntax to fn syntax, but avoid method definitions
-        // Look for patterns like `let x = (args) =>` or `= (args) =>` or start of line `(args) =>`
-        src = src.replace(/(^|[=,]\s*)\(([^)]*)\)\s*=>/g, '$1fn($2) =>');
+        // Look for patterns like `let x = (args) =>` or `= (args) =>` or start of line `(args) =>` or `prop: (args) =>`
+        src = src.replace(/(^|[=,:]\s*)\(([^)]*)\)\s*=>/g, '$1fn($2) =>');
         // More specific regex for immediately invoked lambdas that won't break nested lambdas
         // Only match when the lambda expression is followed by a space and then parentheses
         src = src.replace(/(fn\s*\([^)]*\)\s*=>\s*[^;\n()]+?)\s+\(([^)]*)\)/g, '($1)($2)');
@@ -53,8 +53,8 @@ export class Omniscript {
       try {
         let src = source;
         // Convert arrow function syntax to fn syntax, but avoid method definitions
-        // Look for patterns like `let x = (args) =>` or `= (args) =>` or start of line `(args) =>`
-        src = src.replace(/(^|[=,]\s*)\(([^)]*)\)\s*=>/g, '$1fn($2) =>');
+        // Look for patterns like `let x = (args) =>` or `= (args) =>` or start of line `(args) =>` or `prop: (args) =>`
+        src = src.replace(/(^|[=,:]\s*)\(([^)]*)\)\s*=>/g, '$1fn($2) =>');
         // More specific regex for immediately invoked lambdas that won't break nested lambdas
         src = src.replace(/(fn\s*\([^)]*\)\s*=>\s*[^;\n()]+?)\s+\(([^)]*)\)/g, '($1)($2)');
         const fparser = new FunctionalParser();
