@@ -19,9 +19,10 @@ export type ClassDecl = { type: 'ClassDecl'; name: string; methods: MethodDecl[]
 export type NewInstance = { type: 'New'; className: string; args: Expression[] };
 export type PropAccess = { type: 'Prop'; object: Expression; name: string };
 export type ObjectLiteral = { type: 'ObjectLiteral'; properties: Record<string, Expression> };
+export type ArrayLiteral = { type: 'ArrayLiteral'; elements: Expression[] };
 
 export type ImportDecl = { type: 'Import'; imports: string[]; from: string };
-export type Expression = NumberLiteral | StringLiteral | BooleanLiteral | Identifier | Lambda | Call | Let | IfExpr | Pipe | Binary | Unary | Match | AwaitExpr | ReturnExpr | ClassDecl | NewInstance | PropAccess | ObjectLiteral | ImportDecl;
+export type Expression = NumberLiteral | StringLiteral | BooleanLiteral | Identifier | Lambda | Call | Let | IfExpr | Pipe | Binary | Unary | Match | AwaitExpr | ReturnExpr | ClassDecl | NewInstance | PropAccess | ObjectLiteral | ArrayLiteral | ImportDecl;
 export type Program = { type: 'Program'; body: Expression[] };
 
 export interface Env { parent?: Env; values: Map<string, any>; immutable: Set<string>; }

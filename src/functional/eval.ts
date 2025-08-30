@@ -289,6 +289,10 @@ function evalExpr(expr: Expression, env: Env): any {
 			}
 			return result;
 		}
+		case 'ArrayLiteral': {
+			const arr = expr as any; // ArrayLiteral type
+			return arr.elements.map((element: Expression) => evalExpr(element, env));
+		}
 		case 'Import': {
 			const i = expr as ImportDecl;
 			// Handle imports from 'stdlib'

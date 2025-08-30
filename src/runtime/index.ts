@@ -130,14 +130,16 @@ export class Runtime {
       // When called as a regular function, 'this' will be undefined (strict mode) or global object
       
       // For constructor calls via 'new', this should be an object
-      // For direct calls, we might need to create an object
-      if (this == null) {
-        // This should not happen with proper 'new' usage, but just in case
-        throw new Error(`Class ${node.name} must be called with 'new' operator`);
+      // For direct calls, create an object to allow the call to proceed
+      let target = this;
+      if (target == null) {
+        // Create an object if called without 'new'
+        target = Object.create(Klass.prototype);
       }
       
-      Object.assign(this, { __class: node.name, __metadata: classMetadata || {} });
-      if (methodMap['constructor']) methodMap['constructor'].apply(this, ctorArgs);
+      Object.assign(target, { __class: node.name, __metadata: classMetadata || {} });
+      if (methodMap['constructor']) methodMap['constructor'].apply(target, ctorArgs);
+      return target;
     };
     Klass.prototype = { ...methodMap, __ops: operatorMap };
     Klass.__metadata = classMetadata;

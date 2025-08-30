@@ -23,6 +23,8 @@ export function lex(input: string): Token[] {
     if (c === ',' ) { tokens.push({type:'COMMA', value:','}); i++; continue; }
     if (c === '{' ) { tokens.push({type:'LBRACE', value:'{'}); i++; continue; }
     if (c === '}' ) { tokens.push({type:'RBRACE', value:'}'}); i++; continue; }
+    if (c === '[' ) { tokens.push({type:'LBRACKET', value:'['}); i++; continue; }
+    if (c === ']' ) { tokens.push({type:'RBRACKET', value:']'}); i++; continue; }
     if (c === ';' ) { tokens.push({type:'SEMI', value:';'}); i++; continue; }
     if (c === '(' ) { tokens.push({type:'LPAREN', value:'('}); i++; continue; }
     if (c === ')' ) { tokens.push({type:'RPAREN', value:')'}); i++; continue; }
