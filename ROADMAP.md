@@ -67,8 +67,8 @@ This document enumerates tasks required to reach 100% of the public README featu
 
 ## 10. Documentation Alignment
 - [x] README status badge & feature matrix - **UPDATED**
+- [x] API reference generator - **NEW ADVANCED FEATURE** ⭐
 - [ ] Versioned docs site
-- [ ] API reference generator
 
 ## 11. Distribution
 - [x] Prebuilt binaries for major platforms - **IMPLEMENTED**
@@ -127,6 +127,13 @@ This document enumerates tasks required to reach 100% of the public README featu
 - **Security Policies**: Granular control over file system, network, and module access
 - **Audit Logging**: Comprehensive security event logging with filtering and analysis
 - **Restricted Environments**: Safe execution of untrusted code with configurable constraints
+
+### 📚 **Documentation & Tooling**
+- **API Documentation Generator**: Automatic TypeScript code analysis and markdown generation
+- **JSDoc Comment Extraction**: Complete documentation parsing with examples and parameters
+- **CLI Documentation Command**: Built-in `omni docs` command for generating documentation
+- **Multi-format Output**: Support for markdown with plans for HTML and JSON formats
+- **Module-based Documentation**: Individual documentation files per module for better organization
 
 ---
 

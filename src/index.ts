@@ -72,3 +72,4 @@ export { Parser } from './parser';
 export { Compiler } from './compiler';
 export { Runtime } from './runtime';
 export { SecurityManager, SandboxedEnvironment, SecurityError, ResourceMonitor } from './security';
+export { TypeScriptDocGenerator, MarkdownDocGenerator } from './docs-generator';
