@@ -167,7 +167,7 @@ export class Parser {
     }
     
     // Parse statements in order by finding boundaries more carefully
-    let remainingSource = sourceWithoutFns;
+    const remainingSource = sourceWithoutFns;
     
     // Extract classes first (they can contain semicolons, so handle them specially)
     const classMatches: Array<{start: number, end: number, text: string}> = [];
@@ -652,7 +652,7 @@ export class Parser {
       }
       
       // Parse operator overloading methods: operator +(other: Complex): Complex { ... }
-      const operatorRe = /operator\s*([+\-*\/])\s*\(([^)]*)\)\s*:\s*([^{]+)\s*\{([^}]*)\}/g;
+      const operatorRe = /operator\s*([+\-*/])\s*\(([^)]*)\)\s*:\s*([^{]+)\s*\{([^}]*)\}/g;
       let operatorMatch;
       const operators: any[] = [];
       while ((operatorMatch = operatorRe.exec(classBody)) !== null) {

@@ -326,10 +326,11 @@ export class TypeChecker {
         return type.types?.map(t => this.typeToString(t)).join(' | ') || 'union';
       case 'intersection':
         return type.types?.map(t => this.typeToString(t)).join(' & ') || 'intersection';
-      case 'function':
+      case 'function': {
         const params = type.parameters?.map(t => this.typeToString(t)).join(', ') || '';
         const ret = type.returnType ? this.typeToString(type.returnType) : 'unknown';
         return `(${params}) => ${ret}`;
+      }
       case 'array':
         return `${type.elementType ? this.typeToString(type.elementType) : 'unknown'}[]`;
       case 'object':

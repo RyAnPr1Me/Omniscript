@@ -42,12 +42,8 @@ export class DatabaseV2 {
   }
 
   static async transaction<T>(callback: () => Promise<T>): Promise<T> {
-    try {
-      const result = await callback();
-      return result;
-    } catch (error) {
-      throw error;
-    }
+    const result = await callback();
+    return result;
   }
 }
 

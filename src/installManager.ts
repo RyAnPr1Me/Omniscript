@@ -429,7 +429,7 @@ export class OmniscriptInstaller {
     
     // Copy platform-specific executable
     const platform = os.platform();
-    let executableName = platform === 'win32' 
+    const executableName = platform === 'win32' 
       ? 'omniscript-cli-win.exe'
       : platform === 'darwin'
         ? 'omniscript-cli-macos'

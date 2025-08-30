@@ -82,6 +82,7 @@ function evalExpr(expr: Expression, env: Env): any {
 					case '!==': return left !== right;
 				}
 			}
+			break;
 		case 'Unary': {
 			const u = expr as Unary;
 			const operand = evalExpr(u.operand, env);

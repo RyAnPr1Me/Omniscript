@@ -630,7 +630,7 @@ export class Runtime {
     
     for (const matchCase of cases) {
       let matched = false;
-      let bindings: Record<string, any> = {};
+      const bindings: Record<string, any> = {};
       
       // Check if pattern matches
       if (matchCase.pattern.type === 'Wildcard') {
@@ -774,11 +774,9 @@ export class Runtime {
         return this.evalExpr((expr as any).condition) ? this.evalExpr((expr as any).trueExpr) : this.evalExpr((expr as any).falseExpr);
       case 'ArrayLiteral':
         return (((expr as any).elements) || []).map((e: any) => this.evalExpr(e));
-      case 'MemberAccess':
-        const obj = this.evalExpr((expr as any).object);
-        return (obj as any)?.[(expr as any).member as any];
-      case 'Match':
+      case 'Match': {
         return this.evalMatch(expr as any);
+      }
       default:
         return undefined;
     }
