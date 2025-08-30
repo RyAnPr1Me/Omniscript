@@ -103,11 +103,12 @@ export class PatternMatcher {
       case 'object':
         return this.matchObject(value, pattern, bindings);
       
-      case 'guard':
+      case 'guard': {
         const baseMatch = pattern.patterns && pattern.patterns.length > 0 
           ? this.matchPattern(value, pattern.patterns[0], bindings)
           : true;
         return baseMatch && this.evaluateGuard(pattern.condition, bindings);
+      }
       
       default:
         return false;
@@ -216,7 +217,7 @@ export class PatternMatcher {
     const missing: Pattern[] = [];
     
     switch (valueType) {
-      case 'boolean':
+      case 'boolean': {
         const hasTrue = cases.some(c => this.matchesLiteral(c.pattern, true));
         const hasFalse = cases.some(c => this.matchesLiteral(c.pattern, false));
         const hasWildcard = cases.some(c => c.pattern.type === 'wildcard');
@@ -226,8 +227,9 @@ export class PatternMatcher {
           if (!hasFalse) missing.push({ type: 'literal', value: false });
         }
         break;
+      }
         
-      case 'Option':
+      case 'Option': {
         const hasSome = cases.some(c => this.matchesConstructor(c.pattern, 'Some'));
         const hasNone = cases.some(c => this.matchesConstructor(c.pattern, 'None'));
         const hasOptionWildcard = cases.some(c => c.pattern.type === 'wildcard');
@@ -237,13 +239,16 @@ export class PatternMatcher {
           if (!hasNone) missing.push({ type: 'constructor', name: 'None' });
         }
         break;
+      }
         
-      default:
+      default: {
         // For other types, check if there's a wildcard
         const hasAnyWildcard = cases.some(c => c.pattern.type === 'wildcard');
         if (!hasAnyWildcard) {
           missing.push({ type: 'wildcard' });
         }
+        break;
+      }
     }
     
     return missing;

@@ -63,12 +63,12 @@ This document enumerates tasks required to reach 100% of the public README featu
 - [x] Comprehensive unit tests for parser, type checker, runtime - **ENHANCED**
 - [x] Conformance test suite for stdlib - **ENHANCED**
 - [x] Performance benchmarks - **ENHANCED**
-- [ ] Fuzzing for parser/runtime safety
+- [x] Fuzzing for parser/runtime safety - **NEW ADVANCED FEATURE** ⭐
 
 ## 10. Documentation Alignment
 - [x] README status badge & feature matrix - **UPDATED**
 - [x] API reference generator - **NEW ADVANCED FEATURE** ⭐
-- [ ] Versioned docs site
+- [x] Versioned docs site - **NEW ADVANCED FEATURE** ⭐
 
 ## 11. Distribution
 - [x] Prebuilt binaries for major platforms - **IMPLEMENTED**
@@ -134,6 +134,18 @@ This document enumerates tasks required to reach 100% of the public README featu
 - **CLI Documentation Command**: Built-in `omni docs` command for generating documentation
 - **Multi-format Output**: Support for markdown with plans for HTML and JSON formats
 - **Module-based Documentation**: Individual documentation files per module for better organization
+- **Static Site Generator**: Complete versioned documentation site generator with modern styling
+- **CLI Site Command**: Built-in `omni site` command for generating static documentation sites
+- **Theme Support**: Light, dark, and auto themes with responsive design
+- **Deployment Integration**: Support for GitHub Pages, Netlify, and Vercel deployment
+
+### 🔍 **Testing & Security Enhancement**
+- **Comprehensive Fuzzing System**: Advanced fuzzer for parser and runtime safety testing
+- **Property-based Testing**: Automated testing of critical system properties
+- **Random Input Generation**: Sophisticated input generation for security testing
+- **CLI Fuzzing Command**: Built-in `omni fuzz` command with configurable options
+- **Performance Monitoring**: Real-time monitoring during fuzzing operations
+- **Security Validation**: Automated detection of security vulnerabilities
 
 ### 🌐 **Server-Side Rendering (SSR)**
 - **SSR Renderer**: Complete server-side rendering system for full-stack applications

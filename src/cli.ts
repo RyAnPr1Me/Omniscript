@@ -464,6 +464,66 @@ program
   });
 
 program
+  .command('site')
+  .description('Generate static documentation site')
+  .option('-o, --output <path>', 'Output directory', './docs-site')
+  .option('-s, --source <path>', 'Source documentation directory', './docs')
+  .option('--theme <theme>', 'Site theme (light, dark, auto)', 'auto')
+  .option('--name <name>', 'Site name', 'Omniscript')
+  .option('--deploy <target>', 'Deploy to hosting service (github-pages, netlify, vercel)')
+  .action(async (options) => {
+    try {
+      const { generateDocSite, StaticDocGenerator } = await import('./docs-site');
+      const fs = await import('fs');
+      
+      console.log('🌐 Generating static documentation site...');
+      
+      // Read package.json for version
+      const packagePath = './package.json';
+      let version = '0.1.0';
+      try {
+        const packageJson = JSON.parse(fs.readFileSync(packagePath, 'utf-8'));
+        version = packageJson.version || '0.1.0';
+      } catch {
+        console.warn('Could not read package.json, using default version');
+      }
+      
+      const config = {
+        name: options.name,
+        outputDir: options.output,
+        sourceDir: options.source,
+        theme: options.theme as 'light' | 'dark' | 'auto',
+        version
+      };
+      
+      await generateDocSite(config);
+      
+      if (options.deploy) {
+        const generator = new StaticDocGenerator({
+          name: config.name,
+          description: 'A modern programming language for full-stack development',
+          baseUrl: 'https://omniscript.dev',
+          version: config.version,
+          outputDir: config.outputDir,
+          sourceDir: config.sourceDir,
+          theme: config.theme,
+          repository: 'https://github.com/RyAnPr1Me/Omniscript'
+        });
+        
+        await generator.deploy(options.deploy as 'github-pages' | 'netlify' | 'vercel');
+      }
+      
+      console.log(`\n🎉 Static site generated successfully!`);
+      console.log(`📂 Output: ${options.output}`);
+      console.log(`🌐 Open ${options.output}/index.html in your browser to view the site`);
+      
+    } catch (error) {
+      console.error(`❌ Site generation failed: ${error}`);
+      process.exit(1);
+    }
+  });
+
+program
   .command('docs')
   .description('Generate API documentation')
   .option('-o, --output <path>', 'Output directory', './docs/api')

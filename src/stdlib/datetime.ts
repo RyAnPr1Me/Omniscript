@@ -346,11 +346,12 @@ export class DateTime {
         newDate.setDate(1);
         newDate.setHours(0, 0, 0, 0);
         break;
-      case 'weeks':
+      case 'weeks': {
         const dayOfWeek = newDate.getDay();
         newDate.setDate(newDate.getDate() - dayOfWeek);
         newDate.setHours(0, 0, 0, 0);
         break;
+      }
       case 'days':
         newDate.setHours(0, 0, 0, 0);
         break;

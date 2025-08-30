@@ -272,9 +272,10 @@ export function createAccumulatorActor<T>(initialValue: T[] = []): ActorRef {
   return actorSystem.createActor(
     async (message, state: T[]) => {
       switch (message.type) {
-        case 'add':
+        case 'add': {
           const newState = [...state, message.payload];
           return { newState, reply: newState.length };
+        }
         case 'get':
           return { newState: state, reply: [...state] };
         case 'clear':
