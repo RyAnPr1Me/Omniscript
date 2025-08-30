@@ -8,6 +8,7 @@ import {
   Lambda,
   Call,
   Let,
+  Const,
   IfExpr,
   Pipe,
   Binary,
@@ -19,6 +20,12 @@ import {
   PropAccess,
   AwaitExpr,
   ImportDecl,
+  CurriedFunction,
+  PartialApplication,
+  LazyExpr,
+  MemoizedFunction,
+  MaybeType,
+  EitherType,
   createEnv,
   Env,
   envDefine,
@@ -27,13 +34,51 @@ import {
   isLambdaValue
 } from './ast';
 
+// Tail call optimization support
+interface TailCall {
+	__tag: 'tailcall';
+	fn: LambdaValue;
+	args: any[];
+}
+
+function isTailCall(value: any): value is TailCall {
+	return value && value.__tag === 'tailcall';
+}
+
+function isSelfRecursiveCall(call: Call, fn: LambdaValue, env: Env): boolean {
+	// Simple heuristic: if the call is to an identifier that matches a function name in scope
+	if (call.callee.type === 'Identifier') {
+		try {
+			const nameInScope = envLookup(env, (call.callee as any).name);
+			return nameInScope === fn;
+		} catch {
+			return false;
+		}
+	}
+	return false;
+}
+
+function trampoline(value: any): any {
+	while (isTailCall(value)) {
+		const callEnv = createEnv(value.fn.closure);
+		for (let i = 0; i < value.fn.params.length; i++) {
+			envDefine(callEnv, value.fn.params[i], value.args[i]);
+		}
+		value = evalExpr(value.fn.body, callEnv);
+	}
+	return value;
+}
+
 export function evaluate(program: Program): any {
 	// Put builtins in a parent environment so user code can shadow them with 'let'
 	const builtinsEnv = createEnv();
 	installBuiltins(builtinsEnv);
 	const globalEnv = createEnv(builtinsEnv);
 	let last: any;
-	for (const expr of program.body) last = evalExpr(expr, globalEnv);
+	for (const expr of program.body) {
+		last = evalExpr(expr, globalEnv);
+		last = trampoline(last); // Apply tail call optimization
+	}
 	return last;
 }
 
@@ -115,15 +160,24 @@ function evalExpr(expr: Expression, env: Env): any {
 				return calleeVal(...evaluated);
 			}
 			
-			// Handle lambda values
+			// Handle lambda values with tail call optimization
 			if (calleeVal.params.length !== c.args.length) throw new Error('Arity mismatch');
 			// Native fast-path
 			if ((calleeVal as any).__native) {
 				const evaluated = c.args.map(a => evalExpr(a, env));
 				return (calleeVal as any).__native(...evaluated);
 			}
+			
+			// Check if this is a tail call (last expression in function body)
+			const evaluatedArgs = c.args.map(a => evalExpr(a, env));
+			
+			// For now, always use tail call optimization if the function is recursive
+			if (isSelfRecursiveCall(c, calleeVal, env)) {
+				return { __tag: 'tailcall', fn: calleeVal, args: evaluatedArgs } as TailCall;
+			}
+			
 			const callEnv = createEnv(calleeVal.closure);
-			for (let i = 0; i < calleeVal.params.length; i++) envDefine(callEnv, calleeVal.params[i], evalExpr(c.args[i], env));
+			for (let i = 0; i < calleeVal.params.length; i++) envDefine(callEnv, calleeVal.params[i], evaluatedArgs[i]);
 			return evalExpr(calleeVal.body, callEnv);
 		}
 		case 'Let': {
@@ -132,6 +186,52 @@ function evalExpr(expr: Expression, env: Env): any {
 			envDefine(env, l.name, val);
 			if (l.body) return evalExpr(l.body, env);
 			return val;
+		}
+		case 'Const': {
+			const c = expr as Const;
+			const val = evalExpr(c.value, env);
+			envDefine(env, c.name, val);
+			if (c.body) return evalExpr(c.body, env);
+			return val;
+		}
+		case 'CurriedFunction': {
+			const cf = expr as CurriedFunction;
+			const lambda = cf.fn;
+			return createCurriedFunction(lambda, cf.appliedArgs);
+		}
+		case 'Partial': {
+			const pa = expr as PartialApplication;
+			const fn = evalExpr(pa.fn, env);
+			if (!isLambdaValue(fn)) throw new Error('Partial application on non-function');
+			return createPartialFunction(fn, pa.args.map(arg => arg ? evalExpr(arg, env) : undefined));
+		}
+		case 'Lazy': {
+			const lazy = expr as LazyExpr;
+			return createLazyValue(lazy.expr, env);
+		}
+		case 'Memo': {
+			const memo = expr as MemoizedFunction;
+			return createMemoizedFunction(memo.fn);
+		}
+		case 'Maybe': {
+			const maybe = expr as MaybeType;
+			return {
+				__tag: 'maybe',
+				value: maybe.value ? evalExpr(maybe.value, env) : null,
+				map: function(f: any) { return this.value === null ? this : { __tag: 'maybe', value: f(this.value), map: this.map, flatMap: this.flatMap }; },
+				flatMap: function(f: any) { return this.value === null ? this : f(this.value); }
+			};
+		}
+		case 'Either': {
+			const either = expr as EitherType;
+			const value = evalExpr(either.value, env);
+			return {
+				__tag: 'either',
+				isLeft: either.isLeft,
+				value: value,
+				map: function(f: any) { return this.isLeft ? this : { __tag: 'either', isLeft: false, value: f(this.value), map: this.map, flatMap: this.flatMap }; },
+				flatMap: function(f: any) { return this.isLeft ? this : f(this.value); }
+			};
 		}
 		case 'If': {
 			const i = expr as IfExpr;
@@ -378,12 +478,42 @@ function installBuiltins(env: Env) {
 	make('sub', ['a', 'b'], (a, b) => a - b);
 	make('mul', ['a', 'b'], (a, b) => a * b);
 	make('div', ['a', 'b'], (a, b) => a / b);
+	
+	// Functional programming utilities
+	make('curry', ['fn'], (fn: LambdaValue) => createCurriedFunction(fn as any));
+	make('partial', ['fn', 'args'], (fn: LambdaValue, args: any[]) => createPartialFunction(fn, args));
+	make('memoize', ['fn'], (fn: LambdaValue) => createMemoizedFunction(fn as any));
+	make('identity', ['x'], (x: any) => x);
+	make('constant', ['x'], (x: any) => ({ __tag: 'lambda', params: ['_'], body: { type: 'Identifier', name: '__native' } as any, closure: createEnv(), __native: () => x }));
+	make('flip', ['fn'], (fn: LambdaValue) => ({ __tag: 'lambda', params: ['a', 'b'], body: { type: 'Identifier', name: '__native' } as any, closure: createEnv(), __native: (a: any, b: any) => invoke2(fn, b, a) }));
+	
+	// Monadic utilities
+	make('just', ['x'], (x: any) => ({ __tag: 'maybe', value: x, map: function(f: any) { return this.value === null ? this : { __tag: 'maybe', value: f(this.value), map: this.map, flatMap: this.flatMap }; }, flatMap: function(f: any) { return this.value === null ? this : f(this.value); } }));
+	make('nothing', [], () => ({ __tag: 'maybe', value: null, map: function(f: any) { return this; }, flatMap: function(f: any) { return this; } }));
+	make('left', ['x'], (x: any) => ({ __tag: 'either', isLeft: true, value: x, map: function(f: any) { return this; }, flatMap: function(f: any) { return this; } }));
+	make('right', ['x'], (x: any) => ({ __tag: 'either', isLeft: false, value: x, map: function(f: any) { return this.isLeft ? this : { __tag: 'either', isLeft: false, value: f(this.value), map: this.map, flatMap: this.flatMap }; }, flatMap: function(f: any) { return this.isLeft ? this : f(this.value); } }));
+	
+	// List operations
+	make('head', ['arr'], (arr: any[]) => arr.length > 0 ? arr[0] : null);
+	make('tail', ['arr'], (arr: any[]) => arr.slice(1));
+	make('cons', ['x', 'arr'], (x: any, arr: any[]) => [x, ...arr]);
+	make('reverse', ['arr'], (arr: any[]) => [...arr].reverse());
+	make('sort', ['arr'], (arr: any[]) => [...arr].sort());
+	make('sortBy', ['fn', 'arr'], (fn: LambdaValue, arr: any[]) => [...arr].sort((a, b) => invoke1(fn, a) - invoke1(fn, b)));
+	// For pipeline use, we need curried versions of take/drop, but also provide the normal ones
+	make('take', ['n', 'arr'], (n: number, arr: any[]) => arr.slice(0, n));
+	make('drop', ['n', 'arr'], (n: number, arr: any[]) => arr.slice(n));
+	make('takeC', ['n'], (n: number) => ({ __tag: 'lambda', params: ['arr'], body: { type: 'Identifier', name: '__native' } as any, closure: createEnv(), __native: (arr: any[]) => arr.slice(0, n) }));
+	make('dropC', ['n'], (n: number) => ({ __tag: 'lambda', params: ['arr'], body: { type: 'Identifier', name: '__native' } as any, closure: createEnv(), __native: (arr: any[]) => arr.slice(n) }));
+	make('zip', ['arr1', 'arr2'], (arr1: any[], arr2: any[]) => arr1.map((x, i) => [x, arr2[i]]).filter(([_, y]) => y !== undefined));
+	
 	// Lists / higher-order
 	make('range', ['n'], (n: number) => Array.from({ length: n }, (_, i) => i));
 	make('map', ['arr', 'fn'], (arr: any[], fn: LambdaValue) => arr.map(v => invoke1(fn, v)));
 	make('filter', ['arr', 'fn'], (arr: any[], fn: LambdaValue) => arr.filter(v => invoke1(fn, v)));
 	make('reduce', ['arr', 'init', 'fn'], (arr: any[], init: any, fn: LambdaValue) => arr.reduce((acc, v) => invoke2(fn, acc, v), init));
 	make('compose', ['f', 'g'], (f: LambdaValue, g: LambdaValue) => ({ __tag: 'lambda', params: ['x'], body: { type: 'Identifier', name: '__native' } as any, closure: createEnv(), __native: (x: any) => invoke1(f, invoke1(g, x)) }));
+	make('pipe', ['g', 'f'], (g: LambdaValue, f: LambdaValue) => ({ __tag: 'lambda', params: ['x'], body: { type: 'Identifier', name: '__native' } as any, closure: createEnv(), __native: (x: any) => invoke1(f, invoke1(g, x)) }));
 }
 
 function invoke1(fn: LambdaValue, a: any) {
@@ -410,4 +540,115 @@ function invoke2(fn: LambdaValue, a: any, b: any) {
     }
 	if (fn.params.length !== 2) throw new Error('Arity mismatch');
 	const env = createEnv(fn.closure); envDefine(env, fn.params[0], a); envDefine(env, fn.params[1], b); return evalExpr(fn.body, env);
+}
+
+// Functional programming helper functions
+function createCurriedFunction(lambda: Lambda, appliedArgs: any[] = []): any {
+	return {
+		__tag: 'lambda',
+		params: lambda.params.slice(appliedArgs.length),
+		body: lambda.body,
+		closure: lambda.closure || createEnv(),
+		__curried: true,
+		__appliedArgs: appliedArgs,
+		__originalLambda: lambda,
+		__native: function(...args: any[]) {
+			const allArgs = [...appliedArgs, ...args];
+			if (allArgs.length >= lambda.params.length) {
+				// All arguments provided, execute function
+				const env = createEnv(lambda.closure || createEnv());
+				for (let i = 0; i < lambda.params.length; i++) {
+					envDefine(env, lambda.params[i], allArgs[i]);
+				}
+				return evalExpr(lambda.body, env);
+			} else {
+				// Return partially applied function
+				return createCurriedFunction(lambda, allArgs);
+			}
+		}
+	};
+}
+
+function createPartialFunction(fn: LambdaValue, partialArgs: (any | undefined)[]): any {
+	return {
+		__tag: 'lambda',
+		params: ['...args'],
+		body: fn.body,
+		closure: fn.closure,
+		__partial: true,
+		__native: function(...args: any[]) {
+			const fullArgs = [];
+			let argIndex = 0;
+			for (const partialArg of partialArgs) {
+				if (partialArg === undefined) {
+					fullArgs.push(args[argIndex++]);
+				} else {
+					fullArgs.push(partialArg);
+				}
+			}
+			// Add any remaining args
+			while (argIndex < args.length) {
+				fullArgs.push(args[argIndex++]);
+			}
+			
+			if (fn.__native) {
+				return fn.__native(...fullArgs);
+			} else {
+				const env = createEnv(fn.closure);
+				for (let i = 0; i < Math.min(fn.params.length, fullArgs.length); i++) {
+					envDefine(env, fn.params[i], fullArgs[i]);
+				}
+				return evalExpr(fn.body, env);
+			}
+		}
+	};
+}
+
+function createLazyValue(expr: Expression, env: Env): any {
+	let evaluated = false;
+	let value: any;
+	
+	return {
+		__tag: 'lazy',
+		force: function() {
+			if (!evaluated) {
+				value = evalExpr(expr, env);
+				evaluated = true;
+			}
+			return value;
+		},
+		map: function(f: any) {
+			return createLazyValue({
+				type: 'Call',
+				callee: { type: 'Identifier', name: 'f' },
+				args: [{ type: 'Call', callee: { type: 'Identifier', name: 'force' }, args: [] }]
+			} as any, createEnv(env));
+		}
+	};
+}
+
+function createMemoizedFunction(lambda: Lambda): any {
+	const cache = new Map();
+	
+	return {
+		__tag: 'lambda',
+		params: lambda.params,
+		body: lambda.body,
+		closure: lambda.closure,
+		__memoized: true,
+		__native: function(...args: any[]) {
+			const key = JSON.stringify(args);
+			if (cache.has(key)) {
+				return cache.get(key);
+			}
+			
+			const env = createEnv(lambda.closure || createEnv());
+			for (let i = 0; i < lambda.params.length; i++) {
+				envDefine(env, lambda.params[i], args[i]);
+			}
+			const result = evalExpr(lambda.body, env);
+			cache.set(key, result);
+			return result;
+		}
+	};
 }

@@ -8,6 +8,7 @@ import {
   MatchCase,
   IfExpr,
   Let,
+  Const,
   Pipe,
   Binary,
   Unary,
@@ -15,7 +16,13 @@ import {
   ClassDecl,
   MethodDecl,
   AwaitExpr,
-  ImportDecl
+  ImportDecl,
+  CurriedFunction,
+  PartialApplication,
+  LazyExpr,
+  MemoizedFunction,
+  MaybeType,
+  EitherType
 } from './ast';
 
 export class FunctionalParser {
@@ -135,13 +142,39 @@ export class FunctionalParser {
   }
 
   private letExpr(): Expression {
-    if (this.peek('LET')) {
-      this.consume('LET');
+    if (this.peek('LET') || this.peek('CONST')) {
+      const isConst = this.peek('CONST');
+      this.consume(isConst ? 'CONST' : 'LET');
       const name = this.consume('IDENT').value;
       this.consume('EQUAL');
       const value = this.expression();
-      return { type: 'Let', name, value } as Let;
+      
+      if (isConst) {
+        return { type: 'Const', name, value } as Const;
+      } else {
+        return { type: 'Let', name, value, immutable: true } as Let;
+      }
     }
+    
+    // Handle functional constructs
+    if (this.peek('CURRY')) {
+      this.consume('CURRY');
+      const fn = this.lambda();
+      return { type: 'CurriedFunction', fn: fn as Lambda, appliedArgs: [] } as CurriedFunction;
+    }
+    
+    if (this.peek('LAZY')) {
+      this.consume('LAZY');
+      const expr = this.expression();
+      return { type: 'Lazy', expr } as LazyExpr;
+    }
+    
+    if (this.peek('MEMO')) {
+      this.consume('MEMO');
+      const fn = this.lambda();
+      return { type: 'Memo', fn: fn as Lambda } as MemoizedFunction;
+    }
+    
     return this.classDecl();
   }
 
