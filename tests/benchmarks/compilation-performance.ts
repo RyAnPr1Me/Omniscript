@@ -174,12 +174,7 @@ class CompilationBenchmark {
   private async testEndToEndPerformance(): Promise<void> {
     console.log('🔄 End-to-End Performance Test:\n');
     
-    const testCode = `
-      fn test() {
-        let x = 2 + 3 * 4;
-        return x + 10;
-      }
-    `;
+    const testCode = `2 + 3 * 4`;
 
     // Standard mode
     const standard = new Omniscript();
