@@ -1,5 +1,5 @@
 export interface Token { type: string; value: string }
-const KEYWORDS = new Set(['let','fn','true','false','if','then','else','match','class','operator','new','extends','try','catch','finally','return','throw','await','async','import','from']);
+const KEYWORDS = new Set(['let','fn','true','false','if','then','else','match','class','operator','new','extends','try','catch','finally','return','throw','await','async','import','from','typeof']);
 export function lex(input: string): Token[] {
   const tokens: Token[] = []; let i=0;
   const isAlpha = (c: string)=>/[A-Za-z_]/.test(c); const isNum=(c:string)=>/[0-9]/.test(c);
@@ -23,6 +23,8 @@ export function lex(input: string): Token[] {
     if (c === ',' ) { tokens.push({type:'COMMA', value:','}); i++; continue; }
     if (c === '{' ) { tokens.push({type:'LBRACE', value:'{'}); i++; continue; }
     if (c === '}' ) { tokens.push({type:'RBRACE', value:'}'}); i++; continue; }
+    if (c === '[' ) { tokens.push({type:'LBRACKET', value:'['}); i++; continue; }
+    if (c === ']' ) { tokens.push({type:'RBRACKET', value:']'}); i++; continue; }
     if (c === ';' ) { tokens.push({type:'SEMI', value:';'}); i++; continue; }
     if (c === '(' ) { tokens.push({type:'LPAREN', value:'('}); i++; continue; }
     if (c === ')' ) { tokens.push({type:'RPAREN', value:')'}); i++; continue; }

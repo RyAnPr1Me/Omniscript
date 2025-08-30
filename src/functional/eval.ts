@@ -11,6 +11,7 @@ import {
   IfExpr,
   Pipe,
   Binary,
+  Unary,
   Match,
   ClassDecl,
   MethodDecl,
@@ -81,6 +82,24 @@ function evalExpr(expr: Expression, env: Env): any {
 					case '!==': return left !== right;
 				}
 			}
+		case 'Unary': {
+			const u = expr as Unary;
+			const operand = evalExpr(u.operand, env);
+			switch (u.operator) {
+				case 'typeof': 
+					// Handle lambda objects from functional parser as 'function'
+					if (operand && typeof operand === 'object' && (operand as any).__tag === 'lambda') {
+						return 'function';
+					}
+					return typeof operand;
+				case '-': return -(operand as any);
+				case '!': return !operand;
+				case '++': 
+				case '--': 
+					throw new Error(`Unary operator ${u.operator} not implemented`);
+				default: throw new Error(`Unknown unary operator ${u.operator}`);
+			}
+		}
 		case 'Call': {
 			const c = expr as Call;
 			const calleeVal = evalExpr(c.callee, env);
@@ -261,6 +280,18 @@ function evalExpr(expr: Expression, env: Env): any {
 			const value = evalExpr(a.expr, env);
 			// For now, just return the value directly (no real async support yet)
 			return value;
+		}
+		case 'ObjectLiteral': {
+			const obj = expr as any; // ObjectLiteral type
+			const result: any = {};
+			for (const [key, valueExpr] of Object.entries(obj.properties)) {
+				result[key] = evalExpr(valueExpr as Expression, env);
+			}
+			return result;
+		}
+		case 'ArrayLiteral': {
+			const arr = expr as any; // ArrayLiteral type
+			return arr.elements.map((element: Expression) => evalExpr(element, env));
 		}
 		case 'Import': {
 			const i = expr as ImportDecl;

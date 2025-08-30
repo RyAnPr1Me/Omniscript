@@ -8,6 +8,7 @@ export type Let = { type: 'Let'; name: string; value: Expression; body?: Express
 export type IfExpr = { type: 'If'; cond: Expression; then: Expression; else: Expression };
 export type Pipe = { type: 'Pipe'; left: Expression; right: Expression };
 export type Binary = { type: 'Binary'; op: '+'|'-'|'*'|'/'|'%'|'>'|'<'|'>='|'<='|'=='|'!='|'==='|'!=='; left: Expression; right: Expression };
+export type Unary = { type: 'Unary'; operator: 'typeof'|'-'|'!'|'++'|'--'; operand: Expression };
 export type MatchCase = { pattern: Expression | { type: 'Wildcard' }; guard?: Expression; value: Expression };
 export type Match = { type: 'Match'; expr: Expression; cases: MatchCase[] };
 export type AwaitExpr = { type: 'Await'; expr: Expression };
@@ -17,9 +18,11 @@ export type MethodDecl = { type: 'MethodDecl'; name: string; params: string[]; b
 export type ClassDecl = { type: 'ClassDecl'; name: string; methods: MethodDecl[]; decorators: string[] };
 export type NewInstance = { type: 'New'; className: string; args: Expression[] };
 export type PropAccess = { type: 'Prop'; object: Expression; name: string };
+export type ObjectLiteral = { type: 'ObjectLiteral'; properties: Record<string, Expression> };
+export type ArrayLiteral = { type: 'ArrayLiteral'; elements: Expression[] };
 
 export type ImportDecl = { type: 'Import'; imports: string[]; from: string };
-export type Expression = NumberLiteral | StringLiteral | BooleanLiteral | Identifier | Lambda | Call | Let | IfExpr | Pipe | Binary | Match | AwaitExpr | ReturnExpr | ClassDecl | NewInstance | PropAccess | ImportDecl;
+export type Expression = NumberLiteral | StringLiteral | BooleanLiteral | Identifier | Lambda | Call | Let | IfExpr | Pipe | Binary | Unary | Match | AwaitExpr | ReturnExpr | ClassDecl | NewInstance | PropAccess | ObjectLiteral | ArrayLiteral | ImportDecl;
 export type Program = { type: 'Program'; body: Expression[] };
 
 export interface Env { parent?: Env; values: Map<string, any>; immutable: Set<string>; }

@@ -1,5 +1,5 @@
 import { Database, QueryBuilder } from '../../src/stdlib/database';
-import { describe, expect, test } from '@jest/globals';
+import { describe, expect, test, beforeEach } from '@jest/globals';
 
 // Test entity classes (without decorators for now to avoid TypeScript issues)
 class User {
@@ -18,6 +18,10 @@ class Post {
 }
 
 describe('Database ORM', () => {
+  beforeEach(() => {
+    Database.clear();
+  });
+
   test('QueryBuilder can be created', () => {
     const query = Database.query(User);
     expect(query).toBeInstanceOf(QueryBuilder);

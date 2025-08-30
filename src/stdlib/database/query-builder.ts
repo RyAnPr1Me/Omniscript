@@ -190,7 +190,7 @@ export class Database {
   private mockData: Map<string, any[]> = new Map();
 
   private constructor() {
-    this.initializeMockData();
+    // Don't initialize mock data by default - let tests set up their own data
   }
 
   static getInstance(): Database {
@@ -226,25 +226,23 @@ export class Database {
     
     const data = instance.mockData.get(tableName) || [];
     
-    // Extract metadata to determine if this is a new entity or update
-    const entityData = { ...entity } as any;
+    // Modify entity in place to maintain reference equality
+    const entityData = entity as any;
     
     if (entityData.id) {
       // Update existing entity
       const index = data.findIndex(item => item.id === entityData.id);
       if (index >= 0) {
-        data[index] = { ...data[index], ...entityData };
-        return data[index] as T;
+        Object.assign(data[index], entityData);
       }
     } else {
-      // Create new entity
+      // Create new entity - assign ID and timestamps to original object
       entityData.id = data.length > 0 ? Math.max(...data.map(item => item.id)) + 1 : 1;
       if (!entityData.createdAt) {
         entityData.createdAt = new Date().toISOString();
       }
-      data.push(entityData);
+      data.push({ ...entityData });
       instance.mockData.set(tableName, data);
-      return entityData as T;
     }
     
     return entity;
@@ -299,6 +297,11 @@ export class Database {
 
   setMockData(tableName: string, data: any[]): void {
     this.mockData.set(tableName, data);
+  }
+
+  static clear(): void {
+    const instance = Database.getInstance();
+    instance.mockData.clear();
   }
 }
 

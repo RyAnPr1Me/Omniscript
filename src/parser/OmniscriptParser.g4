@@ -160,6 +160,7 @@ unaryOperator
     | BITWISE_NOT
     | INCREMENT
     | DECREMENT
+    | TYPEOF
     ;
 
 functionDeclaration
@@ -261,6 +262,7 @@ TRUE: 'true';
 FALSE: 'false';
 NULL: 'null';
 UNDEFINED: 'undefined';
+TYPEOF: 'typeof';
 IN: 'in';
 
 // Operators and punctuation
