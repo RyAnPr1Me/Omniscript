@@ -239,7 +239,7 @@ export class Repository<T extends AggregateRoot> {
   }
 
   async getById(id: string, aggregateFactory: (id: string) => T): Promise<T | null> {
-    let aggregate = aggregateFactory(id);
+    const aggregate = aggregateFactory(id);
     let fromVersion = 0;
 
     // Try to load from snapshot first

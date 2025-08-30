@@ -408,6 +408,62 @@ program
   });
 
 program
+  .command('fuzz')
+  .description('Run fuzzing tests for parser and runtime safety')
+  .option('-i, --iterations <number>', 'Number of test iterations', '1000')
+  .option('-t, --timeout <ms>', 'Timeout per test in milliseconds', '5000')
+  .option('--no-unicode', 'Disable unicode character generation')
+  .option('--control-chars', 'Include control characters in fuzzing')
+  .option('-p, --property <property>', 'Run specific property test (parser-never-hangs, runtime-memory-safe, type-safety)')
+  .action(async (options) => {
+    try {
+      const { runFuzzTest, runPropertyTest } = await import('./testing/fuzzer');
+      
+      if (options.property) {
+        console.log(`🔍 Running property test: ${options.property}`);
+        const result = await runPropertyTest(options.property, parseInt(options.iterations) || 100);
+        if (result) {
+          console.log(`✅ Property test passed: ${options.property}`);
+        } else {
+          console.log(`❌ Property test failed: ${options.property}`);
+          process.exit(1);
+        }
+      } else {
+        console.log('🎯 Running fuzzing tests...');
+        const result = await runFuzzTest({
+          maxIterations: parseInt(options.iterations) || 1000,
+          timeout: parseInt(options.timeout) || 5000,
+          includeUnicode: options.unicode !== false,
+          includeControlChars: options.controlChars === true
+        });
+        
+        console.log('\n📊 Fuzzing Results:');
+        console.log(`  Total tests: ${result.totalTests}`);
+        console.log(`  Crashes: ${result.crashes}`);
+        console.log(`  Timeouts: ${result.timeouts}`);
+        console.log(`  Success rate: ${((result.totalTests - result.crashes - result.timeouts) / result.totalTests * 100).toFixed(1)}%`);
+        
+        if (result.failures.length > 0) {
+          console.log('\n🐛 Sample failures:');
+          result.failures.slice(0, 3).forEach((failure, index) => {
+            console.log(`  ${index + 1}. ${failure.type}: ${failure.error}`);
+            console.log(`     Input: ${failure.input.substring(0, 50)}${failure.input.length > 50 ? '...' : ''}`);
+          });
+        }
+        
+        if (result.crashes > result.totalTests * 0.1) {
+          console.log('\n⚠️  High crash rate detected - consider investigating');
+        } else {
+          console.log('\n✅ Fuzzing completed with acceptable crash rate');
+        }
+      }
+    } catch (error) {
+      console.error(`❌ Fuzzing failed: ${error}`);
+      process.exit(1);
+    }
+  });
+
+program
   .command('docs')
   .description('Generate API documentation')
   .option('-o, --output <path>', 'Output directory', './docs/api')
