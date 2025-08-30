@@ -7,7 +7,7 @@ import { Omniscript } from './index';
 import { enableDebugger, enableComponentDebug, DebugLevel } from './debug';
 
 const program = new Command();
-const omniscript = new Omniscript();
+let omniscript = new Omniscript();
 
 function startRepl(engine: Omniscript) {
   const rl: ReadlineInterface = createInterface({
@@ -42,8 +42,20 @@ program
   .command('run')
   .description('Run an Omniscript file')
   .argument('<file>', 'Path to Omniscript file')
-  .action(async (file: string) => {
+  .option('-f, --fast', 'Enable fast compilation mode (skip type checking, use AOT)')
+  .option('--no-cache', 'Disable compilation caching')
+  .action(async (file: string, options: any) => {
     try {
+      // Recreate omniscript instance with performance options
+      if (options.fast || options.noCache !== undefined) {
+        omniscript = new Omniscript({
+          fastMode: options.fast || false,
+          compiler: {
+            enableCaching: options.noCache !== true
+          }
+        });
+      }
+      
       const source = await readFile(file, 'utf-8');
       const result = await omniscript.execute(source);
       if (result !== undefined) {
@@ -59,9 +71,15 @@ program
   .command('eval')
   .description('Evaluate inline Omniscript/functional code snippet')
   .argument('<code...>', 'Code to execute (wrap in quotes)')
-  .action(async (codeParts: string[]) => {
+  .option('-f, --fast', 'Enable fast compilation mode')
+  .action(async (codeParts: string[], options: any) => {
     const code = codeParts.join(' ');
     try {
+      // Use fast mode if requested
+      if (options.fast) {
+        omniscript = new Omniscript({ fastMode: true });
+      }
+      
       const result = await omniscript.execute(code);
       if (result !== undefined) console.log(result);
     } catch (error) {

@@ -1,25 +1,103 @@
 import { OmniscriptError } from '../errors';
 import { debug } from '../debug';
 import { JITOptimizer } from './optimizer';
+import { AOTCompiler, AOTCompilerOptions } from './aot';
+
+export interface CompilerOptions {
+  fastMode?: boolean;
+  skipTypeChecking?: boolean;
+  skipOptimization?: boolean;
+  enableCaching?: boolean;
+  useAOT?: boolean;
+  aotOptions?: AOTCompilerOptions;
+}
 
 export class Compiler {
-  private jitOptimizer: JITOptimizer = new JITOptimizer();
+  private jitOptimizer: JITOptimizer;
+  private aotCompiler: AOTCompiler;
+  private compilationCache = new Map<string, any>();
+  private options: CompilerOptions = {};
+
+  constructor(options: CompilerOptions = {}) {
+    this.options = options;
+    this.jitOptimizer = new JITOptimizer(options.fastMode || false);
+    this.aotCompiler = new AOTCompiler(options.aotOptions || {});
+  }
 
   compile(ast: any): any {
+    // Check cache first if enabled
+    if (this.options.enableCaching) {
+      const cacheKey = this.generateASTHash(ast);
+      if (this.compilationCache.has(cacheKey)) {
+        debug.debug('Compiler', 'Cache hit - returning cached bytecode');
+        return this.compilationCache.get(cacheKey);
+      }
+    }
+
+    // Use AOT compiler for direct machine code generation
+    if (this.options.useAOT) {
+      debug.debug('Compiler', 'Using AOT compilation for maximum speed');
+      const machineCode = this.aotCompiler.compileToMachineCode(ast);
+      
+      if (this.options.enableCaching) {
+        const cacheKey = this.generateASTHash(ast);
+        this.compilationCache.set(cacheKey, machineCode);
+      }
+      
+      return machineCode;
+    }
+
+    if (this.options.fastMode) {
+      return this.fastCompile(ast);
+    }
+
     debug.info('Compiler', 'Starting JIT compilation with advanced language features...');
     debug.time('Compiler', 'compilation');
     
     // Perform basic type checking before compilation
-    this.performTypeChecking(ast);
+    if (!this.options.skipTypeChecking) {
+      this.performTypeChecking(ast);
+    }
     
     const bytecode = this.visitNode(ast);
     
     // Apply JIT optimizations
-    const optimizedBytecode = this.jitOptimizer.optimize(bytecode);
+    let optimizedBytecode = bytecode;
+    if (!this.options.skipOptimization) {
+      optimizedBytecode = this.jitOptimizer.optimize(bytecode);
+    }
+    
+    // Cache result if enabled
+    if (this.options.enableCaching) {
+      const cacheKey = this.generateASTHash(ast);
+      this.compilationCache.set(cacheKey, optimizedBytecode);
+    }
     
     debug.timeEnd('Compiler', 'compilation');
     debug.debug('Compiler', 'Generated optimized bytecode:', optimizedBytecode);
     return optimizedBytecode;
+  }
+
+  fastCompile(ast: any): any {
+    // Direct compilation to bytecode with minimal overhead
+    debug.debug('Compiler', 'Fast compilation mode - skipping expensive operations');
+    
+    const bytecode = this.visitNode(ast);
+    
+    // Cache result if enabled
+    if (this.options.enableCaching) {
+      const cacheKey = this.generateASTHash(ast);
+      this.compilationCache.set(cacheKey, bytecode);
+    }
+    
+    return bytecode;
+  }
+
+  private generateASTHash(ast: any): string {
+    // Simple hash generation for caching
+    return JSON.stringify(ast).split('').reduce((hash, char) => {
+      return ((hash << 5) - hash + char.charCodeAt(0)) & 0xffffffff;
+    }, 0).toString(36);
   }
 
   private performTypeChecking(ast: any): void {

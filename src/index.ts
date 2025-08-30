@@ -1,17 +1,38 @@
 import { Parser } from './parser';
-import { Compiler } from './compiler';
+import { Compiler, CompilerOptions } from './compiler';
 import { Runtime } from './runtime';
 import { FunctionalParser } from './functional/parser';
 import { evaluate as evalFunctional } from './functional/eval';
+
+export interface OmniscriptOptions {
+  compiler?: CompilerOptions;
+  fastMode?: boolean;
+}
 
 export class Omniscript {
   private parser: Parser;
   private compiler: Compiler;
   private runtime: Runtime;
 
-  constructor() {
+  constructor(options: OmniscriptOptions = {}) {
     this.parser = new Parser();
-    this.compiler = new Compiler();
+    
+    // Configure compiler with performance optimizations
+    const compilerOptions: CompilerOptions = {
+      fastMode: options.fastMode || false,
+      skipTypeChecking: options.fastMode || false,
+      skipOptimization: false,
+      enableCaching: true,
+      useAOT: options.fastMode || false,
+      aotOptions: {
+        target: 'bytecode',
+        optimizationLevel: options.fastMode ? 1 : 2,
+        enableInlining: true
+      },
+      ...options.compiler
+    };
+    
+    this.compiler = new Compiler(compilerOptions);
     this.runtime = new Runtime();
   }
 
@@ -72,7 +93,8 @@ export class Omniscript {
 }
 
 export { Parser } from './parser';
-export { Compiler } from './compiler';
+export { Compiler, CompilerOptions } from './compiler';
+export { AOTCompiler, AOTCompilerOptions } from './compiler/aot';
 export { Runtime } from './runtime';
 export { SecurityManager, SandboxedEnvironment, SecurityError, ResourceMonitor } from './security';
 export { TypeScriptDocGenerator, MarkdownDocGenerator } from './docs-generator';

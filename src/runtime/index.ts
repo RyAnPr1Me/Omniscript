@@ -176,6 +176,10 @@ export class Runtime {
           return this.executeExpressionStatement(bytecode as any);
         case 'Value':
           return bytecode.value;
+        case 'Binary':
+          return this.executeBinary(bytecode as any);
+        case 'Identifier':
+          return this.executeIdentifier(bytecode as any);
         case 'Class':
         case 'ClassDeclaration':
           return this.executeClassDeclaration(bytecode as any);
@@ -920,6 +924,46 @@ export class Runtime {
   clearSecurityAuditLog(): void {
     const securityManager = SecurityManager.getInstance();
     securityManager.clearAuditLog();
+  }
+
+  // Support for AOT compiler bytecode types
+  private executeBinary(node: any): unknown {
+    const left = this.execute(node.left);
+    const right = this.execute(node.right);
+    
+    // Check for operator overloading
+    if (left && typeof left === 'object' && (left as any).__ops && 
+        typeof (left as any).__ops[node.operator] === 'function') {
+      return (left as any).__ops[node.operator](left, right);
+    }
+    
+    switch (node.operator) {
+      case '+': return (left as any) + (right as any);
+      case '-': return (left as any) - (right as any);
+      case '*': return (left as any) * (right as any);
+      case '/': return (left as any) / (right as any);
+      case '%': return (left as any) % (right as any);
+      case '==': return left == right;
+      case '!=': return left != right;
+      case '===': return left === right;
+      case '!==': return left !== right;
+      case '<': return (left as any) < (right as any);
+      case '<=': return (left as any) <= (right as any);
+      case '>': return (left as any) > (right as any);
+      case '>=': return (left as any) >= (right as any);
+      case '&&': return left && right;
+      case '||': return left || right;
+      default:
+        throw new Error(`Unknown binary operator: ${node.operator}`);
+    }
+  }
+
+  private executeIdentifier(node: any): unknown {
+    const value = this.scope.get(node.name);
+    if (value === undefined) {
+      throw new Error(`Undefined variable: ${node.name}`);
+    }
+    return value;
   }
 }
 
