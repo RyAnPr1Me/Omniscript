@@ -148,7 +148,11 @@ function evalExpr(expr: Expression, env: Env): any {
 		}
 		case 'Call': {
 			const c = expr as Call;
-			const calleeVal = evalExpr(c.callee, env);
+			let calleeVal = evalExpr(c.callee, env);
+			
+			// Handle tail calls - resolve them before proceeding
+			calleeVal = trampoline(calleeVal);
+			
 			// Allow both lambda values and regular JavaScript functions
 			if (!isLambdaValue(calleeVal) && typeof calleeVal !== 'function') {
 				throw new Error('Attempted call on non-function');
@@ -169,7 +173,12 @@ function evalExpr(expr: Expression, env: Env): any {
 			}
 			
 			// Check if this is a tail call (last expression in function body)
-			const evaluatedArgs = c.args.map(a => evalExpr(a, env));
+			const evaluatedArgs = c.args.map(a => {
+				let argVal = evalExpr(a, env);
+				// Also apply trampoline to arguments to resolve any tail calls
+				argVal = trampoline(argVal);
+				return argVal;
+			});
 			
 			// For now, always use tail call optimization if the function is recursive
 			if (isSelfRecursiveCall(c, calleeVal, env)) {
