@@ -1,10 +1,21 @@
 export interface Token { type: string; value: string }
-const KEYWORDS = new Set(['let','const','fn','true','false','if','then','else','match','class','operator','new','extends','try','catch','finally','return','throw','await','async','import','from','typeof','curry','lazy','memo']);
+const KEYWORDS = new Set(['var','def','fn','true','false','if','then','else','match','object','operator','new','extends','try','catch','finally','return','throw','await','async','use','from','typeof','curry','lazy','memo']);
 export function lex(input: string): Token[] {
   const tokens: Token[] = []; let i=0;
   const isAlpha = (c: string)=>/[A-Za-z_]/.test(c); const isNum=(c:string)=>/[0-9]/.test(c);
   while (i < input.length) {
     const c = input[i]; if (/\s/.test(c)) { i++; continue; }
+    
+    // Comments
+    if (c === '#') { 
+      while (i < input.length && input[i] !== '\n') i++; 
+      continue; 
+    }
+    if (c === '/' && input[i+1] === '/') { 
+      while (i < input.length && input[i] !== '\n') i++; 
+      continue; 
+    }
+    
     // two-char tokens first
     if (c === '=' && input[i+1] === '>') { tokens.push({type:'ARROW', value:'=>'}); i+=2; continue; }
     if (c === '|' && input[i+1]==='>') { tokens.push({type:'PIPE_ARROW', value:'|>'}); i+=2; continue; }

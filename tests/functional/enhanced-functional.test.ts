@@ -3,14 +3,14 @@ import { Omniscript } from '../../src/index';
 describe('Enhanced Functional Programming Features', () => {
   const omni = new Omniscript();
 
-  describe('Immutability and Const bindings', () => {
-    test('const bindings work', async () => {
-      const result = await omni.execute('const x = 42; x');
+  describe('Immutability and Def bindings', () => {
+    test('def bindings work', async () => {
+      const result = await omni.execute('def x = 42; x');
       expect(result).toBe(42);
     });
 
-    test('const with expressions', async () => {
-      const result = await omni.execute('const add = fn(a, b) => a + b; add(3, 4)');
+    test('def with expressions', async () => {
+      const result = await omni.execute('def add = fn(a, b) => a + b; add(3, 4)');
       expect(result).toBe(7);
     });
   });
@@ -97,18 +97,18 @@ describe('Enhanced Functional Programming Features', () => {
     });
 
     test('flip function', async () => {
-      const result = await omni.execute('let sub = fn(a, b) => a - b; flip(sub)(3, 10)');
+      const result = await omni.execute('var sub = fn(a, b) => a - b; flip(sub)(3, 10)');
       expect(result).toBe(7); // 10 - 3 = 7
     });
 
     test('pipe function composition', async () => {
-      const result = await omni.execute('let addOne = fn(x) => x + 1; let double = fn(x) => x * 2; pipe(addOne, double)(5)');
+      const result = await omni.execute('var addOne = fn(x) => x + 1; var double = fn(x) => x * 2; pipe(addOne, double)(5)');
       expect(result).toBe(12); // (5 + 1) * 2 = 12
     });
 
     test('compose vs pipe', async () => {
-      const result1 = await omni.execute('let addOne = fn(x) => x + 1; let double = fn(x) => x * 2; compose(double, addOne)(5)');
-      const result2 = await omni.execute('let addOne = fn(x) => x + 1; let double = fn(x) => x * 2; pipe(addOne, double)(5)');
+      const result1 = await omni.execute('var addOne = fn(x) => x + 1; var double = fn(x) => x * 2; compose(double, addOne)(5)');
+      const result2 = await omni.execute('var addOne = fn(x) => x + 1; var double = fn(x) => x * 2; pipe(addOne, double)(5)');
       expect(result1).toBe(result2); // Both should give 12
     });
   });
@@ -116,9 +116,9 @@ describe('Enhanced Functional Programming Features', () => {
   describe('Complex functional patterns', () => {
     test('function composition chain', async () => {
       const result = await omni.execute(`
-        let addOne = fn(x) => x + 1;
-        let double = fn(x) => x * 2;
-        let square = fn(x) => x * x;
+        var addOne = fn(x) => x + 1;
+        var double = fn(x) => x * 2;
+        var square = fn(x) => x * x;
         range(3) |> map(compose(square, compose(double, addOne)))
       `);
       expect(result).toEqual([4, 16, 36]); // [(0+1)*2]^2, [(1+1)*2]^2, [(2+1)*2]^2
@@ -133,9 +133,9 @@ describe('Enhanced Functional Programming Features', () => {
 
     test('nested function application', async () => {
       const result = await omni.execute(`
-        let apply = fn(f, x) => f(x);
-        let double = fn(x) => x * 2;
-        let addTen = fn(x) => x + 10;
+        var apply = fn(f, x) => f(x);
+        var double = fn(x) => x * 2;
+        var addTen = fn(x) => x + 10;
         apply(compose(addTen, double), 5)
       `);
       expect(result).toBe(20); // (5 * 2) + 10 = 20

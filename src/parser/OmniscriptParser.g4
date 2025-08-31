@@ -9,7 +9,7 @@ moduleDeclaration
     ;
 
 importDeclaration
-    : IMPORT (LBRACE IDENTIFIER (COMMA IDENTIFIER)* RBRACE FROM)? STRING SEMICOLON
+    : USE (LBRACE IDENTIFIER (COMMA IDENTIFIER)* RBRACE FROM)? STRING SEMICOLON
     ;
 
 statement
@@ -29,7 +29,7 @@ statement
     ;
 
 variableDeclaration
-    : (LET | CONST) IDENTIFIER typeAnnotation? (ASSIGN expression)? SEMICOLON
+    : (VAR | DEF) IDENTIFIER typeAnnotation? (ASSIGN expression)? SEMICOLON
     ;
 
 decorator
@@ -37,7 +37,7 @@ decorator
     ;
 
 typeAnnotation
-    : COLON type
+    : DOUBLE_COLON type
     ;
 
 type
@@ -180,7 +180,7 @@ blockStatement
     ;
 
 classDeclaration
-    : decorator* CLASS IDENTIFIER (EXTENDS IDENTIFIER)? LBRACE classMember* RBRACE
+    : decorator* OBJECT IDENTIFIER (EXTENDS IDENTIFIER)? LBRACE classMember* RBRACE
     ;
 
 classMember
@@ -234,10 +234,10 @@ throwStatement
     ;
 
 // Keywords (need to be defined before IDENTIFIER)
-LET: 'let';
-CONST: 'const';
+VAR: 'var';
+DEF: 'def';
 FN: 'fn';
-CLASS: 'class';
+OBJECT: 'object';
 INTERFACE: 'interface';
 EXTENDS: 'extends';
 IF: 'if';
@@ -254,7 +254,7 @@ FOR: 'for';
 ASYNC: 'async';
 AWAIT: 'await';
 NEW: 'new';
-IMPORT: 'import';
+USE: 'use';
 FROM: 'from';
 MODULE: 'module';
 OPERATOR: 'operator';
@@ -299,6 +299,7 @@ NOT: '!';
 BITWISE_NOT: '~';
 QUESTION: '?';
 COLON: ':';
+DOUBLE_COLON: '::';
 SEMICOLON: ';';
 COMMA: ',';
 DOT: '.';
