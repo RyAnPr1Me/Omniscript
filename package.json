@@ -37,28 +37,7 @@
     "lint": "eslint .",
     "format": "prettier --write ."
   },
-  "pkg": {
-    "scripts": [
-      "dist/**/*.js"
-    ],
-    "targets": [
-      "node18-win-x64",
-      "node18-linux-x64",
-      "node18-macos-x64"
-    ],
-    "outputPath": "dist/bin",
-    "entries": [
-      "dist/cli.js",
-      "dist/bin/install.js"
-    ],
-    "assets": [
-      "dist/**/*",
-      "src/**/*",
-      "stdlib/**/*",
-      "package.json",
-      "tsconfig.json"
-    ]
-  },
+
   "repository": {
     "type": "git",
     "url": "https://github.com/RyAnPr1Me/Omniscript.git"
