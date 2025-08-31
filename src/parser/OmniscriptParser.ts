@@ -406,6 +406,7 @@ export default class OmniscriptParser extends Parser {
       } else {
         break;
       }
+      // eslint-disable-next-line no-constant-condition
     } while (true);
     return args;
   }
@@ -424,6 +425,7 @@ export default class OmniscriptParser extends Parser {
   private parseBinaryExpression(precedence: number): Expression {
     let left = this.parseUnaryExpression();
 
+    // eslint-disable-next-line no-constant-condition
     while (true) {
       const operator = this.getCurrentOperator() as Operator; // Fixed type
       const newPrecedence = this.getOperatorPrecedence(operator);
@@ -513,7 +515,7 @@ export default class OmniscriptParser extends Parser {
     }
     
     switch (token.type) {
-      case OmniscriptParser.IDENTIFIER:
+      case OmniscriptParser.IDENTIFIER: {
         this.match(OmniscriptParser.IDENTIFIER);
         let expr: Expression = {
           type: 'Expression',
@@ -553,6 +555,7 @@ export default class OmniscriptParser extends Parser {
           }
         }
         return expr;
+      }
 
       case OmniscriptParser.NUMBER:
         this.match(OmniscriptParser.NUMBER);
@@ -601,11 +604,12 @@ export default class OmniscriptParser extends Parser {
       case OmniscriptParser.LBRACE:
         return this.parseObjectLiteral();
 
-      case OmniscriptParser.LPAREN:
+      case OmniscriptParser.LPAREN: {
         this.match(OmniscriptParser.LPAREN);
         const groupExpr = this.expression();
         this.match(OmniscriptParser.RPAREN);
         return groupExpr;
+      }
 
       case OmniscriptParser.MATCH:
         return this.parseMatchExpression();
@@ -844,6 +848,7 @@ export default class OmniscriptParser extends Parser {
       } else {
         break;
       }
+      // eslint-disable-next-line no-constant-condition
     } while (true);
 
     this.match(OmniscriptParser.GT);
@@ -873,6 +878,7 @@ export default class OmniscriptParser extends Parser {
         } else {
           break;
         }
+        // eslint-disable-next-line no-constant-condition
       } while (true);
       
       this.match(OmniscriptParser.GT);
