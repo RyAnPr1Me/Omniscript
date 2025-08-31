@@ -726,6 +726,19 @@ export class Runtime {
         } else {
           // Function call: no 'this' binding needed
           const fn = this.evalExpr(callee);
+          
+          // Handle lambda objects from functional parser
+          if (fn && typeof fn === 'object' && (fn as any).__tag === 'lambda') {
+            const lambda = fn as any;
+            if (lambda.__native) {
+              // Use native implementation if available
+              return lambda.__native(...args);
+            }
+            // Create new environment with closure + parameters
+            const callEnv = this.createLambdaEnv(lambda.closure || new Map(), lambda.params, args);
+            return this.executeLambdaBody(lambda.body, callEnv);
+          }
+          
           if (typeof fn !== 'function') throw new Error('Call to non-function');
           
           // Handle constructor calls
@@ -898,6 +911,51 @@ export class Runtime {
       return value;
     }
     throw new Error('Unsupported assignment target');
+  }
+
+  // Lambda handling methods for functional programming support
+  private createLambdaEnv(closure: any, params: string[], args: unknown[]): Map<string, unknown> {
+    const env = new Map<string, unknown>();
+    
+    // Copy closure environment if it exists
+    if (closure && closure.values instanceof Map) {
+      for (const [key, value] of closure.values) {
+        env.set(key, value);
+      }
+    } else if (closure instanceof Map) {
+      for (const [key, value] of closure) {
+        env.set(key, value);
+      }
+    }
+    
+    // Bind parameters to arguments
+    for (let i = 0; i < Math.min(params.length, args.length); i++) {
+      env.set(params[i], args[i]);
+    }
+    
+    return env;
+  }
+
+  private executeLambdaBody(body: any, env: Map<string, unknown>): unknown {
+    // Push the lambda environment onto the stack
+    this.envStack.push(env);
+    
+    try {
+      // Execute the lambda body
+      if (body.type === 'Binary') {
+        return this.evalBinary(body);
+      } else if (body.type === 'Identifier') {
+        return this.getVar(body.name);
+      } else if (body.type === 'Literal') {
+        return body.value;
+      } else {
+        // For more complex expressions, use evalExpr
+        return this.evalExpr(body);
+      }
+    } finally {
+      // Remove the lambda environment from the stack
+      this.envStack.pop();
+    }
   }
 
   // Security and sandboxing methods
