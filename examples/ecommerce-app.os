@@ -1,321 +1,511 @@
-// E-commerce Application Example
-// Demonstrates: Database ORM, HTTP Server, Error Handling, Authentication
+// Modern E-commerce Application Example
+// Demonstrates: Database ORM, HTTP Server, Error Handling, Authentication, Type Safety
 
-import { HTTP, Database, Crypto } from 'stdlib';
+use { HTTP, Database, Crypto, DateTime, Console } from 'stdlib';
 
-// Define data models
-class User {
-  @id id: number;
-  @field name: string;
-  @field email: string;
-  @field passwordHash: string;
-  @timestamp createdAt: DateTime;
-  @relation orders: Order[];
-}
-
-class Product {
-  @id id: number;
-  @field name: string;
-  @field description: string;
-  @field price: number;
-  @field stockQuantity: number;
-  @field category: string;
-  @timestamp createdAt: DateTime;
-}
-
-class Order {
-  @id id: number;
-  @field userId: number;
-  @field items: OrderItem[];
-  @field totalAmount: number;
-  @field status: string; // "pending", "processing", "shipped", "delivered"
-  @timestamp createdAt: DateTime;
-  @timestamp updatedAt: DateTime;
-}
-
-class OrderItem {
-  @id id: number;
-  @field orderId: number;
-  @field productId: number;
-  @field quantity: number;
-  @field unitPrice: number;
-}
-
-// Authentication middleware
-const authenticateUser = async (req, res, next) => {
-  const token = req.headers['authorization']?.replace('Bearer ', '');
-  
-  if (!token) {
-    return res.status(401).json({ error: 'No authentication token provided' });
-  }
-  
-  try {
-    // Verify JWT token (simplified)
-    const decoded = await Crypto.verifyJWT(token, process.env.JWT_SECRET);
-    req.user = decoded;
-    next();
-  } catch (error) {
-    res.status(401).json({ error: 'Invalid authentication token' });
-  }
+// Type definitions
+type UserRegistration = {
+  name :: string,
+  email :: string,
+  password :: string
 };
 
-// Error handling middleware
-const errorHandler = (err, req, res, next) => {
-  console.error('Error:', err.message);
-  
-  match err.type {
-    'ValidationError' => res.status(400).json({ error: err.message }),
-    'NotFoundError' => res.status(404).json({ error: 'Resource not found' }),
-    'UnauthorizedError' => res.status(401).json({ error: 'Unauthorized' }),
-    _ => res.status(500).json({ error: 'Internal server error' })
-  }
+type UserLogin = {
+  email :: string,
+  password :: string
 };
+
+type OrderItemInput = {
+  productId :: number,
+  quantity :: number
+};
+
+type AuthToken = {
+  userId :: number,
+  email :: string,
+  exp :: number
+};
+
+// Define data models with modern syntax
+object User {
+  @id id :: number;
+  @field name :: string;
+  @field email :: string;
+  @field passwordHash :: string;
+  @timestamp createdAt :: DateTime;
+  @relation orders :: Order[];
+  
+  constructor(data :: UserRegistration) {
+    this.name = data.name;
+    this.email = data.email;
+    this.createdAt = DateTime.now();
+  }
+  
+  def validate :: () -> Either<string, boolean> = () => {
+    match {
+      case this.name.length < 2 => left("Name must be at least 2 characters")
+      case !this.email.includes("@") => left("Invalid email format")
+      case this.email.length < 5 => left("Email too short")
+      case _ => right(true)
+    }
+  };
+  
+  def setPassword :: (password :: string) -> Promise<void> = async (password) => {
+    this.passwordHash = await Crypto.hash(password, 'SHA-256');
+  };
+  
+  def verifyPassword :: (password :: string) -> Promise<boolean> = async (password) => {
+    def hash :: string = await Crypto.hash(password, 'SHA-256');
+    return hash === this.passwordHash;
+  };
+}
+
+object Product {
+  @id id :: number;
+  @field name :: string;
+  @field description :: string;
+  @field price :: number;
+  @field stockQuantity :: number;
+  @field category :: string;
+  @field imageUrl :: string;
+  @timestamp createdAt :: DateTime;
+  
+  constructor(data :: any) {
+    this.name = data.name;
+    this.description = data.description;
+    this.price = data.price;
+    this.stockQuantity = data.stockQuantity;
+    this.category = data.category;
+    this.imageUrl = data.imageUrl || "";
+    this.createdAt = DateTime.now();
+  }
+  
+  def validate :: () -> Either<string, boolean> = () => {
+    match {
+      case this.name.length === 0 => left("Product name is required")
+      case this.price <= 0 => left("Price must be positive")
+      case this.stockQuantity < 0 => left("Stock quantity cannot be negative")
+      case _ => right(true)
+    }
+  };
+  
+  def isInStock :: (quantity :: number) -> boolean = (quantity) => {
+    return this.stockQuantity >= quantity;
+  };
+  
+  def calculateTotal :: (quantity :: number) -> number = (quantity) => {
+    return this.price * quantity;
+  };
+}
+
+object Order {
+  @id id :: number;
+  @field userId :: number;
+  @field items :: OrderItem[];
+  @field totalAmount :: number;
+  @field status :: OrderStatus;
+  @timestamp createdAt :: DateTime;
+  @timestamp updatedAt :: DateTime;
+  
+  constructor(userId :: number, items :: OrderItem[]) {
+    this.userId = userId;
+    this.items = items;
+    this.totalAmount = items |> map((item) => item.getTotal()) |> reduce(0, (a, b) => a + b);
+    this.status = OrderStatus.Pending;
+    this.createdAt = DateTime.now();
+    this.updatedAt = DateTime.now();
+  }
+  
+  def updateStatus :: (newStatus :: OrderStatus) -> void = (newStatus) => {
+    this.status = newStatus;
+    this.updatedAt = DateTime.now();
+  };
+}
+
+object OrderItem {
+  @id id :: number;
+  @field orderId :: number;
+  @field productId :: number;
+  @field quantity :: number;
+  @field unitPrice :: number;
+  
+  constructor(productId :: number, quantity :: number, unitPrice :: number) {
+    this.productId = productId;
+    this.quantity = quantity;
+    this.unitPrice = unitPrice;
+  }
+  
+  def getTotal :: () -> number = () => {
+    return this.quantity * this.unitPrice;
+  };
+}
+
+// Enums for better type safety
+enum OrderStatus {
+  Pending = "pending",
+  Processing = "processing", 
+  Shipped = "shipped",
+  Delivered = "delivered",
+  Cancelled = "cancelled"
+}
+
+// Authentication middleware with type safety
+def authenticateUser :: (req :: HTTP.Request, res :: HTTP.Response, next :: Function) -> Promise<void> = 
+  async (req, res, next) => {
+    def authHeader :: string | undefined = req.headers['authorization'];
+    
+    match authHeader {
+      case undefined => {
+        res.status(401).json({ error: 'No authentication token provided' });
+        return;
+      }
+      case header => {
+        def token :: string = header.replace('Bearer ', '');
+        
+        try {
+          def decoded :: AuthToken = await Crypto.verifyJWT(token, process.env.JWT_SECRET);
+          req.user = decoded;
+          next();
+        } catch (error :: Error) {
+          res.status(401).json({ error: 'Invalid authentication token' });
+        }
+      }
+    }
+  };
+
+// Error handling with pattern matching
+def handleError :: (error :: Error, req :: HTTP.Request, res :: HTTP.Response) -> void = 
+  (error, req, res) => {
+    Console.error('Error:', error.message);
+    
+    match error.name {
+      case "ValidationError" => res.status(400).json({ error: error.message })
+      case "NotFoundError" => res.status(404).json({ error: 'Resource not found' })
+      case "UnauthorizedError" => res.status(401).json({ error: 'Unauthorized' })
+      case "DatabaseError" => res.status(500).json({ error: 'Database operation failed' })
+      case _ => res.status(500).json({ error: 'Internal server error' })
+    }
+  };
 
 // Create HTTP server
-const app = new HTTP.Server();
+def app :: HTTP.Server = HTTP.createServer();
+
+// Middleware
+app.use(HTTP.middleware.json());
+app.use(HTTP.middleware.cors());
 
 // User Authentication Routes
-app.post("/auth/register", async (req, res) => {
+app.post("/auth/register", async (req :: HTTP.Request, res :: HTTP.Response) => {
   try {
-    const { name, email, password } = req.body;
+    def userData :: UserRegistration = req.body;
+    def user :: User = new User(userData);
     
-    // Validate input
-    if (!name || !email || !password) {
-      return res.status(400).json({ error: 'Name, email, and password are required' });
+    def validation :: Either<string, boolean> = user.validate();
+    
+    match validation {
+      case left(error) => {
+        res.status(400).json({ error });
+        return;
+      }
+      case right(_) => {
+        // Check if user already exists
+        def existingUser :: User | null = await Database.query<User>()
+          .where((u) => u.email === userData.email)
+          .first();
+        
+        match existingUser {
+          case null => {
+            await user.setPassword(userData.password);
+            def savedUser :: User = await Database.save(user);
+            
+            def tokenPayload :: AuthToken = {
+              userId: savedUser.id,
+              email: savedUser.email,
+              exp: DateTime.now().getTime() + (24 * 60 * 60 * 1000) // 24 hours
+            };
+            
+            def token :: string = await Crypto.generateJWT(tokenPayload);
+            
+            res.status(201).json({
+              message: 'User created successfully',
+              token,
+              user: {
+                id: savedUser.id,
+                name: savedUser.name,
+                email: savedUser.email
+              }
+            });
+          }
+          case user => res.status(400).json({ error: 'User with this email already exists' })
+        }
+      }
     }
-    
-    // Check if user already exists
-    const existingUser = await Database.query(User)
-      .where(u => u.email === email)
-      .first();
-    
-    if (existingUser) {
-      return res.status(400).json({ error: 'User with this email already exists' });
-    }
-    
-    // Hash password
-    const passwordHash = await Crypto.hash(password, 'SHA-256');
-    
-    // Create user
-    const user = new User({
-      name,
-      email,
-      passwordHash,
-      createdAt: new DateTime()
-    });
-    
-    await Database.save(user);
-    
-    // Generate JWT token
-    const token = await Crypto.generateJWT({ userId: user.id, email: user.email });
-    
-    res.status(201).json({ 
-      message: 'User created successfully',
-      token,
-      user: { id: user.id, name: user.name, email: user.email }
-    });
-  } catch (error) {
-    errorHandler(error, req, res);
+  } catch (error :: Error) {
+    handleError(error, req, res);
   }
 });
 
-app.post("/auth/login", async (req, res) => {
+app.post("/auth/login", async (req :: HTTP.Request, res :: HTTP.Response) => {
   try {
-    const { email, password } = req.body;
+    def loginData :: UserLogin = req.body;
     
-    // Find user
-    const user = await Database.query(User)
-      .where(u => u.email === email)
+    def user :: User | null = await Database.query<User>()
+      .where((u) => u.email === loginData.email)
       .first();
     
-    if (!user) {
-      return res.status(401).json({ error: 'Invalid credentials' });
+    match user {
+      case null => res.status(401).json({ error: 'Invalid credentials' })
+      case user => {
+        def isValid :: boolean = await user.verifyPassword(loginData.password);
+        
+        match isValid {
+          case false => res.status(401).json({ error: 'Invalid credentials' })
+          case true => {
+            def tokenPayload :: AuthToken = {
+              userId: user.id,
+              email: user.email,
+              exp: DateTime.now().getTime() + (24 * 60 * 60 * 1000)
+            };
+            
+            def token :: string = await Crypto.generateJWT(tokenPayload);
+            
+            res.json({
+              message: 'Login successful',
+              token,
+              user: {
+                id: user.id,
+                name: user.name,
+                email: user.email
+              }
+            });
+          }
+        }
+      }
     }
-    
-    // Verify password
-    const passwordHash = await Crypto.hash(password, 'SHA-256');
-    if (passwordHash !== user.passwordHash) {
-      return res.status(401).json({ error: 'Invalid credentials' });
-    }
-    
-    // Generate JWT token
-    const token = await Crypto.generateJWT({ userId: user.id, email: user.email });
-    
-    res.json({ 
-      message: 'Login successful',
-      token,
-      user: { id: user.id, name: user.name, email: user.email }
-    });
-  } catch (error) {
-    errorHandler(error, req, res);
+  } catch (error :: Error) {
+    handleError(error, req, res);
   }
 });
 
 // Product Routes
-app.get("/products", async (req, res) => {
+app.get("/products", async (req :: HTTP.Request, res :: HTTP.Response) => {
   try {
-    const { category, page = 1, limit = 20 } = req.query;
+    def { category, page = "1", limit = "20" } = req.query;
+    def pageNum :: number = parseInt(page);
+    def limitNum :: number = parseInt(limit);
+    def offset :: number = (pageNum - 1) * limitNum;
     
-    let query = Database.query(Product);
+    def query = Database.query<Product>();
     
-    if (category) {
-      query = query.where(p => p.category === category);
-    }
+    def filteredQuery = match category {
+      case undefined => query
+      case cat => query.where((p) => p.category === cat)
+    };
     
-    const products = await query
+    def products :: Product[] = await filteredQuery
       .orderBy("createdAt", "desc")
-      .skip((page - 1) * limit)
-      .take(limit);
+      .offset(offset)
+      .limit(limitNum)
+      .execute();
     
-    res.json({ products });
-  } catch (error) {
-    errorHandler(error, req, res);
+    def total :: number = await Database.count<Product>();
+    
+    res.json({
+      products,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total,
+        pages: Math.ceil(total / limitNum)
+      }
+    });
+  } catch (error :: Error) {
+    handleError(error, req, res);
   }
 });
 
-app.get("/products/:id", async (req, res) => {
+app.get("/products/:id", async (req :: HTTP.Request, res :: HTTP.Response) => {
   try {
-    const productId = parseInt(req.params.id);
+    def productId :: number = parseInt(req.params.id);
     
-    const product = await Database.query(Product)
-      .where(p => p.id === productId)
-      .first();
-    
-    if (!product) {
-      return res.status(404).json({ error: 'Product not found' });
+    match productId {
+      case x if isNaN(x) => res.status(400).json({ error: 'Invalid product ID' })
+      case id => {
+        def product :: Product | null = await Database.findById<Product>(id);
+        
+        match product {
+          case null => res.status(404).json({ error: 'Product not found' })
+          case product => res.json({ product })
+        }
+      }
     }
-    
-    res.json({ product });
-  } catch (error) {
-    errorHandler(error, req, res);
+  } catch (error :: Error) {
+    handleError(error, req, res);
   }
 });
 
 // Order Routes (Protected)
-app.post("/orders", authenticateUser, async (req, res) => {
+app.post("/orders", authenticateUser, async (req :: HTTP.Request, res :: HTTP.Response) => {
   try {
-    const { items } = req.body; // Array of { productId, quantity }
-    const userId = req.user.userId;
+    def { items } :: { items: OrderItemInput[] } = req.body;
+    def userId :: number = req.user.userId;
     
-    if (!items || items.length === 0) {
-      return res.status(400).json({ error: 'Order must contain at least one item' });
-    }
-    
-    // Calculate total and validate stock
-    let totalAmount = 0;
-    const orderItems = [];
-    
-    for (const item of items) {
-      const product = await Database.query(Product)
-        .where(p => p.id === item.productId)
-        .first();
-      
-      if (!product) {
-        return res.status(400).json({ error: `Product ${item.productId} not found` });
-      }
-      
-      if (product.stockQuantity < item.quantity) {
-        return res.status(400).json({ 
-          error: `Insufficient stock for product ${product.name}. Available: ${product.stockQuantity}` 
+    match items {
+      case [] => res.status(400).json({ error: 'Order must contain at least one item' })
+      case items => {
+        // Validate and process items
+        def processedItems :: OrderItem[] = [];
+        def totalAmount :: number = 0;
+        
+        for (def item of items) {
+          def product :: Product | null = await Database.findById<Product>(item.productId);
+          
+          match product {
+            case null => {
+              res.status(400).json({ error: `Product ${item.productId} not found` });
+              return;
+            }
+            case product => {
+              match product.isInStock(item.quantity) {
+                case false => {
+                  res.status(400).json({
+                    error: `Insufficient stock for product ${product.name}. Available: ${product.stockQuantity}`
+                  });
+                  return;
+                }
+                case true => {
+                  def orderItem :: OrderItem = new OrderItem(
+                    item.productId, 
+                    item.quantity, 
+                    product.price
+                  );
+                  processedItems.push(orderItem);
+                  totalAmount += product.calculateTotal(item.quantity);
+                }
+              }
+            }
+          }
+        }
+        
+        // Create order
+        def order :: Order = new Order(userId, processedItems);
+        def savedOrder :: Order = await Database.save(order);
+        
+        // Update stock quantities using functional approach
+        def stockUpdates :: Promise<void>[] = items |> map(async (item) => {
+          def product :: Product = await Database.findById<Product>(item.productId);
+          product.stockQuantity -= item.quantity;
+          await Database.save(product);
+        });
+        
+        await Promise.all(stockUpdates);
+        
+        res.status(201).json({
+          message: 'Order created successfully',
+          order: {
+            id: savedOrder.id,
+            totalAmount: savedOrder.totalAmount,
+            status: savedOrder.status,
+            createdAt: savedOrder.createdAt
+          }
         });
       }
-      
-      const itemTotal = product.price * item.quantity;
-      totalAmount += itemTotal;
-      
-      orderItems.push({
-        productId: item.productId,
-        quantity: item.quantity,
-        unitPrice: product.price
-      });
     }
-    
-    // Create order
-    const order = new Order({
-      userId,
-      items: orderItems,
-      totalAmount,
-      status: 'pending',
-      createdAt: new DateTime(),
-      updatedAt: new DateTime()
-    });
-    
-    await Database.save(order);
-    
-    // Update stock quantities
-    for (const item of items) {
-      await Database.query(Product)
-        .where(p => p.id === item.productId)
-        .update({ stockQuantity: stockQuantity - item.quantity });
-    }
-    
-    res.status(201).json({ 
-      message: 'Order created successfully',
-      order: {
-        id: order.id,
-        totalAmount: order.totalAmount,
-        status: order.status,
-        createdAt: order.createdAt
-      }
-    });
-  } catch (error) {
-    errorHandler(error, req, res);
+  } catch (error :: Error) {
+    handleError(error, req, res);
   }
 });
 
-app.get("/orders", authenticateUser, async (req, res) => {
+app.get("/orders", authenticateUser, async (req :: HTTP.Request, res :: HTTP.Response) => {
   try {
-    const userId = req.user.userId;
+    def userId :: number = req.user.userId;
     
-    const orders = await Database.query(Order)
-      .where(o => o.userId === userId)
+    def orders :: Order[] = await Database.query<Order>()
+      .where((o) => o.userId === userId)
       .include('items')
-      .orderBy("createdAt", "desc");
+      .orderBy("createdAt", "desc")
+      .execute();
     
     res.json({ orders });
-  } catch (error) {
-    errorHandler(error, req, res);
+  } catch (error :: Error) {
+    handleError(error, req, res);
   }
 });
 
-app.patch("/orders/:id/status", authenticateUser, async (req, res) => {
+app.patch("/orders/:id/status", authenticateUser, async (req :: HTTP.Request, res :: HTTP.Response) => {
   try {
-    const orderId = parseInt(req.params.id);
-    const { status } = req.body;
-    const userId = req.user.userId;
+    def orderId :: number = parseInt(req.params.id);
+    def { status } :: { status: string } = req.body;
+    def userId :: number = req.user.userId;
     
-    const validStatuses = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
-    if (!validStatuses.includes(status)) {
-      return res.status(400).json({ error: 'Invalid status' });
+    def statusValues :: string[] = Object.values(OrderStatus);
+    
+    match statusValues.includes(status) {
+      case false => res.status(400).json({ error: 'Invalid status' })
+      case true => {
+        def order :: Order | null = await Database.query<Order>()
+          .where((o) => o.id === orderId && o.userId === userId)
+          .first();
+        
+        match order {
+          case null => res.status(404).json({ error: 'Order not found' })
+          case order => {
+            order.updateStatus(status as OrderStatus);
+            await Database.save(order);
+            res.json({ message: 'Order status updated successfully' });
+          }
+        }
+      }
     }
+  } catch (error :: Error) {
+    handleError(error, req, res);
+  }
+});
+
+// Analytics endpoint
+app.get("/analytics/sales", authenticateUser, async (req :: HTTP.Request, res :: HTTP.Response) => {
+  try {
+    def orders :: Order[] = await Database.query<Order>()
+      .where((o) => o.status === OrderStatus.Delivered)
+      .execute();
     
-    const order = await Database.query(Order)
-      .where(o => o.id === orderId && o.userId === userId)
-      .first();
+    def analytics = orders
+      |> groupBy((o) => o.createdAt.toDateString())
+      |> map((group) => ({
+          date: group.key,
+          totalSales: group.items |> map((o) => o.totalAmount) |> reduce(0, (a, b) => a + b),
+          orderCount: group.items.length
+        }))
+      |> sortBy((item) => item.date);
     
-    if (!order) {
-      return res.status(404).json({ error: 'Order not found' });
-    }
-    
-    await Database.query(Order)
-      .where(o => o.id === orderId)
-      .update({ status, updatedAt: new DateTime() });
-    
-    res.json({ message: 'Order status updated successfully' });
-  } catch (error) {
-    errorHandler(error, req, res);
+    res.json({ analytics });
+  } catch (error :: Error) {
+    handleError(error, req, res);
   }
 });
 
 // Health check endpoint
-app.get("/health", (req, res) => {
-  res.json({ status: 'healthy', timestamp: new DateTime() });
+app.get("/health", (req :: HTTP.Request, res :: HTTP.Response) => {
+  res.json({ 
+    status: 'healthy', 
+    timestamp: DateTime.now(),
+    version: '2.0.0',
+    features: ['authentication', 'orders', 'analytics', 'type-safety']
+  });
 });
 
 // Start server
-const PORT = process.env.PORT || 3000;
+def PORT :: number = parseInt(process.env.PORT) || 3000;
 app.listen(PORT, () => {
-  console.log(`E-commerce API server running on port ${PORT}`);
+  Console.log(`🛒 Modern E-commerce API server running on port ${PORT}`);
+  Console.log(`📋 Available endpoints:`);
+  Console.log(`  POST   /auth/register`);
+  Console.log(`  POST   /auth/login`);
+  Console.log(`  GET    /products`);
+  Console.log(`  GET    /products/:id`);
+  Console.log(`  POST   /orders (protected)`);
+  Console.log(`  GET    /orders (protected)`);
+  Console.log(`  PATCH  /orders/:id/status (protected)`);
+  Console.log(`  GET    /analytics/sales (protected)`);
+  Console.log(`  GET    /health`);
 });
-
-export default app;
