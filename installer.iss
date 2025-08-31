@@ -37,7 +37,7 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 Name: "quicklaunchicon"; Description: "{cm:CreateQuickLaunchIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked; OnlyBelowVersion: 6.1
-Name: "addtopath"; Description: "Add Omniscript to system PATH"; GroupDescription: "Environment:"; Flags: unchecked
+Name: "addtopath"; Description: "Add Omniscript to system PATH"; GroupDescription: "Environment:"; Flags: checked
 
 [Files]
 Source: "dist\cli.js"; DestDir: "{app}\bin"; Flags: ignoreversion
@@ -58,12 +58,13 @@ Name: "{userappdata}\Microsoft\Internet Explorer\Quick Launch\Omniscript"; Filen
 [Run]
 Filename: "{cmd}"; Parameters: "/c echo @echo off > ""{app}\omni.bat"""; Flags: runhidden waituntilterminated; StatusMsg: "Creating omni command..."
 Filename: "{cmd}"; Parameters: "/c echo node ""{app}\bin\cli.js"" %%* >> ""{app}\omni.bat"""; Flags: runhidden waituntilterminated
+Filename: "{cmd}"; Parameters: "/c copy ""{app}\omni.bat"" ""{sys}\omni.bat"""; Flags: runhidden waituntilterminated; StatusMsg: "Installing omni command globally..."
 Filename: "node"; Parameters: """{app}\bin\cli.js"" --version"; Description: "Verify Omniscript installation"; Flags: postinstall skipifsilent runhidden; StatusMsg: "Verifying installation..."
 
 [Registry]
 ; Add Omni install folder to PATH
-Root: HKLM; Subkey: "SYSTEM\CurrentControlSet\Control\Session Manager\Environment"; ValueType: expandsz; ValueName: "Path"; ValueData: "{olddata};{app}\bin"; Flags: preservestringtype uninsdeletevalue; Tasks: addtopath; Check: IsAdminInstallMode
-Root: HKCU; Subkey: "Environment"; ValueType: expandsz; ValueName: "Path"; ValueData: "{olddata};{app}\bin"; Flags: preservestringtype uninsdeletevalue; Tasks: addtopath; Check: not IsAdminInstallMode
+Root: HKLM; Subkey: "SYSTEM\CurrentControlSet\Control\Session Manager\Environment"; ValueType: expandsz; ValueName: "Path"; ValueData: "{olddata};{app}"; Flags: preservestringtype uninsdeletevalue; Tasks: addtopath; Check: IsAdminInstallMode
+Root: HKCU; Subkey: "Environment"; ValueType: expandsz; ValueName: "Path"; ValueData: "{olddata};{app}"; Flags: preservestringtype uninsdeletevalue; Tasks: addtopath; Check: not IsAdminInstallMode
 
 ; File association for .os files
 Root: HKCU; Subkey: "Software\Classes\.os"; ValueType: string; ValueName: ""; ValueData: "OmniscriptFile"; Flags: uninsdeletevalue
