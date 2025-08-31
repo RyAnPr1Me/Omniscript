@@ -1,43 +1,99 @@
-// Machine Learning Inference Service
-// Demonstrates: Model serving, Feature engineering, Async processing, Performance optimization
+// Modern Machine Learning Inference Service
+// Demonstrates: Model serving, Feature engineering, Async processing, Performance optimization, Type Safety
 
-import { HTTP, Database, Crypto, FileSystem, Math as OMath } from 'stdlib';
+use { HTTP, Database, Crypto, FileSystem, Math, DateTime, Console, UUID } from 'stdlib';
 
-// Feature engineering utilities
-class FeatureEngineer {
-  static normalize(values: number[]): number[] {
-    const mean = values.reduce((sum, val) => sum + val, 0) / values.length;
-    const variance = values.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / values.length;
-    const stdDev = Math.sqrt(variance);
+// Type definitions for ML operations
+type ModelPrediction = {
+  prediction :: any,
+  confidence :: number,
+  features :: any,
+  modelVersion :: string,
+  timestamp :: DateTime
+};
+
+type FeatureVector = {
+  numerical :: number[],
+  categorical :: string[],
+  text :: string[],
+  metadata :: any
+};
+
+type ModelConfig = {
+  name :: string,
+  version :: string,
+  type :: string,
+  inputSchema :: any,
+  outputSchema :: any,
+  preprocessor :: Function,
+  predictor :: Function
+};
+
+type CacheEntry<T> = {
+  value :: T,
+  timestamp :: DateTime,
+  hits :: number,
+  ttl :: number
+};
+
+type MLMetrics = {
+  totalPredictions :: number,
+  averageLatency :: number,
+  cacheHitRate :: number,
+  errorRate :: number,
+  throughput :: number
+};
+
+// Enhanced Feature Engineering with type safety
+object FeatureEngineer {
+  static def normalize :: (values :: number[]) -> number[] = (values) => {
+    def mean :: number = values |> reduce(0, (sum, val) => sum + val) / values.length;
+    def variance :: number = values |> reduce(0, (sum, val) => sum + Math.pow(val - mean, 2)) / values.length;
+    def stdDev :: number = Math.sqrt(variance);
     
-    return values.map(val => (val - mean) / stdDev);
-  }
+    return values |> map((val) => stdDev === 0 ? 0 : (val - mean) / stdDev);
+  };
   
-  static oneHotEncode(categories: string[], allCategories: string[]): number[] {
-    return allCategories.map(cat => categories.includes(cat) ? 1 : 0);
-  }
+  static def standardize :: (values :: number[], mean :: number, std :: number) -> number[] = 
+    (values, mean, std) => {
+      return values |> map((val) => std === 0 ? 0 : (val - mean) / std);
+    };
   
-  static binNumeric(value: number, bins: number[]): number {
-    for (let i = 0; i < bins.length - 1; i++) {
-      if (value >= bins[i] && value < bins[i + 1]) {
-        return i;
+  static def oneHotEncode :: (categories :: string[], allCategories :: string[]) -> number[] = 
+    (categories, allCategories) => {
+      return allCategories |> map((cat) => categories.includes(cat) ? 1 : 0);
+    };
+  
+  static def binNumeric :: (value :: number, bins :: number[]) -> number = (value, bins) => {
+    for (def i = 0; i < bins.length - 1; i++) {
+      match value >= bins[i] && value < bins[i + 1] {
+        case true => return i
+        case false => {}
       }
     }
     return bins.length - 1;
-  }
+  };
   
-  static extractTextFeatures(text: string): any {
-    const words = text.toLowerCase().split(/\s+/);
-    const wordCount = words.length;
-    const avgWordLength = words.reduce((sum, word) => sum + word.length, 0) / wordCount;
-    const sentenceCount = text.split(/[.!?]+/).length - 1;
+  static def extractTextFeatures :: (text :: string) -> any = (text) => {
+    def words :: string[] = text.toLowerCase().split(/\s+/).filter((w) => w.length > 0);
+    def wordCount :: number = words.length;
+    def avgWordLength :: number = wordCount === 0 ? 0 : 
+      words |> map((word) => word.length) |> reduce(0, (a, b) => a + b) / wordCount;
+    def sentenceCount :: number = text.split(/[.!?]+/).length - 1;
     
-    // Sentiment indicators (simplified)
-    const positiveWords = ['good', 'great', 'excellent', 'amazing', 'love', 'perfect'];
-    const negativeWords = ['bad', 'terrible', 'awful', 'hate', 'horrible', 'worst'];
+    // Enhanced sentiment analysis
+    def positiveWords :: string[] = ['good', 'great', 'excellent', 'amazing', 'love', 'perfect', 'awesome', 'fantastic', 'wonderful'];
+    def negativeWords :: string[] = ['bad', 'terrible', 'awful', 'hate', 'horrible', 'worst', 'disappointing', 'frustrating', 'annoying'];
+    def intensifiers :: string[] = ['very', 'extremely', 'really', 'quite', 'absolutely'];
     
-    const positiveCount = words.filter(word => positiveWords.includes(word)).length;
-    const negativeCount = words.filter(word => negativeWords.includes(word)).length;
+    def positiveCount :: number = words |> filter((word) => positiveWords.includes(word)) |> length;
+    def negativeCount :: number = words |> filter((word) => negativeWords.includes(word)) |> length;
+    def intensifierCount :: number = words |> filter((word) => intensifiers.includes(word)) |> length;
+    
+    // Advanced features
+    def exclamationCount :: number = (text.match(/!/g) || []).length;
+    def questionCount :: number = (text.match(/\?/g) || []).length;
+    def capsRatio :: number = text.length === 0 ? 0 : (text.match(/[A-Z]/g) || []).length / text.length;
     
     return {
       wordCount,
@@ -45,9 +101,745 @@ class FeatureEngineer {
       sentenceCount,
       positiveCount,
       negativeCount,
-      sentimentScore: (positiveCount - negativeCount) / wordCount
+      intensifierCount,
+      exclamationCount,
+      questionCount,
+      capsRatio,
+      sentimentScore: wordCount === 0 ? 0 : (positiveCount - negativeCount) / wordCount,
+      intensityScore: wordCount === 0 ? 0 : intensifierCount / wordCount,
+      readabilityScore: sentenceCount === 0 ? 0 : wordCount / sentenceCount
     };
+  };
+  
+  static def extractNumericalFeatures :: (data :: any) -> number[] = (data) => {
+    def features :: number[] = [];
+    
+    // Extract common numerical features
+    match data.age {
+      case undefined => {}
+      case age => features.push(age)
+    }
+    
+    match data.income {
+      case undefined => {}
+      case income => features.push(income)
+    }
+    
+    match data.score {
+      case undefined => {}
+      case score => features.push(score)
+    }
+    
+    // Time-based features
+    match data.timestamp {
+      case undefined => {}
+      case ts => {
+        def date :: DateTime = new DateTime(ts);
+        features.push(date.getHour());
+        features.push(date.getDayOfWeek());
+        features.push(date.getMonth());
+      }
+    }
+    
+    return features;
+  };
+  
+  static def createFeatureVector :: (rawData :: any) -> FeatureVector = (rawData) => {
+    def numerical :: number[] = FeatureEngineer.extractNumericalFeatures(rawData);
+    def categorical :: string[] = [];
+    def text :: string[] = [];
+    
+    // Extract categorical features
+    if (rawData.category) categorical.push(rawData.category);
+    if (rawData.region) categorical.push(rawData.region);
+    if (rawData.deviceType) categorical.push(rawData.deviceType);
+    
+    // Extract text features
+    if (rawData.description) text.push(rawData.description);
+    if (rawData.title) text.push(rawData.title);
+    if (rawData.comments) text.push(...rawData.comments);
+    
+    return {
+      numerical,
+      categorical,
+      text,
+      metadata: {
+        originalData: rawData,
+        extractionTime: DateTime.now()
+      }
+    };
+  };
+}
+
+// Enhanced ML Cache with LRU eviction and TTL
+object MLCache<T> {
+  def cache :: Map<string, CacheEntry<T>>;
+  def maxSize :: number;
+  def defaultTTL :: number;
+  def hits :: number;
+  def misses :: number;
+  
+  constructor(maxSize :: number = 1000, defaultTTL :: number = 300000) { // 5 minutes default TTL
+    this.cache = new Map();
+    this.maxSize = maxSize;
+    this.defaultTTL = defaultTTL;
+    this.hits = 0;
+    this.misses = 0;
   }
+  
+  def get :: (key :: string) -> T | null = (key) => {
+    def entry :: CacheEntry<T> | undefined = this.cache.get(key);
+    
+    match entry {
+      case undefined => {
+        this.misses++;
+        return null;
+      }
+      case entry => {
+        def now :: DateTime = DateTime.now();
+        def isExpired :: boolean = now.getTime() - entry.timestamp.getTime() > entry.ttl;
+        
+        match isExpired {
+          case true => {
+            this.cache.delete(key);
+            this.misses++;
+            return null;
+          }
+          case false => {
+            entry.hits++;
+            this.hits++;
+            // Move to end (LRU)
+            this.cache.delete(key);
+            this.cache.set(key, entry);
+            return entry.value;
+          }
+        }
+      }
+    }
+  };
+  
+  def set :: (key :: string, value :: T, ttl :: number) -> void = (key, value, ttl) => {
+    // Check if we need to evict
+    match this.cache.size >= this.maxSize {
+      case true => {
+        def firstKey :: string = this.cache.keys().next().value;
+        this.cache.delete(firstKey);
+      }
+      case false => {}
+    }
+    
+    def entry :: CacheEntry<T> = {
+      value,
+      timestamp: DateTime.now(),
+      hits: 0,
+      ttl: ttl || this.defaultTTL
+    };
+    
+    this.cache.set(key, entry);
+  };
+  
+  def getHitRate :: () -> number = () => {
+    def total :: number = this.hits + this.misses;
+    return total === 0 ? 0 : this.hits / total;
+  };
+  
+  def clear :: () -> void = () => {
+    this.cache.clear();
+    this.hits = 0;
+    this.misses = 0;
+  };
+  
+  def getStats :: () -> any = () => ({
+    size: this.cache.size,
+    hits: this.hits,
+    misses: this.misses,
+    hitRate: this.getHitRate(),
+    maxSize: this.maxSize
+  });
+}
+
+// Model Registry for managing multiple models
+object ModelRegistry {
+  def models :: Map<string, ModelConfig>;
+  def loadedModels :: Map<string, any>;
+  def modelMetrics :: Map<string, MLMetrics>;
+  
+  constructor() {
+    this.models = new Map();
+    this.loadedModels = new Map();
+    this.modelMetrics = new Map();
+  }
+  
+  def registerModel :: (config :: ModelConfig) -> Either<string, boolean> = (config) => {
+    match this.validateModelConfig(config) {
+      case left(error) => left(error)
+      case right(_) => {
+        this.models.set(config.name, config);
+        this.initializeMetrics(config.name);
+        Console.log(`🤖 Model registered: ${config.name} v${config.version}`);
+        return right(true);
+      }
+    }
+  };
+  
+  def getModel :: (modelName :: string) -> ModelConfig | null = (modelName) => {
+    return this.models.get(modelName) || null;
+  };
+  
+  def loadModel :: (modelName :: string) -> Either<string, any> = (modelName) => {
+    def config :: ModelConfig | null = this.getModel(modelName);
+    
+    match config {
+      case null => left(`Model not found: ${modelName}`)
+      case config => {
+        match this.loadedModels.has(modelName) {
+          case true => right(this.loadedModels.get(modelName))
+          case false => {
+            try {
+              // Simulate model loading (in real implementation, would load from file/database)
+              def model :: any = this.createMockModel(config);
+              this.loadedModels.set(modelName, model);
+              Console.log(`✅ Model loaded: ${modelName}`);
+              return right(model);
+            } catch (error :: Error) {
+              return left(`Failed to load model: ${error.message}`);
+            }
+          }
+        }
+      }
+    }
+  };
+  
+  def validateModelConfig :: (config :: ModelConfig) -> Either<string, boolean> = (config) => {
+    match {
+      case !config.name => left("Model name is required")
+      case !config.version => left("Model version is required")
+      case !config.type => left("Model type is required")
+      case typeof config.predictor !== 'function' => left("Predictor function is required")
+      case _ => right(true)
+    }
+  };
+  
+  def initializeMetrics :: (modelName :: string) -> void = (modelName) => {
+    this.modelMetrics.set(modelName, {
+      totalPredictions: 0,
+      averageLatency: 0,
+      cacheHitRate: 0,
+      errorRate: 0,
+      throughput: 0
+    });
+  };
+  
+  def updateMetrics :: (modelName :: string, latency :: number, success :: boolean) -> void = 
+    (modelName, latency, success) => {
+      def metrics :: MLMetrics = this.modelMetrics.get(modelName);
+      
+      match metrics {
+        case undefined => {}
+        case metrics => {
+          metrics.totalPredictions++;
+          
+          // Update average latency
+          def count :: number = metrics.totalPredictions;
+          metrics.averageLatency = ((metrics.averageLatency * (count - 1)) + latency) / count;
+          
+          // Update error rate
+          match success {
+            case false => {
+              def errors :: number = metrics.errorRate * (count - 1) + 1;
+              metrics.errorRate = errors / count;
+            }
+            case true => {
+              def errors :: number = metrics.errorRate * (count - 1);
+              metrics.errorRate = errors / count;
+            }
+          }
+          
+          this.modelMetrics.set(modelName, metrics);
+        }
+      }
+    };
+  
+  def createMockModel :: (config :: ModelConfig) -> any = (config) => {
+    return {
+      name: config.name,
+      version: config.version,
+      type: config.type,
+      predict: config.predictor,
+      preprocess: config.preprocessor || ((data) => data)
+    };
+  };
+  
+  def getModelStats :: (modelName :: string) -> MLMetrics | null = (modelName) => {
+    return this.modelMetrics.get(modelName) || null;
+  };
+  
+  def getAllModels :: () -> string[] = () => {
+    return Array.from(this.models.keys());
+  };
+}
+
+// ML Inference Engine
+object MLInferenceEngine {
+  def modelRegistry :: ModelRegistry;
+  def predictionCache :: MLCache<ModelPrediction>;
+  def featureCache :: MLCache<FeatureVector>;
+  def batchProcessor :: any;
+  
+  constructor() {
+    this.modelRegistry = new ModelRegistry();
+    this.predictionCache = new MLCache(2000, 600000); // 10 minutes cache
+    this.featureCache = new MLCache(5000, 300000); // 5 minutes cache
+    this.initializeBatchProcessor();
+    this.registerDefaultModels();
+  }
+  
+  def predict :: (modelName :: string, inputData :: any, options :: any) -> Promise<Either<string, ModelPrediction>> = 
+    async (modelName, inputData, options) => {
+      def startTime :: number = DateTime.now().getTime();
+      def cacheKey :: string = this.generateCacheKey(modelName, inputData);
+      
+      try {
+        // Check cache first
+        match options?.useCache !== false {
+          case true => {
+            def cachedPrediction :: ModelPrediction | null = this.predictionCache.get(cacheKey);
+            match cachedPrediction {
+              case null => {}
+              case prediction => {
+                Console.log(`💾 Cache hit for model ${modelName}`);
+                return right(prediction);
+              }
+            }
+          }
+          case false => {}
+        }
+        
+        // Load model
+        def modelResult :: Either<string, any> = this.modelRegistry.loadModel(modelName);
+        
+        match modelResult {
+          case left(error) => return left(error)
+          case right(model) => {
+            // Extract and cache features
+            def features :: FeatureVector = await this.extractFeatures(inputData, cacheKey);
+            
+            // Preprocess data
+            def preprocessedData :: any = model.preprocess(features);
+            
+            // Make prediction
+            def prediction :: any = await model.predict(preprocessedData);
+            
+            def result :: ModelPrediction = {
+              prediction,
+              confidence: this.calculateConfidence(prediction, model.type),
+              features: preprocessedData,
+              modelVersion: model.version,
+              timestamp: DateTime.now()
+            };
+            
+            // Cache result
+            match options?.useCache !== false {
+              case true => this.predictionCache.set(cacheKey, result, 600000)
+              case false => {}
+            }
+            
+            def latency :: number = DateTime.now().getTime() - startTime;
+            this.modelRegistry.updateMetrics(modelName, latency, true);
+            
+            Console.log(`🎯 Prediction completed for ${modelName} in ${latency}ms`);
+            return right(result);
+          }
+        }
+      } catch (error :: Error) {
+        def latency :: number = DateTime.now().getTime() - startTime;
+        this.modelRegistry.updateMetrics(modelName, latency, false);
+        return left(`Prediction failed: ${error.message}`);
+      }
+    };
+  
+  def batchPredict :: (modelName :: string, inputDataList :: any[], options :: any) -> Promise<Either<string, ModelPrediction[]>> = 
+    async (modelName, inputDataList, options) => {
+      try {
+        def batchSize :: number = options?.batchSize || 10;
+        def results :: ModelPrediction[] = [];
+        
+        Console.log(`🔄 Processing batch of ${inputDataList.length} items for ${modelName}`);
+        
+        for (def i = 0; i < inputDataList.length; i += batchSize) {
+          def batch :: any[] = inputDataList.slice(i, i + batchSize);
+          def batchPromises :: Promise<Either<string, ModelPrediction>>[] = batch |> map(async (item) => 
+            this.predict(modelName, item, options)
+          );
+          
+          def batchResults :: Either<string, ModelPrediction>[] = await Promise.all(batchPromises);
+          
+          // Extract successful predictions
+          def successfulPredictions :: ModelPrediction[] = batchResults
+            |> filter((result) => result.isRight)
+            |> map((result) => result.value);
+          
+          results.push(...successfulPredictions);
+          
+          // Log progress
+          Console.log(`📊 Processed batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(inputDataList.length / batchSize)}`);
+        }
+        
+        return right(results);
+      } catch (error :: Error) {
+        return left(`Batch prediction failed: ${error.message}`);
+      }
+    };
+  
+  def extractFeatures :: (inputData :: any, cacheKey :: string) -> Promise<FeatureVector> = 
+    async (inputData, cacheKey) => {
+      // Check feature cache
+      def cachedFeatures :: FeatureVector | null = this.featureCache.get(cacheKey);
+      
+      match cachedFeatures {
+        case null => {
+          def features :: FeatureVector = FeatureEngineer.createFeatureVector(inputData);
+          this.featureCache.set(cacheKey, features, 300000);
+          return features;
+        }
+        case features => features
+      }
+    };
+  
+  def generateCacheKey :: (modelName :: string, inputData :: any) -> string = (modelName, inputData) => {
+    def dataHash :: string = Crypto.hash(JSON.stringify(inputData), 'SHA-256');
+    return `${modelName}:${dataHash}`;
+  };
+  
+  def calculateConfidence :: (prediction :: any, modelType :: string) -> number = (prediction, modelType) => {
+    match modelType {
+      case "classification" => {
+        match Array.isArray(prediction) {
+          case true => Math.max(...prediction)
+          case false => Math.min(Math.abs(prediction), 1.0)
+        }
+      }
+      case "regression" => Math.min(Math.abs(prediction) / 100, 1.0) // Simplified confidence
+      case _ => 0.5
+    }
+  };
+  
+  def initializeBatchProcessor :: () -> void = () => {
+    // Initialize background batch processing queue
+    Console.log('⚙️ Batch processor initialized');
+  };
+  
+  def registerDefaultModels :: () -> void = () => {
+    // Register sample models
+    def churnModel :: ModelConfig = {
+      name: "customer-churn",
+      version: "1.0.0",
+      type: "classification",
+      inputSchema: {
+        required: ["age", "income", "usage_days"],
+        optional: ["region", "device_type"]
+      },
+      outputSchema: {
+        type: "array",
+        items: "number"
+      },
+      preprocessor: (features :: FeatureVector) => {
+        // Normalize numerical features
+        def normalized :: number[] = FeatureEngineer.normalize(features.numerical);
+        
+        // One-hot encode categorical features
+        def categories :: string[] = ["mobile", "web", "desktop"];
+        def encoded :: number[] = FeatureEngineer.oneHotEncode(features.categorical, categories);
+        
+        return [...normalized, ...encoded];
+      },
+      predictor: (features :: number[]) => {
+        // Simple mock prediction logic
+        def score :: number = features |> reduce(0, (sum, f) => sum + f) / features.length;
+        def churnProbability :: number = Math.max(0, Math.min(1, score * 0.3 + Math.random() * 0.1));
+        return [1 - churnProbability, churnProbability]; // [no_churn, churn]
+      }
+    };
+    
+    def sentimentModel :: ModelConfig = {
+      name: "sentiment-analysis",
+      version: "1.0.0", 
+      type: "classification",
+      inputSchema: {
+        required: ["text"],
+        optional: []
+      },
+      outputSchema: {
+        type: "array", 
+        items: "number"
+      },
+      preprocessor: (features :: FeatureVector) => {
+        def textFeatures :: any = features.text |> map(FeatureEngineer.extractTextFeatures) |> reduce({}, (acc, f) => ({
+          ...acc,
+          wordCount: (acc.wordCount || 0) + f.wordCount,
+          sentimentScore: (acc.sentimentScore || 0) + f.sentimentScore,
+          intensityScore: (acc.intensityScore || 0) + f.intensityScore
+        }));
+        
+        return [
+          textFeatures.wordCount || 0,
+          textFeatures.sentimentScore || 0,
+          textFeatures.intensityScore || 0,
+          textFeatures.capsRatio || 0
+        ];
+      },
+      predictor: (features :: number[]) => {
+        def [wordCount, sentiment, intensity, caps] = features;
+        def positiveScore :: number = Math.max(0, sentiment + intensity * 0.5 + caps * 0.2);
+        def negativeScore :: number = Math.max(0, -sentiment + caps * 0.3);
+        def neutralScore :: number = 1 - positiveScore - negativeScore;
+        
+        // Normalize to probabilities
+        def total :: number = positiveScore + negativeScore + neutralScore;
+        return total === 0 ? [0.33, 0.33, 0.34] : [
+          negativeScore / total,
+          neutralScore / total, 
+          positiveScore / total
+        ]; // [negative, neutral, positive]
+      }
+    };
+    
+    this.modelRegistry.registerModel(churnModel);
+    this.modelRegistry.registerModel(sentimentModel);
+    
+    Console.log('🤖 Default models registered');
+  };
+  
+  def getStats :: () -> any = () => ({
+    models: this.modelRegistry.getAllModels(),
+    predictionCache: this.predictionCache.getStats(),
+    featureCache: this.featureCache.getStats(),
+    modelMetrics: Object.fromEntries(this.modelRegistry.modelMetrics.entries())
+  });
+  
+  def clearCaches :: () -> void = () => {
+    this.predictionCache.clear();
+    this.featureCache.clear();
+    Console.log('🧹 ML caches cleared');
+  };
+}
+
+// ML API Server
+def createMLAPIServer :: (port :: number) -> HTTP.Server = (port) => {
+  def app :: HTTP.Server = HTTP.createServer();
+  def mlEngine :: MLInferenceEngine = new MLInferenceEngine();
+  
+  app.use(HTTP.middleware.json());
+  app.use(HTTP.middleware.cors());
+  
+  // Request validation middleware
+  def validateRequest :: (req :: HTTP.Request, res :: HTTP.Response, next :: Function) -> void = 
+    (req, res, next) => {
+      match !req.body {
+        case true => {
+          res.status(400).json({ error: 'Request body is required' });
+          return;
+        }
+        case false => next()
+      }
+    };
+  
+  // Single prediction endpoint
+  app.post('/predict/:modelName', validateRequest, async (req :: HTTP.Request, res :: HTTP.Response) => {
+    try {
+      def modelName :: string = req.params.modelName;
+      def inputData :: any = req.body.data;
+      def options :: any = req.body.options || {};
+      
+      def result :: Either<string, ModelPrediction> = await mlEngine.predict(modelName, inputData, options);
+      
+      match result {
+        case left(error) => res.status(400).json({ error })
+        case right(prediction) => res.json({
+          success: true,
+          prediction: prediction.prediction,
+          confidence: prediction.confidence,
+          modelVersion: prediction.modelVersion,
+          timestamp: prediction.timestamp
+        })
+      }
+    } catch (error :: Error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // Batch prediction endpoint
+  app.post('/predict/:modelName/batch', validateRequest, async (req :: HTTP.Request, res :: HTTP.Response) => {
+    try {
+      def modelName :: string = req.params.modelName;
+      def inputDataList :: any[] = req.body.data;
+      def options :: any = req.body.options || {};
+      
+      def result :: Either<string, ModelPrediction[]> = await mlEngine.batchPredict(modelName, inputDataList, options);
+      
+      match result {
+        case left(error) => res.status(400).json({ error })
+        case right(predictions) => res.json({
+          success: true,
+          predictions: predictions |> map((p) => ({
+            prediction: p.prediction,
+            confidence: p.confidence,
+            modelVersion: p.modelVersion,
+            timestamp: p.timestamp
+          })),
+          count: predictions.length
+        })
+      }
+    } catch (error :: Error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // Model information endpoint
+  app.get('/models', (req :: HTTP.Request, res :: HTTP.Response) => {
+    def models :: string[] = mlEngine.modelRegistry.getAllModels();
+    def modelInfo :: any = models |> map((name) => {
+      def config :: ModelConfig = mlEngine.modelRegistry.getModel(name);
+      def stats :: MLMetrics = mlEngine.modelRegistry.getModelStats(name);
+      return {
+        name: config.name,
+        version: config.version,
+        type: config.type,
+        inputSchema: config.inputSchema,
+        outputSchema: config.outputSchema,
+        stats
+      };
+    });
+    
+    res.json({ models: modelInfo });
+  });
+  
+  // System statistics endpoint
+  app.get('/stats', (req :: HTTP.Request, res :: HTTP.Response) => {
+    def stats :: any = mlEngine.getStats();
+    res.json({
+      system: stats,
+      uptime: process.uptime(),
+      memory: process.memoryUsage(),
+      timestamp: DateTime.now()
+    });
+  });
+  
+  // Clear caches endpoint
+  app.post('/admin/clear-caches', (req :: HTTP.Request, res :: HTTP.Response) => {
+    mlEngine.clearCaches();
+    res.json({ message: 'Caches cleared successfully' });
+  });
+  
+  // Health check endpoint
+  app.get('/health', (req :: HTTP.Request, res :: HTTP.Response) => {
+    res.json({
+      status: 'healthy',
+      service: 'ml-inference',
+      timestamp: DateTime.now(),
+      models: mlEngine.modelRegistry.getAllModels().length
+    });
+  });
+  
+  app.listen(port, () => {
+    Console.log(`🧠 ML Inference API server running on port ${port}`);
+  });
+  
+  return app;
+};
+
+// Example usage and demonstration
+def main :: () -> Promise<void> = async () => {
+  Console.log('🚀 Starting Modern ML Inference Service...');
+  
+  // Start the API server
+  createMLAPIServer(4000);
+  
+  // Example predictions
+  def mlEngine :: MLInferenceEngine = new MLInferenceEngine();
+  
+  // Test customer churn prediction
+  Console.log('\n🔮 Testing customer churn prediction...');
+  def customerData :: any = {
+    age: 35,
+    income: 75000,
+    usage_days: 120,
+    region: "North America",
+    device_type: "mobile"
+  };
+  
+  def churnResult :: Either<string, ModelPrediction> = await mlEngine.predict('customer-churn', customerData, {});
+  
+  match churnResult {
+    case left(error) => Console.error('❌ Churn prediction failed:', error)
+    case right(prediction) => {
+      Console.log('✅ Churn prediction result:', {
+        churnProbability: prediction.prediction[1],
+        confidence: prediction.confidence,
+        modelVersion: prediction.modelVersion
+      });
+    }
+  }
+  
+  // Test sentiment analysis
+  Console.log('\n💭 Testing sentiment analysis...');
+  def textData :: any = {
+    text: "I absolutely love this product! It's amazing and works perfectly."
+  };
+  
+  def sentimentResult :: Either<string, ModelPrediction> = await mlEngine.predict('sentiment-analysis', textData, {});
+  
+  match sentimentResult {
+    case left(error) => Console.error('❌ Sentiment analysis failed:', error)
+    case right(prediction) => {
+      def [negative, neutral, positive] = prediction.prediction;
+      Console.log('✅ Sentiment analysis result:', {
+        sentiment: positive > 0.5 ? 'positive' : negative > 0.5 ? 'negative' : 'neutral',
+        scores: { negative, neutral, positive },
+        confidence: prediction.confidence
+      });
+    }
+  }
+  
+  // Test batch prediction
+  Console.log('\n📦 Testing batch prediction...');
+  def batchData :: any[] = [
+    { age: 25, income: 50000, usage_days: 30 },
+    { age: 45, income: 90000, usage_days: 365 },
+    { age: 30, income: 60000, usage_days: 180 }
+  ];
+  
+  def batchResult :: Either<string, ModelPrediction[]> = await mlEngine.batchPredict('customer-churn', batchData, { batchSize: 2 });
+  
+  match batchResult {
+    case left(error) => Console.error('❌ Batch prediction failed:', error)
+    case right(predictions) => {
+      Console.log(`✅ Batch prediction completed: ${predictions.length} results`);
+      predictions.forEach((p, i) => {
+        Console.log(`  Customer ${i + 1}: ${(p.prediction[1] * 100).toFixed(1)}% churn probability`);
+      });
+    }
+  }
+  
+  // Display final statistics
+  def stats :: any = mlEngine.getStats();
+  Console.log('\n📊 Final ML Engine Statistics:', JSON.stringify(stats, null, 2));
+  
+  Console.log('\n🎉 ML Inference Service demonstration completed!');
+  Console.log('🌐 API Server endpoints:');
+  Console.log('  POST   /predict/:modelName');
+  Console.log('  POST   /predict/:modelName/batch');
+  Console.log('  GET    /models');
+  Console.log('  GET    /stats');
+  Console.log('  POST   /admin/clear-caches');
+  Console.log('  GET    /health');
+};
+
+// Run the example
+main().catch((error) => {
+  Console.error('💥 Main execution error:', error);
+  process.exit(1);
+});
   
   static createTimeFeatures(timestamp: Date): any {
     return {

@@ -1,53 +1,639 @@
-// Data Processing Pipeline with Functional Programming
-// Demonstrates: Stream processing, Functional composition, Error handling, Performance optimization
+// Modern Data Processing Pipeline with Enhanced Functional Programming
+// Demonstrates: Stream processing, Functional composition, Error handling, Performance optimization, Type Safety
 
-import { FileSystem, Stream, HTTP, Database } from 'stdlib';
+use { FileSystem, Stream, HTTP, Database, DateTime, Console, Math } from 'stdlib';
 
-// Functional utilities for data processing
-const pipe = (...fns) => (value) => fns.reduce((acc, fn) => fn(acc), value);
+// Type definitions for better type safety
+type RawEvent = {
+  timestamp :: DateTime,
+  userId :: number,
+  event :: string,
+  data :: any,
+  sessionId :: string
+};
 
-const curry = (fn) => (...args) => 
-  args.length >= fn.length ? fn(...args) : curry(fn.bind(null, ...args));
+type EnrichedEvent = RawEvent & {
+  user :: User,
+  geolocation :: GeoLocation,
+  deviceInfo :: DeviceInfo
+};
 
-const compose = (...fns) => (value) => fns.reduceRight((acc, fn) => fn(acc), value);
+type ProcessingResult<T> = {
+  success :: boolean,
+  data :: T,
+  errors :: string[],
+  metadata :: any
+};
 
-// Data transformation functions
-const parseCSVLine = (line: string) => {
-  const fields = line.split(',').map(field => field.trim().replace(/^"(.*)"$/, '$1'));
-  return {
-    timestamp: new Date(fields[0]),
-    userId: parseInt(fields[1]),
-    event: fields[2],
-    data: fields[3] ? JSON.parse(fields[3]) : null,
-    sessionId: fields[4]
+type PipelineMetrics = {
+  totalProcessed :: number,
+  successful :: number,
+  failed :: number,
+  averageProcessingTime :: number,
+  throughput :: number
+};
+
+type User = {
+  id :: number,
+  name :: string,
+  email :: string,
+  segment :: string,
+  joinedAt :: DateTime
+};
+
+type GeoLocation = {
+  country :: string,
+  region :: string,
+  city :: string,
+  coordinates :: [number, number]
+};
+
+type DeviceInfo = {
+  userAgent :: string,
+  browser :: string,
+  os :: string,
+  deviceType :: string
+};
+
+// Enhanced functional utilities with type safety
+def pipe :: <T>(...fns :: Function[]) -> (value :: T) -> T = (...fns) => 
+  (value) => fns |> reduce(value, (acc, fn) => fn(acc));
+
+def compose :: <T>(...fns :: Function[]) -> (value :: T) -> T = (...fns) =>
+  (value) => fns |> reduceRight(value, (acc, fn) => fn(acc));
+
+def curry :: <T>(fn :: Function) -> Function = (fn) => 
+  (...args) => args.length >= fn.length ? fn(...args) : curry(fn.bind(null, ...args));
+
+def memoize :: <T>(fn :: Function) -> Function = (fn) => {
+  def cache :: Map<string, T> = new Map();
+  return (...args) => {
+    def key :: string = JSON.stringify(args);
+    match cache.has(key) {
+      case true => cache.get(key)
+      case false => {
+        def result :: T = fn(...args);
+        cache.set(key, result);
+        return result;
+      }
+    }
   };
 };
 
-const validateEvent = (event: any) => {
-  if (!event.timestamp || isNaN(event.timestamp.getTime())) {
-    throw new Error(`Invalid timestamp: ${event.timestamp}`);
+def retry :: <T>(fn :: () -> Promise<T>, attempts :: number, delay :: number) -> Promise<T> = 
+  async (fn, attempts, delay) => {
+    for (def attempt of range(attempts)) {
+      try {
+        return await fn();
+      } catch (error :: Error) {
+        match attempt === attempts - 1 {
+          case true => throw error
+          case false => {
+            Console.warn(`Retry attempt ${attempt + 1} failed:`, error.message);
+            await sleep(delay * Math.pow(2, attempt)); // Exponential backoff
+          }
+        }
+      }
+    }
+  };
+
+def sleep :: (ms :: number) -> Promise<void> = (ms) => 
+  new Promise((resolve) => setTimeout(resolve, ms));
+
+// Enhanced data transformation functions with error handling
+def parseCSVLine :: (line :: string) -> Either<string, RawEvent> = (line) => {
+  try {
+    def fields :: string[] = line.split(',') |> map((field) => field.trim().replace(/^"(.*)"$/, '$1'));
+    
+    match fields.length < 5 {
+      case true => left(`Invalid CSV line: insufficient fields (${fields.length}/5)`)
+      case false => {
+        def timestamp :: DateTime = new DateTime(fields[0]);
+        def userId :: number = parseInt(fields[1]);
+        def data :: any = fields[3] ? JSON.parse(fields[3]) : null;
+        
+        match isNaN(timestamp.getTime()) || isNaN(userId) {
+          case true => left(`Invalid data types in CSV line: ${line}`)
+          case false => right({
+            timestamp,
+            userId,
+            event: fields[2],
+            data,
+            sessionId: fields[4]
+          })
+        }
+      }
+    }
+  } catch (error :: Error) {
+    return left(`Failed to parse CSV line: ${error.message}`);
   }
-  
-  if (!event.userId || typeof event.userId !== 'number') {
-    throw new Error(`Invalid userId: ${event.userId}`);
-  }
-  
-  if (!event.event || typeof event.event !== 'string') {
-    throw new Error(`Invalid event type: ${event.event}`);
-  }
-  
-  return event;
 };
 
-const enrichWithUserData = curry(async (userCache: Map<number, any>, event: any) => {
-  if (!userCache.has(event.userId)) {
-    // Fetch user data from database
-    const user = await Database.query(User)
-      .where(u => u.id === event.userId)
-      .first();
+def validateEvent :: (event :: RawEvent) -> Either<string, RawEvent> = (event) => {
+  match {
+    case !event.timestamp || isNaN(event.timestamp.getTime()) => 
+      left(`Invalid timestamp: ${event.timestamp}`)
+    case !event.userId || typeof event.userId !== 'number' => 
+      left(`Invalid userId: ${event.userId}`)
+    case !event.event || typeof event.event !== 'string' => 
+      left(`Invalid event type: ${event.event}`)
+    case !event.sessionId || typeof event.sessionId !== 'string' => 
+      left(`Invalid sessionId: ${event.sessionId}`)
+    case _ => right(event)
+  }
+};
+
+// Memoized user data enrichment
+def enrichWithUserData :: (userCache :: Map<number, User>) -> (event :: RawEvent) -> Promise<Either<string, RawEvent & { user: User }>> = 
+  curry(async (userCache, event) => {
+    try {
+      match userCache.has(event.userId) {
+        case true => {
+          def user :: User = userCache.get(event.userId);
+          return right({ ...event, user });
+        }
+        case false => {
+          def user :: User | null = await Database.query<User>()
+            .where((u) => u.id === event.userId)
+            .first();
+          
+          match user {
+            case null => left(`User not found: ${event.userId}`)
+            case user => {
+              userCache.set(event.userId, user);
+              return right({ ...event, user });
+            }
+          }
+        }
+      }
+    } catch (error :: Error) {
+      return left(`Failed to enrich user data: ${error.message}`);
+    }
+  });
+
+// Geolocation enrichment with caching
+def enrichWithGeoLocation :: (geoCache :: Map<string, GeoLocation>) -> (event :: any) -> Promise<Either<string, any>> = 
+  curry(async (geoCache, event) => {
+    try {
+      def ipAddress :: string = event.data?.ipAddress || 'unknown';
+      
+      match ipAddress === 'unknown' {
+        case true => right({ ...event, geolocation: null })
+        case false => {
+          match geoCache.has(ipAddress) {
+            case true => {
+              def geo :: GeoLocation = geoCache.get(ipAddress);
+              return right({ ...event, geolocation: geo });
+            }
+            case false => {
+              def geoResponse :: any = await HTTP.get(`https://api.ipgeolocation.io/ipgeo?apiKey=${process.env.GEO_API_KEY}&ip=${ipAddress}`);
+              
+              def geolocation :: GeoLocation = {
+                country: geoResponse.country_name,
+                region: geoResponse.state_prov,
+                city: geoResponse.city,
+                coordinates: [parseFloat(geoResponse.latitude), parseFloat(geoResponse.longitude)]
+              };
+              
+              geoCache.set(ipAddress, geolocation);
+              return right({ ...event, geolocation });
+            }
+          }
+        }
+      }
+    } catch (error :: Error) {
+      return left(`Failed to enrich geolocation: ${error.message}`);
+    }
+  });
+
+// Device information extraction
+def enrichWithDeviceInfo :: (event :: any) -> Either<string, any> = (event) => {
+  try {
+    def userAgent :: string = event.data?.userAgent || '';
     
-    if (user) {
-      userCache.set(event.userId, user);
+    match userAgent === '' {
+      case true => right({ ...event, deviceInfo: null })
+      case false => {
+        def deviceInfo :: DeviceInfo = {
+          userAgent,
+          browser: extractBrowser(userAgent),
+          os: extractOS(userAgent),
+          deviceType: extractDeviceType(userAgent)
+        };
+        
+        return right({ ...event, deviceInfo });
+      }
+    }
+  } catch (error :: Error) {
+    return left(`Failed to enrich device info: ${error.message}`);
+  }
+};
+
+// Helper functions for device parsing
+def extractBrowser :: (userAgent :: string) -> string = (userAgent) => {
+  match {
+    case userAgent.includes('Chrome') => 'Chrome'
+    case userAgent.includes('Firefox') => 'Firefox'
+    case userAgent.includes('Safari') => 'Safari'
+    case userAgent.includes('Edge') => 'Edge'
+    case _ => 'Unknown'
+  }
+};
+
+def extractOS :: (userAgent :: string) -> string = (userAgent) => {
+  match {
+    case userAgent.includes('Windows') => 'Windows'
+    case userAgent.includes('Mac OS') => 'macOS'
+    case userAgent.includes('Linux') => 'Linux'
+    case userAgent.includes('Android') => 'Android'
+    case userAgent.includes('iOS') => 'iOS'
+    case _ => 'Unknown'
+  }
+};
+
+def extractDeviceType :: (userAgent :: string) -> string = (userAgent) => {
+  match {
+    case userAgent.includes('Mobile') => 'Mobile'
+    case userAgent.includes('Tablet') => 'Tablet'
+    case _ => 'Desktop'
+  }
+};
+
+// Stream processing with functional composition
+object DataPipeline {
+  def userCache :: Map<number, User>;
+  def geoCache :: Map<string, GeoLocation>;
+  def metrics :: PipelineMetrics;
+  def errorThreshold :: number;
+  def batchSize :: number;
+  
+  constructor(errorThreshold :: number = 0.1, batchSize :: number = 1000) {
+    this.userCache = new Map();
+    this.geoCache = new Map();
+    this.errorThreshold = errorThreshold;
+    this.batchSize = batchSize;
+    this.metrics = {
+      totalProcessed: 0,
+      successful: 0,
+      failed: 0,
+      averageProcessingTime: 0,
+      throughput: 0
+    };
+  }
+  
+  def processCSVFile :: (filePath :: string) -> Promise<ProcessingResult<any[]>> = async (filePath) => {
+    def startTime :: number = DateTime.now().getTime();
+    def results :: any[] = [];
+    def errors :: string[] = [];
+    
+    try {
+      def fileContent :: string = await FileSystem.readFile(filePath, 'utf8');
+      def lines :: string[] = fileContent.split('\n') |> filter((line) => line.trim().length > 0);
+      
+      Console.log(`📊 Processing ${lines.length} lines from ${filePath}`);
+      
+      // Process in batches for better performance
+      def batches :: string[][] = this.chunkArray(lines, this.batchSize);
+      
+      for (def batch of batches) {
+        def batchResults :: any[] = await this.processBatch(batch);
+        results.push(...batchResults.filter((r) => r.success).map((r) => r.data));
+        errors.push(...batchResults.filter((r) => !r.success).map((r) => r.error));
+        
+        // Check error threshold
+        def errorRate :: number = errors.length / (this.metrics.totalProcessed || 1);
+        match errorRate > this.errorThreshold {
+          case true => {
+            throw new Error(`Error rate ${(errorRate * 100).toFixed(2)}% exceeds threshold ${(this.errorThreshold * 100).toFixed(2)}%`);
+          }
+          case false => {}
+        }
+      }
+      
+      def endTime :: number = DateTime.now().getTime();
+      def processingTime :: number = endTime - startTime;
+      
+      this.updateMetrics(lines.length, results.length, errors.length, processingTime);
+      
+      return {
+        success: true,
+        data: results,
+        errors,
+        metadata: {
+          processingTime,
+          throughput: this.metrics.throughput,
+          errorRate: errors.length / lines.length
+        }
+      };
+      
+    } catch (error :: Error) {
+      return {
+        success: false,
+        data: [],
+        errors: [error.message],
+        metadata: { processingTime: DateTime.now().getTime() - startTime }
+      };
+    }
+  };
+  
+  def processBatch :: (lines :: string[]) -> Promise<any[]> = async (lines) => {
+    def promises :: Promise<any>[] = lines |> map(async (line) => {
+      try {
+        def result :: any = await this.processLine(line);
+        return { success: true, data: result };
+      } catch (error :: Error) {
+        return { success: false, error: error.message };
+      }
+    });
+    
+    return Promise.all(promises);
+  };
+  
+  def processLine :: (line :: string) -> Promise<any> = async (line) => {
+    // Create functional processing pipeline
+    def pipeline :: Function = pipe(
+      parseCSVLine,
+      (result) => result.flatMap(validateEvent),
+      (result) => result.flatMapAsync(enrichWithUserData(this.userCache)),
+      (result) => result.flatMapAsync(enrichWithGeoLocation(this.geoCache)),
+      (result) => result.flatMap(enrichWithDeviceInfo)
+    );
+    
+    def result :: Either<string, any> = await pipeline(line);
+    
+    match result {
+      case left(error) => throw new Error(error)
+      case right(data) => data
+    }
+  };
+  
+  def chunkArray :: <T>(array :: T[], chunkSize :: number) -> T[][] = (array, chunkSize) => {
+    def chunks :: T[][] = [];
+    for (def i = 0; i < array.length; i += chunkSize) {
+      chunks.push(array.slice(i, i + chunkSize));
+    }
+    return chunks;
+  };
+  
+  def updateMetrics :: (total :: number, successful :: number, failed :: number, processingTime :: number) -> void = 
+    (total, successful, failed, processingTime) => {
+      this.metrics.totalProcessed += total;
+      this.metrics.successful += successful;
+      this.metrics.failed += failed;
+      
+      // Calculate moving average processing time
+      def currentAvg :: number = this.metrics.averageProcessingTime;
+      def totalEvents :: number = this.metrics.totalProcessed;
+      this.metrics.averageProcessingTime = (currentAvg * (totalEvents - total) + processingTime) / totalEvents;
+      
+      // Calculate throughput (events per second)
+      this.metrics.throughput = (total / processingTime) * 1000;
+    };
+  
+  def generateReport :: () -> any = () => ({
+    metrics: this.metrics,
+    cacheStats: {
+      userCacheSize: this.userCache.size,
+      geoCacheSize: this.geoCache.size
+    },
+    performance: {
+      successRate: (this.metrics.successful / this.metrics.totalProcessed) * 100,
+      errorRate: (this.metrics.failed / this.metrics.totalProcessed) * 100,
+      averageProcessingTimeMs: this.metrics.averageProcessingTime,
+      throughputPerSecond: this.metrics.throughput
+    }
+  });
+  
+  def clearCaches :: () -> void = () => {
+    this.userCache.clear();
+    this.geoCache.clear();
+    Console.log('🧹 Caches cleared');
+  };
+}
+
+// Session aggregation and analytics
+def aggregateUserSessions :: (events :: any[]) -> Map<string, any> = (events) => {
+  def sessionMap :: Map<string, any> = new Map();
+  
+  events
+    |> groupBy((event) => event.sessionId)
+    |> forEach((sessionEvents, sessionId) => {
+      def session :: any = {
+        sessionId,
+        userId: sessionEvents[0]?.userId,
+        startTime: sessionEvents |> map((e) => e.timestamp) |> min,
+        endTime: sessionEvents |> map((e) => e.timestamp) |> max,
+        eventCount: sessionEvents.length,
+        events: sessionEvents |> map((e) => e.event) |> unique,
+        duration: 0,
+        pages: sessionEvents |> filter((e) => e.event === 'page_view') |> map((e) => e.data?.page) |> unique,
+        country: sessionEvents[0]?.geolocation?.country,
+        deviceType: sessionEvents[0]?.deviceInfo?.deviceType
+      };
+      
+      session.duration = session.endTime.getTime() - session.startTime.getTime();
+      sessionMap.set(sessionId, session);
+    });
+  
+  return sessionMap;
+};
+
+// Real-time stream processing example
+def createRealTimeProcessor :: () -> any = () => {
+  def pipeline :: DataPipeline = new DataPipeline(0.05, 100); // Lower error threshold, smaller batches
+  def eventBuffer :: any[] = [];
+  def bufferTimeout :: any = null;
+  
+  def flushBuffer :: () -> Promise<void> = async () => {
+    match eventBuffer.length > 0 {
+      case true => {
+        Console.log(`⚡ Processing ${eventBuffer.length} real-time events`);
+        
+        def promises :: Promise<any>[] = eventBuffer |> map(async (event) => {
+          try {
+            return await pipeline.processLine(JSON.stringify([
+              event.timestamp,
+              event.userId,
+              event.event,
+              JSON.stringify(event.data),
+              event.sessionId
+            ].join(',')));
+          } catch (error :: Error) {
+            Console.error('Real-time processing error:', error.message);
+            return null;
+          }
+        });
+        
+        def results :: any[] = await Promise.all(promises);
+        def validResults :: any[] = results.filter((r) => r !== null);
+        
+        Console.log(`✅ Processed ${validResults.length}/${eventBuffer.length} events`);
+        
+        // Clear buffer
+        eventBuffer.length = 0;
+        
+        // Emit processed events for further downstream processing
+        return validResults;
+      }
+      case false => {}
+    }
+  };
+  
+  return {
+    addEvent: (event :: any) => {
+      eventBuffer.push(event);
+      
+      // Auto-flush on buffer size or timeout
+      match eventBuffer.length >= 100 {
+        case true => flushBuffer()
+        case false => {
+          match bufferTimeout {
+            case null => {
+              bufferTimeout = setTimeout(() => {
+                flushBuffer();
+                bufferTimeout = null;
+              }, 5000); // 5 second timeout
+            }
+            case _ => {}
+          }
+        }
+      }
+    },
+    
+    flush: flushBuffer,
+    
+    getMetrics: () => pipeline.generateReport()
+  };
+};
+
+// Advanced analytics and insights
+def generateInsights :: (events :: any[]) -> any = (events) => {
+  def sessions :: Map<string, any> = aggregateUserSessions(events);
+  def userEvents :: Map<number, any[]> = events |> groupBy((e) => e.userId);
+  
+  def insights :: any = {
+    totalSessions: sessions.size,
+    totalUsers: userEvents.size,
+    totalEvents: events.length,
+    
+    // Session insights
+    avgSessionDuration: Array.from(sessions.values()) 
+      |> map((s) => s.duration) 
+      |> reduce(0, (a, b) => a + b) / sessions.size,
+      
+    avgEventsPerSession: Array.from(sessions.values()) 
+      |> map((s) => s.eventCount) 
+      |> reduce(0, (a, b) => a + b) / sessions.size,
+    
+    // Geographic insights
+    topCountries: events 
+      |> filter((e) => e.geolocation?.country)
+      |> groupBy((e) => e.geolocation.country)
+      |> map((group) => ({ country: group.key, count: group.items.length }))
+      |> sortBy((item) => -item.count)
+      |> take(10),
+    
+    // Device insights
+    deviceBreakdown: events
+      |> filter((e) => e.deviceInfo?.deviceType)
+      |> groupBy((e) => e.deviceInfo.deviceType)
+      |> map((group) => ({ device: group.key, count: group.items.length })),
+    
+    // User behavior insights
+    mostActiveUsers: Array.from(userEvents.entries())
+      |> map(([userId, userEventList]) => ({ userId, eventCount: userEventList.length }))
+      |> sortBy((item) => -item.eventCount)
+      |> take(10),
+    
+    // Event type distribution
+    eventTypeDistribution: events
+      |> groupBy((e) => e.event)
+      |> map((group) => ({ event: group.key, count: group.items.length }))
+      |> sortBy((item) => -item.count)
+  };
+  
+  return insights;
+};
+
+// Example usage and demonstration
+def main :: () -> Promise<void> = async () => {
+  Console.log('🚀 Starting Modern Data Processing Pipeline...');
+  
+  def pipeline :: DataPipeline = new DataPipeline();
+  
+  // Example 1: Process CSV file
+  try {
+    Console.log('📊 Processing sample CSV file...');
+    def sampleData :: string = `
+"2024-01-15T10:30:00Z",1,"page_view","{\\"page\\": \\"/home\\", \\"ipAddress\\": \\"192.168.1.1\\", \\"userAgent\\": \\"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36\\"}","session-123"
+"2024-01-15T10:31:00Z",1,"click","{\\"element\\": \\"signup-button\\", \\"ipAddress\\": \\"192.168.1.1\\"}","session-123"
+"2024-01-15T10:32:00Z",2,"page_view","{\\"page\\": \\"/products\\", \\"ipAddress\\": \\"192.168.1.2\\", \\"userAgent\\": \\"Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X)\\"}","session-456"
+"2024-01-15T10:33:00Z",1,"purchase","{\\"product\\": \\"premium-plan\\", \\"amount\\": 99.99}","session-123"
+    `.trim();
+    
+    // Write sample data to temporary file
+    await FileSystem.writeFile('/tmp/sample_events.csv', sampleData);
+    
+    def result :: ProcessingResult<any[]> = await pipeline.processCSVFile('/tmp/sample_events.csv');
+    
+    match result.success {
+      case true => {
+        Console.log('✅ CSV processing completed successfully');
+        Console.log(`📈 Processed ${result.data.length} events`);
+        
+        def insights :: any = generateInsights(result.data);
+        Console.log('🔍 Analytics Insights:', JSON.stringify(insights, null, 2));
+      }
+      case false => {
+        Console.error('❌ CSV processing failed:', result.errors);
+      }
+    }
+    
+    // Show pipeline report
+    def report :: any = pipeline.generateReport();
+    Console.log('📊 Pipeline Report:', JSON.stringify(report, null, 2));
+    
+  } catch (error :: Error) {
+    Console.error('💥 Pipeline error:', error.message);
+  }
+  
+  // Example 2: Real-time processing
+  Console.log('\n⚡ Starting real-time processing demo...');
+  def realTimeProcessor :: any = createRealTimeProcessor();
+  
+  // Simulate real-time events
+  def sampleEvents :: any[] = [
+    {
+      timestamp: DateTime.now().toISOString(),
+      userId: 1,
+      event: 'page_view',
+      data: { page: '/dashboard', ipAddress: '192.168.1.1' },
+      sessionId: 'real-time-session-1'
+    },
+    {
+      timestamp: DateTime.now().toISOString(),
+      userId: 2,
+      event: 'search',
+      data: { query: 'omniscript tutorial', ipAddress: '192.168.1.2' },
+      sessionId: 'real-time-session-2'
+    }
+  ];
+  
+  sampleEvents.forEach((event) => realTimeProcessor.addEvent(event));
+  
+  // Wait for processing
+  await sleep(1000);
+  def rtMetrics :: any = realTimeProcessor.getMetrics();
+  Console.log('⚡ Real-time processing metrics:', JSON.stringify(rtMetrics, null, 2));
+  
+  Console.log('\n🎉 Data pipeline demonstration completed!');
+};
+
+// Run the example
+main().catch((error) => {
+  Console.error('💥 Main execution error:', error);
+  process.exit(1);
+});
     }
   }
   
