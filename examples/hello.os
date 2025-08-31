@@ -1,5 +1,5 @@
 fn main() {
-  let message = "Hello, Omniscript!";
+  var message = "Hello, Omniscript!";
   Console.log(message);
   
   // Simple HTTP server
@@ -7,8 +7,8 @@ fn main() {
     res.send(message);
   });
   
-    // Class with operator overloading example (prototype)
-    class Vector {
+    // Object with operator overloading example (prototype)
+    object Vector {
       operator + (other) {
         return Vector(this.x + other.x, this.y + other.y)
       }
@@ -18,8 +18,8 @@ fn main() {
       }
     }
   
-    let a = Vector(1,2)
-    let b = Vector(3,4)
-    let c = a + b
+    var a = Vector(1,2)
+    var b = Vector(3,4)
+    var c = a + b
     print(c.x, c.y)
 }

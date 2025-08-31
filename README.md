@@ -41,14 +41,14 @@ omni dev
 ## Features
 
 ### Type-safe Full Stack Development
-```typescript
-// Single file for both frontend and backend
+```omniscript
+# Single file for both frontend and backend
 @component
-class UserList {
-  @state users: User[] = [];
+object UserList {
+  @state users:: User[] = [];
   
   async loadUsers() {
-    // Auto-synchronized between client/server
+    # Auto-synchronized between client/server
     this.users = await db.users.findAll();
   }
   
@@ -61,22 +61,22 @@ class UserList {
 ```
 
 ### Built-in Database ORM
-```typescript
-class User {
-  @id id: number;
-  @field name: string;
-  @relation posts: Post[];
+```omniscript
+object User {
+  @id id:: number;
+  @field name:: string;
+  @relation posts:: Post[];
 }
 
-// Type-safe queries
-const newUsers = await db.users
+# Type-safe queries
+def newUsers = await db.users
   .where(u => u.posts.length > 0)
   .orderBy(u => u.name)
   .take(10);
 ```
 
 ### Pattern Matching
-```typescript
+```omniscript
 match value {
   0 => "zero",
   n if n > 0 => "positive",
@@ -86,12 +86,12 @@ match value {
 ```
 
 ### Advanced Decorators
-Omniscript supports powerful decorators for classes, methods, and properties.
+Omniscript supports powerful decorators for objects, methods, and properties.
 
-```typescript
+```omniscript
 @component
-class UserList {
-  @state private users: User[] = [];
+object UserList {
+  @state private users:: User[] = [];
   
   @effect
   async loadUsers() {

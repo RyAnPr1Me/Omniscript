@@ -81,8 +81,8 @@ export default class OmniscriptLexer extends Lexer {
         while (isAlpha(ch()) || isNum(ch())) { id += C(); consume(); }
         const kw = id;
         switch (kw) {
-          case 'let':
-          case 'const': return this.makeToken(OmniscriptParser.VAR, kw);
+          case 'var':
+          case 'def': return this.makeToken(OmniscriptParser.VAR, kw);
           case 'match': return this.makeToken(OmniscriptParser.MATCH, kw);
           case 'return': return this.makeToken(OmniscriptParser.RETURN, kw);
           case 'if': return this.makeToken(OmniscriptParser.IF, kw);
@@ -97,6 +97,8 @@ export default class OmniscriptLexer extends Lexer {
           case 'await': return this.makeToken(OmniscriptParser.AWAIT, kw);
           case 'fn': return this.makeToken(OmniscriptParser.FN, kw);
           case 'extends': return this.makeToken(OmniscriptParser.EXTENDS, kw);
+          case 'object': return this.makeToken(OmniscriptParser.OBJECT, kw);
+          case 'use': return this.makeToken(OmniscriptParser.USE, kw);
           case 'true': return this.makeToken(OmniscriptParser.TRUE, kw);
           case 'false': return this.makeToken(OmniscriptParser.FALSE, kw);
           case 'null': return this.makeToken(OmniscriptParser.NULL, kw);
@@ -107,6 +109,7 @@ export default class OmniscriptLexer extends Lexer {
       // Two/three-char operators
       if (C() === '?' && C2() === '?' && String.fromCharCode(la(3)) === '=') { consume(); consume(); consume(); return this.makeToken(OmniscriptParser.NULLISH_ASSIGN, '??='); }
   if (C() === '=' && C2() === '>') { consume(); consume(); return this.makeToken(OmniscriptParser.ARROW, '=>'); }
+      if (C() === ':' && C2() === ':') { consume(); consume(); return this.makeToken(OmniscriptParser.DOUBLE_COLON, '::'); }
       if (C() === '=' && C2() === '=') { consume(); consume(); return this.makeToken(OmniscriptParser.EQ, '=='); }
       if (C() === '!' && C2() === '=') { consume(); consume(); return this.makeToken(OmniscriptParser.NEQ, '!='); }
       if (C() === '<' && C2() === '=') { consume(); consume(); return this.makeToken(OmniscriptParser.LTE, '<='); }

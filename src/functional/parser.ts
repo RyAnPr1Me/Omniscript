@@ -142,9 +142,9 @@ export class FunctionalParser {
   }
 
   private letExpr(): Expression {
-    if (this.peek('LET') || this.peek('CONST')) {
-      const isConst = this.peek('CONST');
-      this.consume(isConst ? 'CONST' : 'LET');
+    if (this.peek('VAR') || this.peek('DEF')) {
+      const isConst = this.peek('DEF');
+      this.consume(isConst ? 'DEF' : 'VAR');
       const name = this.consume('IDENT').value;
       this.consume('EQUAL');
       const value = this.expression();
@@ -187,8 +187,8 @@ export class FunctionalParser {
       decorators.push(decoratorName);
     }
     
-    if (this.peek('CLASS')) {
-      this.consume('CLASS');
+    if (this.peek('OBJECT')) {
+      this.consume('OBJECT');
       const name = this.consume('IDENT').value;
       // optional inheritance
       let parent: string | undefined;

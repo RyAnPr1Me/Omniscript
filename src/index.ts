@@ -42,9 +42,9 @@ export class Omniscript {
                                /\([^)]*\)\s*=>/g.test(source) ||  // Also detect (args) => syntax
                                /if\s+\w+\s+then\s+/.test(source) ||
                                /match\s+\w+\s*\{/.test(source) ||
-                               /\blet\s+\w+\s*=/.test(source) ||  // Also detect let bindings
-                               /\bconst\s+\w+\s*=/.test(source) ||  // Also detect const bindings
-                               /\bclass\s+\w+\s*\{/.test(source) ||  // Also detect class definitions
+                               /\bvar\s+\w+\s*=/.test(source) ||  // Also detect var bindings
+                               /\bdef\s+\w+\s*=/.test(source) ||  // Also detect def bindings
+                               /\bobject\s+\w+\s*\{/.test(source) ||  // Also detect object definitions
                                /\\\|>/.test(source) ||  // Also detect pipeline operations
                                /\b(curry|memoize|just|nothing|left|right|head|tail|cons|flip|add|inc)\s*\(/.test(source) || // Detect functional builtins
                                /\)\s*\(/.test(source); // Detect curried function calls like add(2)(3)
@@ -54,7 +54,7 @@ export class Omniscript {
       try {
         let src = source;
         // Convert arrow function syntax to fn syntax, but avoid method definitions
-        // Look for patterns like `let x = (args) =>` or `= (args) =>` or start of line `(args) =>` or `prop: (args) =>`
+        // Look for patterns like `var x = (args) =>` or `= (args) =>` or start of line `(args) =>` or `prop: (args) =>`
         src = src.replace(/(^|[=,:]\s*)\(([^)]*)\)\s*=>/g, '$1fn($2) =>');
         // More specific regex for immediately invoked lambdas that won't break nested lambdas
         // Only match when the lambda expression is followed by a space and then parentheses
@@ -77,7 +77,7 @@ export class Omniscript {
       try {
         let src = source;
         // Convert arrow function syntax to fn syntax, but avoid method definitions
-        // Look for patterns like `let x = (args) =>` or `= (args) =>` or start of line `(args) =>` or `prop: (args) =>`
+        // Look for patterns like `var x = (args) =>` or `= (args) =>` or start of line `(args) =>` or `prop: (args) =>`
         src = src.replace(/(^|[=,:]\s*)\(([^)]*)\)\s*=>/g, '$1fn($2) =>');
         // More specific regex for immediately invoked lambdas that won't break nested lambdas
         src = src.replace(/(fn\s*\([^)]*\)\s*=>\s*[^;\n()]+?)\s+\(([^)]*)\)/g, '($1)($2)');

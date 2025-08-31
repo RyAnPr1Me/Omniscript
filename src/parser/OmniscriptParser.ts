@@ -207,6 +207,12 @@ export default class OmniscriptParser extends Parser {
   static readonly SEMI = 52; // ;
   static readonly MATCH = 53; // match keyword
   static readonly ARROW = 54; // =>
+  
+  // New unique keywords for Omniscript
+  static readonly DEF = 55; // def keyword (replaces const)
+  static readonly OBJECT = 56; // object keyword (replaces class)
+  static readonly USE = 57; // use keyword (replaces import)
+  static readonly DOUBLE_COLON = 58; // :: for type annotations
 
   constructor(input: any) {
     if (!input) {

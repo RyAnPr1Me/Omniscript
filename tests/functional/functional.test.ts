@@ -11,14 +11,14 @@ describe('Functional language subset', () => {
     expect(result).toBe(6);
   });
 
-  test('let binding and nested lambdas', async () => {
-    const src = 'let inc = fn(n)=> n + 1; let add = fn(a)=> fn(b)=> a + b; add(2)(inc(3))';
+  test('var binding and nested lambdas', async () => {
+    const src = 'var inc = fn(n)=> n + 1; var add = fn(a)=> fn(b)=> a + b; add(2)(inc(3))';
     const result = await omni.execute(src);
     expect(result).toBe(6);
   });
 
   test('if expression', async () => {
-    const src = 'let x = 5; if x then 1 else 2';
+    const src = 'var x = 5; if x then 1 else 2';
     const result = await omni.execute(src);
     expect(result).toBe(1);
   });
