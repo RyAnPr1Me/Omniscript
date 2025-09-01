@@ -881,7 +881,7 @@ export class Runtime {
       const omnistdlib: any = {};
       
       // List of core modules to load
-      const coreModules = ['collections', 'math', 'datetime'];
+      const coreModules = ['index', 'collections', 'math', 'datetime', 'crypto', 'network'];
       
       for (const moduleName of coreModules) {
         const modulePath = path.join(omnistdlibPath, `${moduleName}.os`);
