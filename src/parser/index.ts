@@ -28,6 +28,12 @@ export class Parser {
       if (!result) {
         throw new Error('Parser error: program() returned null or undefined');
       }
+      
+      // Check if the source contains match expressions that ANTLR didn't parse
+      if (source.includes('match ') && !this.hasMatchExpressions(result)) {
+        throw new Error('ANTLR parser incomplete - missing match expressions');
+      }
+      
       return result;
     } catch (error: any) {
       // If ANTLR parser fails (internal state issues), try a lightweight fallback parser
@@ -38,6 +44,22 @@ export class Parser {
         throw new Error(`Parser error: ${error instanceof Error ? error.message : String(error)}`);
       }
     }
+  }
+
+  private hasMatchExpressions(ast: any): boolean {
+    if (!ast || typeof ast !== 'object') return false;
+    
+    if (ast.type === 'Match' || ast.type === 'MatchExpression') return true;
+    
+    if (Array.isArray(ast)) {
+      return ast.some(item => this.hasMatchExpressions(item));
+    }
+    
+    if (ast.body && Array.isArray(ast.body)) {
+      return ast.body.some((item: any) => this.hasMatchExpressions(item));
+    }
+    
+    return false;
   }
 
   parseExpression(expr: Expression | string): Expression {
@@ -156,6 +178,8 @@ export class Parser {
                         ' '.repeat(end - start) + 
                         sourceWithoutFns.substring(end);
     }
+    
+    
     
     // Then parse all imports
     const importRe = /import\s+\{([^}]+)\}\s+from\s+['"]([^'"]+)['"]/g;
@@ -485,7 +509,7 @@ export class Parser {
         }
       }
       
-      if (body.length > 0) return { type: 'Program', body };
+      // Don't return early here - continue to parse match expressions
     }
     // match expressions
     const matchRe = /match\s+([A-Za-z_]\w*)\s*\{([\s\S]*?)\}/g;

@@ -670,8 +670,8 @@ export class Runtime {
     logger.debug('Runtime', 'Executing pattern match');
     logger.debug('Runtime', 'Match node structure:', JSON.stringify(node, null, 2));
     
-    const matchValue = this.evalExpr(node.expr);
-    const cases = node.cases || [];
+    const matchValue = this.evalExpr(node.expr || node.subject);
+    const cases = node.cases || node.arms || [];
     
     for (const matchCase of cases) {
       let matched = false;
@@ -718,12 +718,12 @@ export class Runtime {
           }
           
           try {
-            return this.evalExpr(matchCase.value);
+            return this.evalExpr(matchCase.action || matchCase.value || matchCase.expression);
           } finally {
             this.popEnv();
           }
         } else {
-          return this.evalExpr(matchCase.value);
+          return this.evalExpr(matchCase.action || matchCase.value || matchCase.expression);
         }
       }
     }

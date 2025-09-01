@@ -41,7 +41,7 @@ export class Omniscript {
     const hasFunctionalSyntax = /fn\s*\([^)]*\)\s*=>/g.test(source) || 
                                /\([^)]*\)\s*=>/g.test(source) ||  // Also detect (args) => syntax
                                /if\s+\w+\s+then\s+/.test(source) ||
-                               /match\s+\w+\s*\{/.test(source) ||
+                               // /match\s+\w+\s*\{/.test(source) ||  // Temporarily disable this to test ANTLR
                                /\bvar\s+\w+\s*=/.test(source) ||  // Also detect var bindings
                                /\bdef\s+\w+\s*=/.test(source) ||  // Also detect def bindings
                                /\bobject\s+\w+\s*\{/.test(source) ||  // Also detect object definitions
