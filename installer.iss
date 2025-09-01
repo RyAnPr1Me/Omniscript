@@ -59,7 +59,7 @@ Filename: "{cmd}"; Parameters: "/c echo @echo off > ""{app}\omni.bat"""; Flags: 
 Filename: "{cmd}"; Parameters: "/c echo node ""{app}\bin\cli.js"" %%* >> ""{app}\omni.bat"""; Flags: runhidden waituntilterminated
 Filename: "{cmd}"; Parameters: "/c copy ""{app}\omni.bat"" ""{sys}\omni.bat"""; Flags: runhidden waituntilterminated; StatusMsg: "Installing omni command globally..."
 Filename: "npm.cmd"; Parameters: "install --production"; WorkingDir: "{app}"; Flags: runhidden waituntilterminated; StatusMsg: "Installing dependencies..."
-Filename: "node"; Parameters: """{app}\bin\cli.js"" --version"; Description: "Verify Omniscript installation"; Flags: postinstall skipifsilent runhidden; StatusMsg: "Verifying installation..."
+Filename: "node"; Parameters: """{app}\bin\cli.js"" --version"; WorkingDir: "{app}"; Description: "Verify Omniscript installation"; Flags: postinstall skipifsilent runhidden; StatusMsg: "Verifying installation..."
 
 [Registry]
 ; Add Omni install folder to PATH
