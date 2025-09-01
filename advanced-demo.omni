@@ -1,0 +1,68 @@
+// Advanced Omniscript Feature Demonstration
+import { DateTime, DateTimeUtils, Database, HTTPServer, Crypto, db } from 'stdlib';
+
+// 1. Decorators + Reactive State
+@component
+class Counter {
+  @state count = 0;
+
+  @computed get double() {
+    return this.count * 2;
+  }
+
+  @effect logChange() {
+    console.log(`Counter changed to ${this.count}, double is ${this.double}`);
+  }
+}
+let counter = new Counter();
+counter.count = 1;
+counter.count = 3;
+
+// 2. Functional Pipelines
+let numbers = [1, 2, 3, 4];
+let piped = numbers
+  |> (x => x * 2)
+  |> (arr => arr.filter(n => n > 4))
+  |> (arr => arr.reduce((sum, n) => sum + n, 0));
+console.log('Piped result:', piped);
+
+// 3. Pattern Matching
+match piped {
+  x if x > 10 => console.log('Match: large sum', x),
+  _ => console.log('Match: small sum', piped)
+};
+
+// 4. DateTime Utilities
+let now = DateTime.now();
+let future = now.add(2, 'days').add(3, 'hours');
+console.log('Now:', now.format('YYYY-MM-DD HH:mm'));
+console.log('Future:', future.toISO());
+
+// 5. Database ORM (toSQL stub)
+class User {}
+let query = Database.query(User)
+  .where(u => true)
+  .orderBy('id', 'asc')
+  .take(5)
+  .toSQL();
+console.log('Generated SQL:', query.query);
+
+// 6. HTTP Server (routes count)
+let server = new HTTPServer();
+server.get('/', (req, res) => res.send('hi'));
+server.post('/data', (req, res) => res.json({ ok: true }));
+console.log('Registered routes:', server['routes'].length);
+
+// 7. Cryptography
+let hashPromise = Crypto.hash('Omni', 'SHA-256');
+hashPromise.then(h => console.log('SHA256 Hash:', h));
+
+// 8. Duration formatting
+let duration = DateTimeUtils.formatDuration({ years:0, months:0, weeks:0, days:1, hours:2, minutes:3, seconds:4, milliseconds:5 });
+console.log('Formatted duration:', duration);
+
+// 9. Package Manager stub
+console.log('db.save is a function:', typeof db.save);
+
+// 10. End
+console.log('🎉 Advanced Omniscript demo complete');
