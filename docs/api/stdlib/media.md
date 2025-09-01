@@ -1,6 +1,6 @@
 # OmniCodec Media Encoding
 
-The **OmniCodec** is a unique audio and video encoding format implemented in the Omniscript standard library. It provides efficient compression, SIMD acceleration, and built-in security features.
+The **OmniCodec** is a production-grade audio and video encoding format implemented in the Omniscript standard library. It provides efficient compression, SIMD acceleration, enterprise security, and comprehensive monitoring capabilities.
 
 ## Features
 
@@ -8,11 +8,40 @@ The **OmniCodec** is a unique audio and video encoding format implemented in the
 - **SIMD Acceleration**: Leverages parallel processing for enhanced performance
 - **Entropy Encoding**: Run-length encoding for efficient data compression
 - **Quality Control**: Configurable quality levels (1-100) and compression settings
-- **Security**: Built-in encryption support and checksum verification
+- **Production-grade Encryption**: Secure key management with automatic rotation
 - **Dual Format Support**: Handles both audio and video data streams
 - **Cross-platform**: Compatible across different platforms and architectures
+- **Input Validation**: Comprehensive validation and sanitization
+- **Performance Monitoring**: Real-time metrics and analytics
+- **Memory Management**: Streaming support for large files
+- **Error Handling**: Specific error types for debugging and monitoring
 
 ## API Reference
+
+### Production Features
+
+#### Security & Encryption
+- **Secure Key Management**: Automatic key generation, storage, and rotation
+- **Multiple Encryption Algorithms**: Support for AES-GCM and AES-CBC
+- **Password-based Encryption**: Derive keys from user passwords
+- **Key Statistics**: Monitor key usage and rotation
+
+#### Performance Monitoring
+- **Real-time Metrics**: Track encoding/decoding performance
+- **SIMD Performance Analysis**: Measure acceleration benefits
+- **Memory Usage Monitoring**: Track memory consumption
+- **Error Rate Tracking**: Monitor system reliability
+
+#### Memory Management
+- **Configurable Limits**: Set maximum memory usage
+- **Streaming Mode**: Process large files in chunks
+- **Automatic Cleanup**: Clear sensitive data for security
+
+#### Input Validation
+- **Comprehensive Validation**: Sanitize all inputs
+- **Type Checking**: Validate data types and formats
+- **Metadata Validation**: Ensure metadata consistency
+- **Security Checks**: Prevent injection attacks
 
 ### OmniCodec Class
 
@@ -25,6 +54,13 @@ Encodes audio or video data using the OmniCodec format.
 - `type` ('audio' | 'video'): Type of media data
 - `metadata` (Partial<MediaHeader>): Media metadata (duration, resolution, etc.)
 - `options` (Partial<OmniCodecOptions>): Encoding options
+  - `quality` (number): Quality level 1-100 (default: 85)
+  - `enableEncryption` (boolean): Enable encryption (default: false)
+  - `enableSIMD` (boolean): Enable SIMD acceleration (default: true)
+  - `compressionLevel` (number): Compression level 1-9 (default: 5)
+  - `password` (string): Password for encryption (optional)
+  - `streamingMode` (boolean): Enable streaming for large files (default: false)
+  - `maxMemoryUsage` (number): Memory limit in bytes (default: 100MB)
 
 **Returns:** Promise<Uint8Array> - Encoded data
 
