@@ -7,6 +7,7 @@ export * from './math';
 export * from './threading';
 export * from './http';
 export * from './database';
+export * from './media';
 
 export { MathUtils as Math } from './math';
 export { DateTime } from './datetime';
