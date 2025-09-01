@@ -488,7 +488,7 @@ const fs = require('fs');
 
 // Determine the installation directory
 const installDir = path.dirname(__dirname);
-const cliPath = path.join(installDir, 'lib', 'cli.js');
+const cliPath = path.join(installDir, 'lib', 'dist', 'cli.js');
 
 // Check if the main CLI file exists
 if (fs.existsSync(cliPath)) {
