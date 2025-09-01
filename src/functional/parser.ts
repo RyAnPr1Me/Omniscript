@@ -142,9 +142,9 @@ export class FunctionalParser {
   }
 
   private letExpr(): Expression {
-    if (this.peek('VAR') || this.peek('DEF')) {
+    if (this.peek('VAR') || this.peek('LET') || this.peek('DEF')) {
       const isConst = this.peek('DEF');
-      this.consume(isConst ? 'DEF' : 'VAR');
+      const token = this.consume(isConst ? 'DEF' : (this.peek('LET') ? 'LET' : 'VAR'));
       const name = this.consume('IDENT').value;
       this.consume('EQUAL');
       const value = this.expression();

@@ -509,3 +509,11 @@ app.listen(PORT, () => {
   Console.log(`  GET    /analytics/sales (protected)`);
   Console.log(`  GET    /health`);
 });
+
+// Export main functionality
+export { app, User, Product, Order, OrderItem, OrderStatus, authenticateUser, handleError };
+
+// Example usage:
+// Run this file to start the e-commerce server
+// Register: curl -X POST http://localhost:3000/auth/register -H "Content-Type: application/json" -d '{"name":"John Doe","email":"john@example.com","password":"password123"}'
+// Login: curl -X POST http://localhost:3000/auth/login -H "Content-Type: application/json" -d '{"email":"john@example.com","password":"password123"}'
