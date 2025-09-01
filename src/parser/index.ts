@@ -235,8 +235,8 @@ export class Parser {
             isConstructor: true
           };
         }
-      } else if (valueExpr.match(/^".*"$/)) {
-        // String literal
+      } else if (valueExpr.match(/^["'].*["']$/)) {
+        // String literal (both single and double quotes)
         initializer = { type: 'Expression', kind: ExpressionKind.Literal, value: valueExpr.slice(1, -1) };
       } else if (valueExpr.match(/^\d+$/)) {
         // Number literal  
@@ -357,6 +357,25 @@ export class Parser {
             }
           });
         }
+      } else if (line.match(/^[A-Za-z_]\w*\s*[+\-*\/]\s*[A-Za-z_]\w*$/)) {
+        // Binary expression like x + y
+        const binaryMatch = line.match(/^([A-Za-z_]\w*)\s*([+\-*\/])\s*([A-Za-z_]\w*)$/);
+        if (binaryMatch) {
+          const left = binaryMatch[1];
+          const operator = binaryMatch[2];
+          const right = binaryMatch[3];
+          
+          body.push({
+            type: 'ExpressionStatement',
+            expression: {
+              type: 'Expression',
+              kind: ExpressionKind.Binary,
+              operator: operator,
+              left: { type: 'Expression', kind: ExpressionKind.Identifier, name: left },
+              right: { type: 'Expression', kind: ExpressionKind.Identifier, name: right }
+            }
+          });
+        }
       } else if (line.match(/^[A-Za-z_]\w*$/)) {
         // Simple identifier
         body.push({
@@ -474,17 +493,34 @@ export class Parser {
     while ((matchMatch = matchRe.exec(sourceWithoutFns)) !== null) {
       const subjectName = matchMatch[1];
       const armsSrc = matchMatch[2];
-      const arms: any[] = [];
-      const armRe = /([0-9_]+|_)\s*=>\s*("[^"]*"|[^,\n]+)/g;
+      const cases: any[] = [];
+      // Updated regex to handle string patterns like 'active' as well as numbers and wildcard
+      const armRe = /(['"][^'"]*['"]|[0-9_]+|_)\s*=>\s*(['"][^'"]*['"]|[^,}\n]+)/g;
       let a: RegExpExecArray | null;
       while ((a = armRe.exec(armsSrc)) !== null) {
         const patTok = a[1];
         const valTok = a[2].trim();
-        const pattern = patTok === '_' ? { kind: 'wildcard' } : { kind: 'literal', value: Number(patTok) };
-        const expr = valTok.startsWith('"') ? { type: 'Expression', kind: ExpressionKind.Literal, value: valTok.slice(1, -1) } : { type: 'Expression', kind: ExpressionKind.Identifier, name: valTok };
-        arms.push({ pattern, expression: expr });
+        
+        // Parse pattern for executeMatch format
+        let pattern;
+        if (patTok === '_') {
+          pattern = { type: 'Wildcard' };
+        } else if (patTok.match(/^['"].*['"]$/)) {
+          // String pattern like 'active' - treat as string literal
+          pattern = { type: 'StringLiteral', value: patTok.slice(1, -1) };
+        } else {
+          // Numeric pattern
+          pattern = { type: 'NumberLiteral', value: Number(patTok) };
+        }
+        
+        // Parse action expression
+        const action = valTok.match(/^['"].*['"]$/) ? 
+          { type: 'Expression', kind: ExpressionKind.Literal, value: valTok.slice(1, -1) } : 
+          { type: 'Expression', kind: ExpressionKind.Identifier, name: valTok };
+        
+        cases.push({ pattern, action });
       }
-      body.push({ type: 'MatchExpression', subject: { type: 'Expression', kind: ExpressionKind.Identifier, name: subjectName }, arms });
+      body.push({ type: 'Match', expr: { type: 'Expression', kind: ExpressionKind.Identifier, name: subjectName }, cases });
     }
 
     // simple let/variable declarations: let x: Type = value;
@@ -502,7 +538,8 @@ export class Parser {
       
       // Handle string literals with quotes
       let initializer;
-      if (val.match(/^".*"$/)) {
+      if (val.match(/^["'].*["']$/)) {
+        // String literal (both single and double quotes)
         initializer = { type: 'Expression', kind: ExpressionKind.Literal, value: val.slice(1, -1) };
       } else if (val.match(/^\d+$/)) {
         initializer = { type: 'Expression', kind: ExpressionKind.Literal, value: Number(val) };
@@ -603,7 +640,8 @@ export class Parser {
       const val = letMatch[3].trim();
       
       let initializer;
-      if (val.match(/^".*"$/)) {
+      if (val.match(/^["'].*["']$/)) {
+        // String literal (both single and double quotes)
         initializer = { type: 'Expression', kind: ExpressionKind.Literal, value: val.slice(1, -1) };
       } else if (val.match(/^\d+$/)) {
         initializer = { type: 'Expression', kind: ExpressionKind.Literal, value: Number(val) };

@@ -682,6 +682,8 @@ export class Runtime {
         matched = true;
       } else if (matchCase.pattern.type === 'NumberLiteral') {
         matched = matchCase.pattern.value === matchValue;
+      } else if (matchCase.pattern.type === 'StringLiteral') {
+        matched = matchCase.pattern.value === matchValue;
       } else if (matchCase.pattern.type === 'BooleanLiteral') {
         matched = matchCase.pattern.value === matchValue;
       } else if (matchCase.pattern.type === 'Identifier') {
@@ -857,9 +859,9 @@ export class Runtime {
 
   private matchPattern(value: unknown, pattern: { kind: string; value?: unknown }): boolean {
     if (!pattern || typeof pattern !== 'object') return false;
-    if ((pattern as any).kind === 'Wildcard') return true;
+    if ((pattern as any).kind === 'wildcard') return true;
     if ((pattern as any).kind === 'Identifier') return true; // simple binding (not stored yet)
-    if ((pattern as any).kind === 'Number') return value === (pattern as any).value;
+    if ((pattern as any).kind === 'literal') return value === (pattern as any).value;
     return false;
   }
 
