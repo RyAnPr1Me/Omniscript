@@ -349,6 +349,7 @@ export class Runtime {
       
       // Set up other globals if needed
       this.scope.set('console', console);
+      this.scope.set('log', console.log.bind(console)); // Add standalone log function
       this.scope.set('setTimeout', setTimeout);
       this.scope.set('setInterval', setInterval);
       this.scope.set('Object', Object);
