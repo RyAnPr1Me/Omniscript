@@ -40,7 +40,7 @@ Name: "quicklaunchicon"; Description: "{cm:CreateQuickLaunchIcon}"; GroupDescrip
 Name: "addtopath"; Description: "Add Omniscript to system PATH"; GroupDescription: "Environment"
 
 [Files]
-Source: "dist\cli.js"; DestDir: "{app}\bin"; Flags: ignoreversion
+Source: "bin\cli.js"; DestDir: "{app}\bin"; Flags: ignoreversion
 Source: "dist\*"; DestDir: "{app}\lib"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "LICENSE"; DestDir: "{app}"; Flags: ignoreversion
 Source: "README.md"; DestDir: "{app}"; Flags: ignoreversion
@@ -59,6 +59,7 @@ Name: "{userappdata}\Microsoft\Internet Explorer\Quick Launch\Omniscript"; Filen
 Filename: "{cmd}"; Parameters: "/c echo @echo off > ""{app}\omni.bat"""; Flags: runhidden waituntilterminated; StatusMsg: "Creating omni command..."
 Filename: "{cmd}"; Parameters: "/c echo node ""{app}\bin\cli.js"" %%* >> ""{app}\omni.bat"""; Flags: runhidden waituntilterminated
 Filename: "{cmd}"; Parameters: "/c copy ""{app}\omni.bat"" ""{sys}\omni.bat"""; Flags: runhidden waituntilterminated; StatusMsg: "Installing omni command globally..."
+Filename: "npm"; Parameters: "install --production"; WorkingDir: "{app}"; Flags: runhidden waituntilterminated; StatusMsg: "Installing dependencies..."
 Filename: "node"; Parameters: """{app}\bin\cli.js"" --version"; Description: "Verify Omniscript installation"; Flags: postinstall skipifsilent runhidden; StatusMsg: "Verifying installation..."
 
 [Registry]
