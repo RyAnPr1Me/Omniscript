@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "type": "commonjs",
   "bin": {
-    "omni": "./dist/cli.js",
+    "omni": "./bin/cli.js",
     "omniscript-installer": "./dist/bin/installManager.js"
   },
   "dependencies": {
