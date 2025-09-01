@@ -222,17 +222,58 @@ export class Runtime {
   }
 
   private executeFunction(fn: Bytecode): unknown {
-  if (fn.name) this.scope.set(fn.name, fn);
-  try {
-    let last: unknown = undefined;
-    for (const stmt of fn.body || []) {
-      last = this.execute(stmt as any);
+    // If function has a name, store it in scope
+    if (fn.name) {
+      this.scope.set(fn.name, fn);
     }
-    return last;
-  } catch (e: any) {
-    if (e && e.__return) return e.value;
-    throw e;
-  }
+    
+    // For anonymous functions, return a callable function object
+    if (!fn.name) {
+      return (...args: any[]) => {
+        // Create new scope with parameters
+        const oldScope = new Map(this.scope);
+        
+        // Bind parameters to arguments
+        if (fn.params) {
+          for (let i = 0; i < fn.params.length; i++) {
+            this.scope.set(fn.params[i], args[i]);
+          }
+        }
+        
+        try {
+          let last: unknown = undefined;
+          
+          // If body is a single expression, return its value
+          if (fn.body && fn.body.length === 1 && fn.body[0].type === 'Expression') {
+            last = this.evalExpr(fn.body[0] as any);
+          } else {
+            // Execute all statements in body
+            for (const stmt of fn.body || []) {
+              last = this.execute(stmt as any);
+            }
+          }
+          return last;
+        } catch (e: any) {
+          if (e && e.__return) return e.value;
+          throw e;
+        } finally {
+          // Restore original scope
+          this.scope = oldScope;
+        }
+      };
+    }
+    
+    // For named functions, execute the body to define the function
+    try {
+      let last: unknown = undefined;
+      for (const stmt of fn.body || []) {
+        last = this.execute(stmt as any);
+      }
+      return last;
+    } catch (e: any) {
+      if (e && e.__return) return e.value;
+      throw e;
+    }
   }
 
   private async executeFunctionAsync(fn: Bytecode): Promise<unknown> {
@@ -793,6 +834,10 @@ export class Runtime {
         return (((expr as any).elements) || []).map((e: any) => this.evalExpr(e));
       case 'Match': {
         return this.evalMatch(expr as any);
+      }
+      case 'Function': {
+        // Handle Function expressions by returning a callable function
+        return this.executeFunction(expr as any);
       }
       default:
         return undefined;
