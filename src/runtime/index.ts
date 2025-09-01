@@ -575,7 +575,7 @@ export class Runtime {
   private executeBlock(stmts: Bytecode[]): unknown {
     this.pushEnv();
     try {
-  let last;
+      let last;
       for (const s of stmts) {
         last = this.execute(s as any);
       }

@@ -392,7 +392,7 @@ export class Parser {
     // Handle member access expressions like user.name at the end
     const memberAccessRe = /([A-Za-z_]\w*)\.([A-Za-z_]\w*)\s*$/;
     const memberAccessMatch = memberAccessRe.exec(sourceWithoutFns.trim());
-    if (memberAccessMatch && !memberAccessMatch[0].includes('(')) {
+    if (memberAccessMatch && !memberAccessMatch[0].includes('(') && !sourceWithoutFns.trim().match(/typeof\s+[A-Za-z_]\w*\.[A-Za-z_]\w*\s*$/)) {
       const objName = memberAccessMatch[1];
       const memberName = memberAccessMatch[2];
       
@@ -446,10 +446,17 @@ export class Parser {
       for (const stmt of statements) {
         // Try to parse each statement (skip classes - already parsed)
         if (stmt.match(/^let\s+/)) {
-          this.parseLetStatement(stmt, body);
+          // Check if this variable declaration already exists
+          const letMatch = stmt.match(/let\s+([A-Za-z_]\w*)/);
+          const varName = letMatch ? letMatch[1] : null;
+          if (varName && !body.some(b => b.type === 'VariableDeclaration' && b.name === varName)) {
+            this.parseLetStatement(stmt, body);
+          }
         } else if (stmt.match(/^([A-Za-z_]\w*)\.([A-Za-z_]\w*)\(/)) {
           // Method call
           this.parseMethodCallStatement(stmt, body);
+        } else if (stmt.match(/^typeof\s+/)) {
+          // Skip typeof expressions - already handled in line processing
         } else if (stmt.length > 0 && !stmt.match(/^class\s+/)) {
           // Try to parse as simple expression (but skip classes)
           this.parseExpressionStatement(stmt, body);
@@ -484,6 +491,12 @@ export class Parser {
       const name = letMatch[1];
       const typeName = letMatch[2] ? letMatch[2] : undefined;
       const val = letMatch[3].trim();
+      
+      // Check if this variable declaration already exists
+      if (body.some(b => b.type === 'VariableDeclaration' && b.name === name)) {
+        continue; // Skip if already exists
+      }
+      
       // Handle string literals with quotes
       let initializer;
       if (val.match(/^".*"$/)) {
