@@ -7,7 +7,14 @@ import { Omniscript } from './index';
 import { enableDebugger, enableComponentDebug, DebugLevel } from './debug';
 
 const program = new Command();
-let omniscript = new Omniscript();
+let omniscript: Omniscript;
+
+function getOmniscript(options?: any): Omniscript {
+  if (!omniscript) {
+    omniscript = new Omniscript(options);
+  }
+  return omniscript;
+}
 
 function startRepl(engine: Omniscript) {
   const rl: ReadlineInterface = createInterface({
@@ -36,7 +43,7 @@ function startRepl(engine: Omniscript) {
 program
   .name('omni')
   .description('Omniscript CLI')
-  .version('0.1.0');
+  .version('0.1.0', '-v, --version', 'output the version number');
 
 program
   .command('run')
@@ -46,18 +53,18 @@ program
   .option('--no-cache', 'Disable compilation caching')
   .action(async (file: string, options: any) => {
     try {
-      // Recreate omniscript instance with performance options
-      if (options.fast || options.noCache !== undefined) {
-        omniscript = new Omniscript({
-          fastMode: options.fast || false,
-          compiler: {
-            enableCaching: options.noCache !== true
-          }
-        });
-      }
+      // Get omniscript instance with performance options
+      const omniscriptOptions = {
+        fastMode: options.fast || false,
+        compiler: {
+          enableCaching: options.noCache !== true
+        }
+      };
+      
+      const omniscriptInstance = getOmniscript(omniscriptOptions);
       
       const source = await readFile(file, 'utf-8');
-      const result = await omniscript.execute(source);
+      const result = await omniscriptInstance.execute(source);
       if (result !== undefined) {
         console.log(result);
       }
@@ -75,12 +82,11 @@ program
   .action(async (codeParts: string[], options: any) => {
     const code = codeParts.join(' ');
     try {
-      // Use fast mode if requested
-      if (options.fast) {
-        omniscript = new Omniscript({ fastMode: true });
-      }
+      // Get omniscript instance with fast mode if requested
+      const omniscriptOptions = options.fast ? { fastMode: true } : {};
+      const omniscriptInstance = getOmniscript(omniscriptOptions);
       
-      const result = await omniscript.execute(code);
+      const result = await omniscriptInstance.execute(code);
       if (result !== undefined) console.log(result);
     } catch (error) {
       console.error('Error:', error);
@@ -92,7 +98,7 @@ program
   .command('repl')
   .description('Start Omniscript REPL')
   .action(() => {
-    startRepl(omniscript);
+    startRepl(getOmniscript());
   });
 
 program
@@ -232,7 +238,7 @@ program
       try {
         const source = await fs.promises.readFile(watchFile, 'utf-8');
         console.log('\n📄 Running initial build...');
-        const result = await omniscript.execute(source);
+        const result = await getOmniscript().execute(source);
         if (result !== undefined) {
           console.log('✅ Output:', result);
         }
@@ -245,7 +251,7 @@ program
         console.log('\n🔄 File changed, reloading...');
         try {
           const source = await fs.promises.readFile(watchFile, 'utf-8');
-          const result = await omniscript.execute(source);
+          const result = await getOmniscript().execute(source);
           if (result !== undefined) {
             console.log('✅ Output:', result);
           }
