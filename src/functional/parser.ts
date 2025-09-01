@@ -187,8 +187,8 @@ export class FunctionalParser {
       decorators.push(decoratorName);
     }
     
-    if (this.peek('OBJECT')) {
-      this.consume('OBJECT');
+    if (this.peek('OBJECT') || this.peek('CLASS')) {
+      this.consume(this.peek('OBJECT') ? 'OBJECT' : 'CLASS');
       const name = this.consume('IDENT').value;
       // optional inheritance
       let parent: string | undefined;

@@ -45,6 +45,8 @@ export class Omniscript {
                                /\bvar\s+\w+\s*=/.test(source) ||  // Also detect var bindings
                                /\bdef\s+\w+\s*=/.test(source) ||  // Also detect def bindings
                                /\bobject\s+\w+\s*\{/.test(source) ||  // Also detect object definitions
+                               /\bclass\s+\w+\s*\{/.test(source) ||  // Also detect class definitions
+                               /\bimport\s+\{/.test(source) ||  // Also detect import statements
                                /\\\|>/.test(source) ||  // Also detect pipeline operations
                                /\b(curry|memoize|just|nothing|left|right|head|tail|cons|flip|add|inc)\s*\(/.test(source) || // Detect functional builtins
                                /\)\s*\(/.test(source); // Detect curried function calls like add(2)(3)
