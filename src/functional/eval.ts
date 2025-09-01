@@ -407,15 +407,33 @@ function evalExpr(expr: Expression, env: Env): any {
 			const i = expr as ImportDecl;
 			// Handle imports from 'stdlib'
 			if (i.from === 'stdlib') {
-				// Import the requested items into the current environment
-				const stdlib = {
-					HTTP: envLookup(env, 'HTTP'),
-					Database: envLookup(env, 'Database')
-				};
-				
-				for (const importName of i.imports) {
-					if (stdlib[importName as keyof typeof stdlib]) {
-						envDefine(env, importName, stdlib[importName as keyof typeof stdlib]);
+				try {
+					// Import the actual stdlib modules
+					const stdlib = require('../stdlib/index');
+					
+					for (const importName of i.imports) {
+						if (stdlib[importName]) {
+							let importValue = stdlib[importName];
+							
+							// Special handling for HTTP to match runtime behavior
+							if (importName === 'HTTP' && !importValue.Server) {
+								importValue.Server = stdlib.HTTPServer || stdlib.Server;
+							}
+							
+							envDefine(env, importName, importValue);
+						}
+					}
+				} catch (e: any) {
+					// Fallback to the old approach
+					const stdlib = {
+						HTTP: envLookup(env, 'HTTP'),
+						Database: envLookup(env, 'Database')
+					};
+					
+					for (const importName of i.imports) {
+						if (stdlib[importName as keyof typeof stdlib]) {
+							envDefine(env, importName, stdlib[importName as keyof typeof stdlib]);
+						}
 					}
 				}
 			}

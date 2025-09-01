@@ -226,3 +226,11 @@ app.listen(port, () => {
   Console.log(`  PUT    /users/:id`);
   Console.log(`  DELETE /users/:id`);
 });
+
+// Export main functionality
+export { app, User, handleError };
+
+// Example usage:
+// Run this file to start the REST API server
+// curl http://localhost:3000/health
+// curl http://localhost:3000/users

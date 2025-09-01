@@ -222,17 +222,58 @@ export class Runtime {
   }
 
   private executeFunction(fn: Bytecode): unknown {
-  if (fn.name) this.scope.set(fn.name, fn);
-  try {
-    let last: unknown = undefined;
-    for (const stmt of fn.body || []) {
-      last = this.execute(stmt as any);
+    // If function has a name, store it in scope
+    if (fn.name) {
+      this.scope.set(fn.name, fn);
     }
-    return last;
-  } catch (e: any) {
-    if (e && e.__return) return e.value;
-    throw e;
-  }
+    
+    // For anonymous functions, return a callable function object
+    if (!fn.name) {
+      return (...args: any[]) => {
+        // Create new scope with parameters
+        const oldScope = new Map(this.scope);
+        
+        // Bind parameters to arguments
+        if (fn.params) {
+          for (let i = 0; i < fn.params.length; i++) {
+            this.scope.set(fn.params[i], args[i]);
+          }
+        }
+        
+        try {
+          let last: unknown = undefined;
+          
+          // If body is a single expression, return its value
+          if (fn.body && fn.body.length === 1 && fn.body[0].type === 'Expression') {
+            last = this.evalExpr(fn.body[0] as any);
+          } else {
+            // Execute all statements in body
+            for (const stmt of fn.body || []) {
+              last = this.execute(stmt as any);
+            }
+          }
+          return last;
+        } catch (e: any) {
+          if (e && e.__return) return e.value;
+          throw e;
+        } finally {
+          // Restore original scope
+          this.scope = oldScope;
+        }
+      };
+    }
+    
+    // For named functions, execute the body to define the function
+    try {
+      let last: unknown = undefined;
+      for (const stmt of fn.body || []) {
+        last = this.execute(stmt as any);
+      }
+      return last;
+    } catch (e: any) {
+      if (e && e.__return) return e.value;
+      throw e;
+    }
   }
 
   private async executeFunctionAsync(fn: Bytecode): Promise<unknown> {
@@ -534,7 +575,7 @@ export class Runtime {
   private executeBlock(stmts: Bytecode[]): unknown {
     this.pushEnv();
     try {
-  let last;
+      let last;
       for (const s of stmts) {
         last = this.execute(s as any);
       }
@@ -629,8 +670,8 @@ export class Runtime {
     logger.debug('Runtime', 'Executing pattern match');
     logger.debug('Runtime', 'Match node structure:', JSON.stringify(node, null, 2));
     
-    const matchValue = this.evalExpr(node.expr);
-    const cases = node.cases || [];
+    const matchValue = this.evalExpr(node.expr || node.subject);
+    const cases = node.cases || node.arms || [];
     
     for (const matchCase of cases) {
       let matched = false;
@@ -640,6 +681,8 @@ export class Runtime {
       if (matchCase.pattern.type === 'Wildcard') {
         matched = true;
       } else if (matchCase.pattern.type === 'NumberLiteral') {
+        matched = matchCase.pattern.value === matchValue;
+      } else if (matchCase.pattern.type === 'StringLiteral') {
         matched = matchCase.pattern.value === matchValue;
       } else if (matchCase.pattern.type === 'BooleanLiteral') {
         matched = matchCase.pattern.value === matchValue;
@@ -675,12 +718,12 @@ export class Runtime {
           }
           
           try {
-            return this.evalExpr(matchCase.value);
+            return this.evalExpr(matchCase.action || matchCase.value || matchCase.expression);
           } finally {
             this.popEnv();
           }
         } else {
-          return this.evalExpr(matchCase.value);
+          return this.evalExpr(matchCase.action || matchCase.value || matchCase.expression);
         }
       }
     }
@@ -794,6 +837,10 @@ export class Runtime {
       case 'Match': {
         return this.evalMatch(expr as any);
       }
+      case 'Function': {
+        // Handle Function expressions by returning a callable function
+        return this.executeFunction(expr as any);
+      }
       default:
         return undefined;
     }
@@ -812,9 +859,9 @@ export class Runtime {
 
   private matchPattern(value: unknown, pattern: { kind: string; value?: unknown }): boolean {
     if (!pattern || typeof pattern !== 'object') return false;
-    if ((pattern as any).kind === 'Wildcard') return true;
+    if ((pattern as any).kind === 'wildcard') return true;
     if ((pattern as any).kind === 'Identifier') return true; // simple binding (not stored yet)
-    if ((pattern as any).kind === 'Number') return value === (pattern as any).value;
+    if ((pattern as any).kind === 'literal') return value === (pattern as any).value;
     return false;
   }
 

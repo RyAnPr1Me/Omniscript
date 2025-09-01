@@ -431,7 +431,16 @@ export class Compiler {
     return {
       type: 'Match',
       subject: node.subject || node.expr || null,
-      arms: (node.arms || node.cases || []).map((a: any) => ({ pattern: a.pattern || a.case || a.pat, expression: a.expression || a.value }))
+      arms: (node.arms || node.cases || []).map((a: any) => {
+        const arm: any = { 
+          pattern: a.pattern || a.case || a.pat, 
+          expression: a.expression || a.value || a.action 
+        };
+        if (a.guard) {
+          arm.guard = a.guard;
+        }
+        return arm;
+      })
     };
   }
 
