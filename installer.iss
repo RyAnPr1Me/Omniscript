@@ -40,8 +40,8 @@ Name: "quicklaunchicon"; Description: "{cm:CreateQuickLaunchIcon}"; GroupDescrip
 Name: "addtopath"; Description: "Add Omniscript to system PATH"; GroupDescription: "Environment"
 
 [Files]
-Source: "dist\**\*.js"; DestDir: "{app}\bin"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "dist\*"; DestDir: "{app}\lib"; Excludes: "bin,**\*.js"; Flags: ignoreversion recursesubdirs
+Source: "dist\cli.js"; DestDir: "{app}\bin"; Flags: ignoreversion
+Source: "dist\*"; DestDir: "{app}\lib"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "LICENSE"; DestDir: "{app}"; Flags: ignoreversion
 Source: "README.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "package.json"; DestDir: "{app}"; Flags: ignoreversion
