@@ -100,4 +100,5 @@ export { AOTCompiler, AOTCompilerOptions } from './compiler/aot';
 export { Runtime } from './runtime';
 export { SecurityManager, SandboxedEnvironment, SecurityError, ResourceMonitor } from './security';
 export { TypeScriptDocGenerator, MarkdownDocGenerator } from './docs-generator';
-export { SSRRenderer, SSRBuilder } from './ssr';
+// Temporarily comment out SSR export to fix CLI
+// export { SSRRenderer, SSRBuilder } from './ssr';

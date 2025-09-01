@@ -812,4 +812,7 @@ export class Graphics {
   };
 }
 
-logger.info('Graphics library initialized');
+// Only log initialization in non-CLI contexts
+if (!process.argv.some(arg => arg.includes('cli.js') || arg.includes('bin/cli'))) {
+  logger.info('Graphics library initialized');
+}

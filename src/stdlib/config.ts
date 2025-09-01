@@ -60,7 +60,10 @@ export class EnvironmentSource implements ConfigSource {
       config[configKey] = this.parseValue(value || '');
     }
     
-    logger.debug('Config', { count: Object.keys(config).length });
+    // Only log debug info in non-CLI contexts
+    if (!process.argv.some(arg => arg.includes('cli.js') || arg.includes('bin/cli'))) {
+      logger.debug('Config', { count: Object.keys(config).length });
+    }
     return config;
   }
 
@@ -141,7 +144,10 @@ export class FileSource implements ConfigSource {
       };
       
       const config = mockConfigs[this.filename] || {};
-      logger.debug('Config', { filename: this.filename });
+      // Only log debug info in non-CLI contexts
+      if (!process.argv.some(arg => arg.includes('cli.js') || arg.includes('bin/cli'))) {
+        logger.debug('Config', { filename: this.filename });
+      }
       return config;
     } catch (error) {
       logger.warn('Config', { filename: this.filename, error: String(error) });
@@ -152,18 +158,22 @@ export class FileSource implements ConfigSource {
   watch(callback: ConfigChangeListener): void {
     this.watchers.push(callback);
     
-    // Simulate file watching
-    setInterval(() => {
-      // In production, this would use real file system watchers
-      if (Math.random() < 0.01) { // 1% chance of simulated change
-        callback({
-          key: 'lastModified',
-          oldValue: Date.now() - 1000,
-          newValue: Date.now(),
-          source: this.name
-        });
-      }
-    }, 1000);
+    // Only set up file watching if not in CLI context
+    const isCLI = process.argv.some(arg => arg.includes('cli.js') || arg.includes('bin/cli'));
+    if (!isCLI) {
+      // Simulate file watching
+      setInterval(() => {
+        // In production, this would use real file system watchers
+        if (Math.random() < 0.01) { // 1% chance of simulated change
+          callback({
+            key: 'lastModified',
+            oldValue: Date.now() - 1000,
+            newValue: Date.now(),
+            source: this.name
+          });
+        }
+      }, 1000);
+    }
   }
 
   async save(config: Record<string, any>): Promise<void> {
@@ -281,10 +291,13 @@ export class Config {
     }
 
     this.lastCacheUpdate = Date.now();
-    logger.debug('Config - Configuration cache refreshed', {
-      sources: this.sources.length,
-      keys: Object.keys(this.cache).length
-    });
+    // Only log debug info in non-CLI contexts
+    if (!process.argv.some(arg => arg.includes('cli.js') || arg.includes('bin/cli'))) {
+      logger.debug('Config - Configuration cache refreshed', {
+        sources: this.sources.length,
+        keys: Object.keys(this.cache).length
+      });
+    }
   }
 
   private mergeConfig(target: Record<string, any>, source: Record<string, any>): void {
@@ -586,4 +599,7 @@ export const ConfigSchemas = {
 // Global configuration instance
 export const config = ConfigFactory.createDefault();
 
-logger.info('Configuration library initialized');
+// Only log initialization in non-CLI contexts
+if (!process.argv.some(arg => arg.includes('cli.js') || arg.includes('bin/cli'))) {
+  logger.info('Configuration library initialized');
+}

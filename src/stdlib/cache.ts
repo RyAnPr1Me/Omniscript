@@ -647,4 +647,7 @@ export const defaultCache = CacheFactory.createMemoryCache();
 export const tieredCache = CacheFactory.createTieredCache();
 export const memoizer = CacheFactory.createMemoizer();
 
-logger.info('Cache library initialized');
+// Only log initialization in non-CLI contexts
+if (!process.argv.some(arg => arg.includes('cli.js') || arg.includes('bin/cli'))) {
+  logger.info('Cache library initialized');
+}

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 const path = require('path');
 const fs = require('fs');
+const { spawn } = require('child_process');
 
 // Detect if we're running from a development environment or installed environment
 // In development: ../dist/cli.js exists
@@ -20,5 +21,11 @@ if (fs.existsSync(devCliPath)) {
   cliPath = devCliPath;
 }
 
-const realCli = require(cliPath);
-module.exports = realCli;
+// Execute the CLI with the original arguments
+const child = spawn('node', [cliPath, ...process.argv.slice(2)], {
+  stdio: 'inherit'
+});
+
+child.on('close', (code) => {
+  process.exit(code);
+});

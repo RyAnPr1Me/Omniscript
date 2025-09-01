@@ -707,4 +707,7 @@ export const Effects = {
   Distortion: DistortionEffect
 };
 
-logger.info('Audio library initialized');
+// Only log initialization in non-CLI contexts
+if (!process.argv.some(arg => arg.includes('cli.js') || arg.includes('bin/cli'))) {
+  logger.info('Audio library initialized');
+}
