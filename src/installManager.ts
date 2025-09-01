@@ -464,12 +464,60 @@ export class OmniscriptInstaller {
       console.log('Searched in:', possiblePaths);
     }
     
+    // Copy the JavaScript CLI file as fallback (create a launcher script)
+    const jsCliPaths = [
+      path.join(process.cwd(), 'dist', 'cli.js'),
+      path.join(__dirname, '..', 'cli.js'),
+      path.join(__dirname, 'cli.js')
+    ];
+    
+    let jsCliPath: string | undefined;
+    for (const p of jsCliPaths) {
+      if (fs.existsSync(p)) {
+        jsCliPath = p;
+        break;
+      }
+    }
+    
+    if (jsCliPath) {
+      // Create a launcher script instead of copying the CLI directly
+      const launcherScript = `#!/usr/bin/env node
+// Omniscript CLI Launcher
+const path = require('path');
+const fs = require('fs');
+
+// Determine the installation directory
+const installDir = path.dirname(__dirname);
+const cliPath = path.join(installDir, 'lib', 'dist', 'cli.js');
+
+// Check if the main CLI file exists
+if (fs.existsSync(cliPath)) {
+  // Execute the main CLI
+  require(cliPath);
+} else {
+  console.error('❌ Omniscript CLI not found at:', cliPath);
+  console.error('Please reinstall Omniscript or check your installation.');
+  process.exit(1);
+}
+`;
+      
+      const jsTargetPath = path.join(binPath, 'cli.js');
+      fs.writeFileSync(jsTargetPath, launcherScript);
+      fs.chmodSync(jsTargetPath, '755'); // Make executable
+      console.log(`✓ Installed JavaScript CLI launcher to: ${jsTargetPath}`);
+    } else {
+      console.warn('⚠️ Warning: Could not find JavaScript CLI file');
+      console.log('Searched in:', jsCliPaths);
+    }
+    
     // Copy required files
     const requiredFiles = [
       'package.json',
       'tsconfig.json',
       'src',
-      'stdlib'
+      'stdlib',
+      'dist',
+      'node_modules'
     ];
 
     for (const file of requiredFiles) {
