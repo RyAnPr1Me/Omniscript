@@ -42,17 +42,11 @@ describe('CLI', () => {
     });
 
     test('should display help with --help flag', async () => {
-      try {
-        await execAsync(`node ${cliPath} --help`);
-        // If no error was thrown, help was displayed successfully
-        fail('Expected help command to exit with non-zero code');
-      } catch (error: any) {
-        // Help command exits with code 1
-        const output = error.stdout || error.stderr || '';
-        expect(output).toContain('Usage: omni [options] [command]');
-        expect(output).toContain('Omniscript CLI');
-        expect(error.code).toBe(1);
-      }
+      const { stdout } = await execAsync(`node ${cliPath} --help`);
+      expect(stdout).toContain('Usage: omni [options] [command]');
+      expect(stdout).toContain('Omniscript CLI');
+      expect(stdout).toContain('-v, --version');
+      expect(stdout).toContain('-h, --help');
     });
   });
 

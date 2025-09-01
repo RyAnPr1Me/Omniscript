@@ -68,6 +68,9 @@ program
       if (result !== undefined) {
         console.log(result);
       }
+      
+      // Force process exit to prevent hanging
+      process.exit(0);
     } catch (error) {
       console.error('Error:', error);
       process.exit(1);
@@ -88,6 +91,9 @@ program
       
       const result = await omniscriptInstance.execute(code);
       if (result !== undefined) console.log(result);
+      
+      // Force process exit to prevent hanging
+      process.exit(0);
     } catch (error) {
       console.error('Error:', error);
       process.exit(1);

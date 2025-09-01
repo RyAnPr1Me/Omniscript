@@ -308,8 +308,12 @@ export class FileOutput implements LogOutput {
     private formatter: LogFormatter = new JsonFormatter(),
     private maxBufferSize = 100
   ) {
-    // Auto-flush periodically
-    setInterval(() => this.flush(), this.flushInterval);
+    // Only set up auto-flush if not in CLI context
+    const isCLI = process.argv.some(arg => arg.includes('cli.js') || arg.includes('bin/cli'));
+    if (!isCLI) {
+      // Auto-flush periodically
+      setInterval(() => this.flush(), this.flushInterval);
+    }
   }
 
   write(entry: LogEntry): void {
