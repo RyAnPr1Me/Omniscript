@@ -56,6 +56,17 @@ export class HTTP {
   static async fetch(url: string, options?: RequestInit) {
     return fetch(url, options);
   }
+
+  static createServer(path: string, handler: (req: any, res: any) => void) {
+    // Import HTTPServer here to avoid circular dependencies
+    const { HTTPServer } = require('./http/server');
+    const server = new HTTPServer();
+    server.get(path, handler);
+    server.listen(3000, () => {
+      console.log(`Server running on port 3000`);
+    });
+    return server;
+  }
 }
 
 // Enhanced HTTP exports

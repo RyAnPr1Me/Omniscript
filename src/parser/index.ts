@@ -181,12 +181,21 @@ export class Parser {
     
     
     
-    // Then parse all imports
+    // Then parse all imports and use statements
     const importRe = /import\s+\{([^}]+)\}\s+from\s+['"]([^'"]+)['"]/g;
     let importMatch: RegExpExecArray | null;
     while ((importMatch = importRe.exec(sourceWithoutFns)) !== null) {
       const imported = importMatch[1].split(',').map(s => s.trim());
       const from = importMatch[2];
+      body.push({ type: 'ImportDeclaration', imported, from });
+    }
+
+    // Parse use statements (Omniscript syntax)
+    const useRe = /use\s+\{([^}]+)\}\s+from\s+['"]([^'"]+)['"]/g;
+    let useMatch: RegExpExecArray | null;
+    while ((useMatch = useRe.exec(sourceWithoutFns)) !== null) {
+      const imported = useMatch[1].split(',').map(s => s.trim());
+      const from = useMatch[2];
       body.push({ type: 'ImportDeclaration', imported, from });
     }
     
@@ -602,13 +611,14 @@ export class Parser {
       body.push({ type: 'Match', expr: { type: 'Expression', kind: ExpressionKind.Identifier, name: subjectName }, cases });
     }
 
-    // simple let/variable declarations: let x: Type = value;
-    const letRe = /let\s+([A-Za-z_]\w*)(?:\s*:\s*([A-Za-z_]\w*))?\s*=\s*([^;\n]+)/g;
+    // simple let/variable declarations: let x: Type = value; or def x :: Type = value;
+    const letRe = /(let|def)\s+([A-Za-z_]\w*)(?:\s*(?:::?|:)\s*([A-Za-z_]\w*))?\s*=\s*([^;\n]+)/g;
     let letMatch: RegExpExecArray | null;
     while ((letMatch = letRe.exec(sourceWithoutFns)) !== null) {
-      const name = letMatch[1];
-      const typeName = letMatch[2] ? letMatch[2] : undefined;
-      const val = letMatch[3].trim();
+      const varType = letMatch[1]; // let or def
+      const name = letMatch[2];
+      const typeName = letMatch[3] ? letMatch[3] : undefined;
+      const val = letMatch[4].trim();
       
       // Check if this variable declaration already exists
       if (body.some(b => b.type === 'VariableDeclaration' && b.name === name)) {
@@ -715,11 +725,12 @@ export class Parser {
   }
 
   private parseLetStatement(stmt: string, body: any[]): void {
-    const letMatch = stmt.match(/let\s+([A-Za-z_]\w*)(?:\s*:\s*([A-Za-z_]\w*))?\s*=\s*(.+)/);
+    const letMatch = stmt.match(/(let|def)\s+([A-Za-z_]\w*)(?:\s*(?:::?|:)\s*([A-Za-z_]\w*))?\s*=\s*(.+)/);
     if (letMatch) {
-      const name = letMatch[1];
-      const typeName = letMatch[2] || undefined;
-      const val = letMatch[3].trim();
+      const varType = letMatch[1]; // let or def
+      const name = letMatch[2];
+      const typeName = letMatch[3] || undefined;
+      const val = letMatch[4].trim();
       
       let initializer;
       if (val.match(/^["'].*["']$/)) {

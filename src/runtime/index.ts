@@ -160,8 +160,12 @@ export class Runtime {
           return this.executeReturn(bytecode);
         case 'VarDecl':
           return this.executeVarDecl(bytecode as any);
+        case 'VariableDeclaration':
+          return this.executeVarDecl(bytecode as any);
         case 'Expr':
           return this.evalExpr((bytecode as any).expr);
+        case 'ExpressionStatement':
+          return this.executeExpressionStatement(bytecode as any);
         case 'If':
           return this.executeIf(bytecode as any);
         case 'While':
