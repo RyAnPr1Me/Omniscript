@@ -154,6 +154,108 @@ describe('Math Utilities', () => {
     });
   });
 
+  describe('Statistical Distributions', () => {
+    test('should calculate normal distribution', () => {
+      // Test standard normal distribution at mean
+      expect(MathUtils.normalDistribution(0, 0, 1)).toBeCloseTo(0.3989, 3);
+      
+      // Test with different parameters
+      expect(MathUtils.normalDistribution(5, 5, 2)).toBeCloseTo(0.1995, 3);
+    });
+
+    test('should calculate uniform distribution', () => {
+      expect(MathUtils.uniformDistribution(0.5, 0, 1)).toBe(1);
+      expect(MathUtils.uniformDistribution(-1, 0, 1)).toBe(0);
+      expect(MathUtils.uniformDistribution(2, 0, 1)).toBe(0);
+    });
+
+    test('should calculate exponential distribution', () => {
+      expect(MathUtils.exponentialDistribution(0, 1)).toBe(1);
+      expect(MathUtils.exponentialDistribution(-1, 1)).toBe(0);
+      expect(MathUtils.exponentialDistribution(1, 1)).toBeCloseTo(0.3679, 3);
+    });
+  });
+
+  describe('Numerical Methods', () => {
+    test('should calculate derivatives', () => {
+      const f = (x: number) => x * x; // f(x) = x^2, f'(x) = 2x
+      const derivative = MathUtils.derivative(f, 3);
+      expect(derivative).toBeCloseTo(6, 2); // f'(3) = 6
+    });
+
+    test('should calculate integrals', () => {
+      const f = (x: number) => x; // f(x) = x, integral from 0 to 2 = 2
+      const integral = MathUtils.integral(f, 0, 2);
+      expect(integral).toBeCloseTo(2, 1);
+    });
+
+    test('should find roots using Newton-Raphson', () => {
+      const f = (x: number) => x * x - 4; // x^2 - 4 = 0, roots at ±2
+      const root = MathUtils.newtonRaphson(f, 1.5);
+      expect(root).toBeCloseTo(2, 3);
+    });
+  });
+
+  describe('Computational Geometry', () => {
+    test('should calculate 2D distance', () => {
+      const p1 = { x: 0, y: 0 };
+      const p2 = { x: 3, y: 4 };
+      expect(MathUtils.distance2D(p1, p2)).toBe(5);
+    });
+
+    test('should calculate 3D distance', () => {
+      const p1 = { x: 0, y: 0, z: 0 };
+      const p2 = { x: 1, y: 1, z: 1 };
+      expect(MathUtils.distance3D(p1, p2)).toBeCloseTo(1.732, 3);
+    });
+
+    test('should determine point in polygon', () => {
+      const triangle = [
+        { x: 0, y: 0 },
+        { x: 2, y: 0 },
+        { x: 1, y: 2 }
+      ];
+      
+      expect(MathUtils.pointInPolygon({ x: 1, y: 1 }, triangle)).toBe(true);
+      expect(MathUtils.pointInPolygon({ x: 3, y: 3 }, triangle)).toBe(false);
+    });
+
+    test('should compute convex hull', () => {
+      const points = [
+        { x: 0, y: 0 },
+        { x: 1, y: 1 },
+        { x: 2, y: 0 },
+        { x: 1, y: 0.5 }, // Interior point
+        { x: 0, y: 2 }
+      ];
+      
+      const hull = MathUtils.convexHull(points);
+      expect(hull).toHaveLength(3); // Triangle hull
+    });
+  });
+
+  describe('Financial Mathematics', () => {
+    test('should calculate present value', () => {
+      const pv = MathUtils.presentValue(1000, 0.05, 1);
+      expect(pv).toBeCloseTo(952.38, 2);
+    });
+
+    test('should calculate future value', () => {
+      const fv = MathUtils.futureValue(1000, 0.05, 1);
+      expect(fv).toBe(1050);
+    });
+
+    test('should calculate compound interest', () => {
+      const ci = MathUtils.compoundInterest(1000, 0.05, 1, 12); // Monthly compounding
+      expect(ci).toBeCloseTo(1051.16, 2);
+    });
+
+    test('should calculate annuity payment', () => {
+      const payment = MathUtils.annuityPayment(100000, 0.05, 30);
+      expect(payment).toBeCloseTo(6505.14, 2);
+    });
+  });
+
   describe('Utility Functions', () => {
     test('should clamp values correctly', () => {
       expect(MathUtils.clamp(5, 0, 10)).toBe(5);

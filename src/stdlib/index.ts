@@ -9,10 +9,24 @@ export * from './http';
 export * from './database';
 export * from './media';
 export * from './ai';
+export * from './validation';
+export * from './logging';
+export * from './cache';
+export * from './graphics';
+export * from './serialization';
+export * from './config';
+export * from './audio';
 
 export { MathUtils as Math } from './math';
 export { DateTime } from './datetime';
 export { AI } from './ai';
+export { Validator, Sanitizer } from './validation';
+export { Logger, LoggerFactory, logger } from './logging';
+export { CacheFactory, defaultCache, tieredCache, memoizer } from './cache';
+export { Graphics } from './graphics';
+export { Serialization, Serialize } from './serialization';
+export { Config, ConfigFactory, config } from './config';
+export { Audio, Effects } from './audio';
 
 import { SQLiteConnection, PostgresConnection } from './database/connections';
 
