@@ -8,8 +8,22 @@ export * from './threading';
 export * from './http';
 export * from './database';
 
+// New expanded standard library modules
+export * from './fs';
+export * from './json';
+export * from './regex';
+export * from './encoding';
+export * from './path';
+
 export { MathUtils as Math } from './math';
 export { DateTime } from './datetime';
+
+// Export new modules with convenient aliases
+export { FileSystem as FS } from './fs';
+export { Json as JSON } from './json';
+export { Regex as RegExp } from './regex';
+export { Encoding } from './encoding';
+export { Path } from './path';
 
 import { SQLiteConnection, PostgresConnection } from './database/connections';
 
