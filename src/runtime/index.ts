@@ -483,6 +483,86 @@ export class Runtime {
       this.scope.set('ok', (value: any) => ({ __tag: 'Ok', value }));
       this.scope.set('err', (error: any) => ({ __tag: 'Err', error }));
       
+      // Add more functional programming utilities
+      this.scope.set('head', (arr: any[]) => arr.length > 0 ? arr[0] : undefined);
+      this.scope.set('tail', (arr: any[]) => arr.length > 1 ? arr.slice(1) : []);
+      this.scope.set('last', (arr: any[]) => arr.length > 0 ? arr[arr.length - 1] : undefined);
+      this.scope.set('init', (arr: any[]) => arr.length > 1 ? arr.slice(0, -1) : []);
+      this.scope.set('cons', (head: any, tail: any[]) => [head, ...tail]);
+      this.scope.set('flip', (fn: (a: any, b: any) => any) => (b: any, a: any) => fn(a, b));
+      this.scope.set('id', (x: any) => x);
+      this.scope.set('const', (x: any) => () => x);
+      this.scope.set('apply', (fn: (...args: any[]) => any, args: any[]) => fn(...args));
+      
+      // Add higher-order array functions  
+      this.scope.set('reverse', (arr: any[]) => [...arr].reverse());
+      this.scope.set('sort', (arr: any[], compareFn?: (a: any, b: any) => number) => [...arr].sort(compareFn));
+      this.scope.set('concat', (...arrays: any[][]) => ([] as any[]).concat(...arrays));
+      this.scope.set('zip', (arr1: any[], arr2: any[]) => {
+        const result = [];
+        const minLength = Math.min(arr1.length, arr2.length);
+        for (let i = 0; i < minLength; i++) {
+          result.push([arr1[i], arr2[i]]);
+        }
+        return result;
+      });
+      
+      // Add mathematical utilities
+      this.scope.set('add', (a: number, b: number) => a + b);
+      this.scope.set('subtract', (a: number, b: number) => a - b);
+      this.scope.set('multiply', (a: number, b: number) => a * b);
+      this.scope.set('divide', (a: number, b: number) => a / b);
+      this.scope.set('mod', (a: number, b: number) => a % b);
+      this.scope.set('inc', (x: number) => x + 1);
+      this.scope.set('dec', (x: number) => x - 1);
+      this.scope.set('negate', (x: number) => -x);
+      this.scope.set('abs', Math.abs);
+      this.scope.set('min', Math.min);
+      this.scope.set('max', Math.max);
+      this.scope.set('floor', Math.floor);
+      this.scope.set('ceil', Math.ceil);
+      this.scope.set('round', Math.round);
+      
+      // Add boolean utilities
+      this.scope.set('not', (x: any) => !x);
+      this.scope.set('and', (a: any, b: any) => a && b);
+      this.scope.set('or', (a: any, b: any) => a || b);
+      
+      // Add comparison utilities
+      this.scope.set('equals', (a: any, b: any) => a === b);
+      this.scope.set('notEquals', (a: any, b: any) => a !== b);
+      this.scope.set('lessThan', (a: any, b: any) => a < b);
+      this.scope.set('lessThanOrEqual', (a: any, b: any) => a <= b);
+      this.scope.set('greaterThan', (a: any, b: any) => a > b);
+      this.scope.set('greaterThanOrEqual', (a: any, b: any) => a >= b);
+      
+      // Add string utilities
+      this.scope.set('length', (str: string | any[]) => str.length);
+      this.scope.set('toUpperCase', (str: string) => str.toUpperCase());
+      this.scope.set('toLowerCase', (str: string) => str.toLowerCase());
+      this.scope.set('trim', (str: string) => str.trim());
+      this.scope.set('split', (str: string, separator: string) => str.split(separator));
+      this.scope.set('replace', (str: string, search: string, replace: string) => str.replace(search, replace));
+      this.scope.set('startsWith', (str: string, prefix: string) => str.startsWith(prefix));
+      this.scope.set('endsWith', (str: string, suffix: string) => str.endsWith(suffix));
+      this.scope.set('charAt', (str: string, index: number) => str.charAt(index));
+      this.scope.set('substring', (str: string, start: number, end?: number) => str.substring(start, end));
+      
+      // Add type checking utilities
+      this.scope.set('isUndefined', (x: any) => x === undefined);
+      this.scope.set('isNull', (x: any) => x === null);
+      this.scope.set('isString', (x: any) => typeof x === 'string');
+      this.scope.set('isNumber', (x: any) => typeof x === 'number' && !isNaN(x));
+      this.scope.set('isBoolean', (x: any) => typeof x === 'boolean');
+      this.scope.set('isFunction', (x: any) => typeof x === 'function');
+      this.scope.set('isObject', (x: any) => typeof x === 'object' && x !== null);
+      this.scope.set('isEmpty', (x: any) => {
+        if (x === null || x === undefined) return true;
+        if (Array.isArray(x) || typeof x === 'string') return x.length === 0;
+        if (typeof x === 'object') return Object.keys(x).length === 0;
+        return false;
+      });
+      
     } catch (error) {
       logger.warn('Runtime', `Failed to initialize stdlib globals: ${error}`);
     }
