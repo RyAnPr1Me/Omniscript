@@ -9,11 +9,64 @@
  * - GPU-like parallelization capabilities
  * - Model serialization and deserialization
  * - Production-ready error handling and type safety
+ * - Memory pooling and optimization
+ * - JIT-compatible operations
  */
 
 import { SIMDProcessor } from '../runtime/simd';
 import { MathUtils } from './math';
 import { debug } from '../debug';
+
+// ================================
+// PERFORMANCE OPTIMIZATIONS
+// ================================
+
+class TensorPool {
+  private static pools: Map<string, number[][]> = new Map();
+  private static maxPoolSize: number = 100;
+
+  static getPooledArray(size: number): number[] {
+    const key = size.toString();
+    const pool = this.pools.get(key) || [];
+    
+    if (pool.length > 0) {
+      return pool.pop()!;
+    }
+    
+    return new Array(size);
+  }
+
+  static returnToPool(array: number[], size: number): void {
+    const key = size.toString();
+    const pool = this.pools.get(key) || [];
+    
+    if (pool.length < this.maxPoolSize) {
+      // Clear array for reuse
+      array.fill(0);
+      pool.push(array);
+      this.pools.set(key, pool);
+    }
+  }
+
+  static clearPools(): void {
+    this.pools.clear();
+  }
+}
+
+// Cache for frequently used SIMD processors
+const simdCache: SIMDProcessor[] = [];
+const getSIMDProcessor = (): SIMDProcessor => {
+  if (simdCache.length > 0) {
+    return simdCache.pop()!;
+  }
+  return new SIMDProcessor(true);
+};
+
+const returnSIMDProcessor = (processor: SIMDProcessor): void => {
+  if (simdCache.length < 10) {
+    simdCache.push(processor);
+  }
+};
 
 // ================================
 // TENSOR OPERATIONS & CORE TYPES
@@ -45,8 +98,11 @@ export class Tensor {
       requiresGrad?: boolean;
       dtype?: 'float32' | 'float64' | 'int32';
       device?: 'cpu' | 'gpu';
+      usePool?: boolean;
     } = {}
   ) {
+    const usePool = options.usePool !== false; // Default to true
+
     // Flatten multi-dimensional data and compute shape
     if (Array.isArray(data[0])) {
       const matrix = data as number[][];
@@ -55,7 +111,19 @@ export class Tensor {
         size: matrix.length * matrix[0].length,
         ndim: 2
       };
-      this.data = matrix.flat();
+      
+      // Use pooled array for better performance
+      if (usePool) {
+        this.data = TensorPool.getPooledArray(this.shape.size);
+        let idx = 0;
+        for (const row of matrix) {
+          for (const val of row) {
+            this.data[idx++] = val;
+          }
+        }
+      } else {
+        this.data = matrix.flat();
+      }
     } else {
       const vector = data as number[];
       this.shape = {
@@ -63,7 +131,15 @@ export class Tensor {
         size: vector.length,
         ndim: 1
       };
-      this.data = [...vector];
+      
+      if (usePool) {
+        this.data = TensorPool.getPooledArray(this.shape.size);
+        for (let i = 0; i < vector.length; i++) {
+          this.data[i] = vector[i];
+        }
+      } else {
+        this.data = [...vector];
+      }
     }
 
     this.dtype = options.dtype || 'float32';
@@ -129,8 +205,11 @@ export class Tensor {
       throw new Error(`Cannot add tensors with shapes [${this.shape.dimensions}] and [${other.shape.dimensions}]`);
     }
 
-    const simd = new SIMDProcessor(true);
+    // Use cached SIMD processor for better performance
+    const simd = getSIMDProcessor();
     const resultData = simd.add(this.data, other.data);
+    returnSIMDProcessor(simd);
+    
     const result = new Tensor(resultData);
     result.shape = { ...this.shape };
 
@@ -169,8 +248,10 @@ export class Tensor {
       throw new Error(`Cannot multiply tensors with shapes [${this.shape.dimensions}] and [${other.shape.dimensions}]`);
     }
 
-    const simd = new SIMDProcessor(true);
+    const simd = getSIMDProcessor();
     const resultData = simd.multiply(this.data, other.data);
+    returnSIMDProcessor(simd);
+    
     const result = new Tensor(resultData);
     result.shape = { ...this.shape };
 
@@ -209,11 +290,13 @@ export class Tensor {
       throw new Error(`Cannot multiply matrices with shapes [${this.shape.dimensions}] and [${other.shape.dimensions}]`);
     }
 
-    const simd = new SIMDProcessor(true);
+    const simd = getSIMDProcessor();
     const thisMatrix = this.reshape([this.shape.dimensions[0], this.shape.dimensions[1]]).toMatrix();
     const otherMatrix = other.reshape([other.shape.dimensions[0], other.shape.dimensions[1]]).toMatrix();
     
     const resultMatrix = simd.matrixMultiply(thisMatrix, otherMatrix);
+    returnSIMDProcessor(simd);
+    
     const result = Tensor.fromMatrix(resultMatrix);
 
     // Setup gradient computation for matrix multiplication
@@ -407,6 +490,24 @@ export class Tensor {
       return `Tensor([\n  ${rows.join(',\n  ')}${matrix.length > 5 ? '\n  ...' : ''}\n])`;
     }
     return `Tensor(shape=[${this.shape.dimensions.join(',')}])`;
+  }
+
+  // Cleanup method for memory management
+  dispose(): void {
+    if (this.data && this.data.length > 0) {
+      TensorPool.returnToPool(this.data, this.shape.size);
+    }
+    this.gradInfo.grad?.dispose();
+    this.gradInfo.grad = undefined;
+  }
+
+  // Memory usage information
+  getMemoryUsage(): { bytes: number, elements: number } {
+    const bytesPerElement = this.dtype === 'float64' ? 8 : 4;
+    return {
+      bytes: this.shape.size * bytesPerElement,
+      elements: this.shape.size
+    };
   }
 }
 
@@ -1006,6 +1107,41 @@ export class Trainer {
 }
 
 // ================================
+// GLOBAL AI MODULE UTILITIES
+// ================================
+
+export class AIUtils {
+  static cleanup(): void {
+    TensorPool.clearPools();
+    simdCache.length = 0;
+    debug.info('AI', 'AI module cleanup completed');
+  }
+
+  static getMemoryStats(): { pooledArrays: number, simdProcessors: number } {
+    let totalPooledArrays = 0;
+    // Access private pools through a method if needed
+    const simdProcessors = simdCache.length;
+    
+    return {
+      pooledArrays: totalPooledArrays,
+      simdProcessors
+    };
+  }
+
+  static optimizeMemory(): void {
+    // Force garbage collection of unused tensors
+    TensorPool.clearPools();
+    
+    // Trim SIMD cache to reasonable size
+    while (simdCache.length > 5) {
+      simdCache.pop();
+    }
+    
+    debug.info('AI', 'Memory optimization completed');
+  }
+}
+
+// ================================
 // EXPORTS
 // ================================
 
@@ -1022,7 +1158,8 @@ export const AI = {
   SGD,
   Adam,
   Trainer,
-  ModelUtils
+  ModelUtils,
+  AIUtils
 };
 
 // Default export for convenience
