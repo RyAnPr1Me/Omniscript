@@ -8,9 +8,11 @@ export * from './threading';
 export * from './http';
 export * from './database';
 export * from './media';
+export * from './ai';
 
 export { MathUtils as Math } from './math';
 export { DateTime } from './datetime';
+export { AI } from './ai';
 
 import { SQLiteConnection, PostgresConnection } from './database/connections';
 
