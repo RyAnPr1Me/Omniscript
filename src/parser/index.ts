@@ -244,11 +244,14 @@ export class Parser {
       } else if (valueExpr.match(/^\{.*\}$/)) {
         // Object literal: { key: value, key2: value2 }
         initializer = this.parseObjectLiteral(valueExpr);
-      } else if (valueExpr.match(/^(?:fn\s*)?\(.+\)\s*=>/)) {
+      } else if (valueExpr.match(/^\[.*\]$/)) {
+        // Array literal: [item1, item2, ...]
+        initializer = this.parseArrayLiteral(valueExpr);
+      } else if (valueExpr.match(/^(?:fn\s*)?\([^)]*\)\s*=>/)) {
         // Anonymous function: fn(...) => ... or (...) => ...
         const fnMatch = valueExpr.match(/^(?:fn\s*)?\(([^)]*)\)\s*=>\s*(.+)$/);
         if (fnMatch) {
-          const params = fnMatch[1].trim() ? fnMatch[1].split(',').map(p => ({ name: p.trim() })) : [];
+          const params = fnMatch[1].trim() ? fnMatch[1].split(',').map(p => p.trim()) : [];
           const body = fnMatch[2].trim();
           
           // Parse function body
@@ -271,7 +274,7 @@ export class Parser {
             type: 'Function', 
             name: null,
             params: params,
-            body: bodyExpr
+            body: [bodyExpr]  // Wrap in array
           };
         }
       } else {
@@ -607,11 +610,14 @@ export class Parser {
       } else if (val.match(/^\{.*\}$/)) {
         // Object literal: { key: value, key2: value2 }
         initializer = this.parseObjectLiteral(val);
-      } else if (val.match(/^(?:fn\s*)?\(.+\)\s*=>/)) {
+      } else if (val.match(/^\[.*\]$/)) {
+        // Array literal: [item1, item2, ...]
+        initializer = this.parseArrayLiteral(val);
+      } else if (val.match(/^(?:fn\s*)?\([^)]*\)\s*=>/)) {
         // Anonymous function: fn(...) => ... or (...) => ...
         const fnMatch = val.match(/^(?:fn\s*)?\(([^)]*)\)\s*=>\s*(.+)$/);
         if (fnMatch) {
-          const params = fnMatch[1].trim() ? fnMatch[1].split(',').map(p => ({ name: p.trim() })) : [];
+          const params = fnMatch[1].trim() ? fnMatch[1].split(',').map(p => p.trim()) : [];
           const body = fnMatch[2].trim();
           
           // Parse function body
@@ -634,7 +640,7 @@ export class Parser {
             type: 'Function', 
             name: null,
             params: params,
-            body: bodyExpr
+            body: [bodyExpr]  // Wrap in array
           };
         }
       } else if (val.match(/^new\s+([A-Za-z_]\w*)\s*\(([^)]*)\)$/)) {
@@ -1028,6 +1034,7 @@ export class Parser {
     const parts = [];
     let current = '';
     let braceDepth = 0;
+    let parenDepth = 0;
     let inQuotes = false;
     let quoteChar = '';
     
@@ -1042,7 +1049,11 @@ export class Parser {
           braceDepth++;
         } else if (char === '}') {
           braceDepth--;
-        } else if (char === delimiter && braceDepth === 0) {
+        } else if (char === '(') {
+          parenDepth++;
+        } else if (char === ')') {
+          parenDepth--;
+        } else if (char === delimiter && braceDepth === 0 && parenDepth === 0) {
           parts.push(current);
           current = '';
           continue;
@@ -1093,11 +1104,11 @@ export class Parser {
         } else if (valueStr.match(/^\d+$/)) {
           // Number literal
           value = { type: 'Expression', kind: ExpressionKind.Literal, value: Number(valueStr) };
-        } else if (valueStr.match(/^(fn\s*)?\(.+\)\s*=>/)) {
+        } else if (valueStr.match(/^(fn\s*)?\([^)]*\)\s*=>/)) {
           // Arrow function or fn function
           const arrowMatch = valueStr.match(/^(?:fn\s*)?\(([^)]*)\)\s*=>\s*(.+)$/);
           if (arrowMatch) {
-            const params = arrowMatch[1].trim() ? arrowMatch[1].split(',').map(p => ({ name: p.trim() })) : [];
+            const params = arrowMatch[1].trim() ? arrowMatch[1].split(',').map(p => p.trim()) : [];
             const body = arrowMatch[2].trim();
             
             // Parse function body
@@ -1120,7 +1131,7 @@ export class Parser {
               type: 'Function', 
               name: null,
               params: params,
-              body: bodyExpr
+              body: [bodyExpr]  // Wrap in array
             };
           } else {
             value = { type: 'Expression', kind: ExpressionKind.Identifier, name: valueStr };
@@ -1135,5 +1146,38 @@ export class Parser {
     }
     
     return { type: 'Expression', kind: ExpressionKind.ObjectLiteral, properties };
+  }
+
+  private parseArrayLiteral(arrStr: string): any {
+    // Parse array literal like: [item1, item2, item3]
+    const content = arrStr.slice(1, -1).trim(); // Remove [ and ]
+    
+    if (!content) {
+      // Empty array
+      return { type: 'Expression', kind: ExpressionKind.ArrayLiteral, elements: [] };
+    }
+    
+    const elements = [];
+    const parts = this.smartSplit(content, ',');
+    
+    for (const part of parts) {
+      const trimmed = part.trim();
+      let element;
+      
+      if (trimmed.match(/^["'].*["']$/)) {
+        // String literal
+        element = { type: 'Expression', kind: ExpressionKind.Literal, value: trimmed.slice(1, -1) };
+      } else if (trimmed.match(/^\d+$/)) {
+        // Number literal
+        element = { type: 'Expression', kind: ExpressionKind.Literal, value: Number(trimmed) };
+      } else {
+        // Identifier or other expression
+        element = { type: 'Expression', kind: ExpressionKind.Identifier, name: trimmed };
+      }
+      
+      elements.push(element);
+    }
+    
+    return { type: 'Expression', kind: ExpressionKind.ArrayLiteral, elements };
   }
 }
