@@ -292,4 +292,140 @@ export class MathUtils {
   static complexMagnitude(complex: {real: number, imag: number}): number {
     return Math.sqrt(complex.real * complex.real + complex.imag * complex.imag);
   }
+
+  // Statistical distributions
+  static normalDistribution(x: number, mean: number = 0, stdDev: number = 1): number {
+    const coefficient = 1 / (stdDev * Math.sqrt(2 * this.PI));
+    const exponent = -0.5 * Math.pow((x - mean) / stdDev, 2);
+    return coefficient * Math.exp(exponent);
+  }
+
+  static uniformDistribution(x: number, min: number = 0, max: number = 1): number {
+    if (x < min || x > max) return 0;
+    return 1 / (max - min);
+  }
+
+  static exponentialDistribution(x: number, lambda: number = 1): number {
+    if (x < 0) return 0;
+    return lambda * Math.exp(-lambda * x);
+  }
+
+  // Advanced numerical methods
+  static derivative(fn: (x: number) => number, x: number, h: number = 1e-7): number {
+    return (fn(x + h) - fn(x - h)) / (2 * h);
+  }
+
+  static integral(fn: (x: number) => number, a: number, b: number, n: number = 1000): number {
+    const h = (b - a) / n;
+    let sum = (fn(a) + fn(b)) / 2;
+    
+    for (let i = 1; i < n; i++) {
+      sum += fn(a + i * h);
+    }
+    
+    return sum * h;
+  }
+
+  static newtonRaphson(fn: (x: number) => number, x0: number, maxIterations: number = 100, tolerance: number = 1e-10): number {
+    let x = x0;
+    
+    for (let i = 0; i < maxIterations; i++) {
+      const fx = fn(x);
+      const dfx = this.derivative(fn, x);
+      
+      if (Math.abs(dfx) < tolerance) {
+        throw new Error('Derivative is too small, no convergence');
+      }
+      
+      const newX = x - fx / dfx;
+      
+      if (Math.abs(newX - x) < tolerance) {
+        return newX;
+      }
+      
+      x = newX;
+    }
+    
+    throw new Error('No convergence after maximum iterations');
+  }
+
+  // Computational geometry
+  static distance2D(p1: {x: number, y: number}, p2: {x: number, y: number}): number {
+    return Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
+  }
+
+  static distance3D(p1: {x: number, y: number, z: number}, p2: {x: number, y: number, z: number}): number {
+    return Math.sqrt(
+      Math.pow(p2.x - p1.x, 2) + 
+      Math.pow(p2.y - p1.y, 2) + 
+      Math.pow(p2.z - p1.z, 2)
+    );
+  }
+
+  static pointInPolygon(point: {x: number, y: number}, polygon: {x: number, y: number}[]): boolean {
+    let inside = false;
+    
+    for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+      if (((polygon[i].y > point.y) !== (polygon[j].y > point.y)) &&
+          (point.x < (polygon[j].x - polygon[i].x) * (point.y - polygon[i].y) / (polygon[j].y - polygon[i].y) + polygon[i].x)) {
+        inside = !inside;
+      }
+    }
+    
+    return inside;
+  }
+
+  static convexHull(points: {x: number, y: number}[]): {x: number, y: number}[] {
+    if (points.length < 3) return points;
+
+    // Sort points lexicographically
+    const sorted = [...points].sort((a, b) => a.x === b.x ? a.y - b.y : a.x - b.x);
+
+    // Build lower hull
+    const lower: {x: number, y: number}[] = [];
+    for (const point of sorted) {
+      while (lower.length >= 2 && this.cross(lower[lower.length - 2], lower[lower.length - 1], point) <= 0) {
+        lower.pop();
+      }
+      lower.push(point);
+    }
+
+    // Build upper hull
+    const upper: {x: number, y: number}[] = [];
+    for (let i = sorted.length - 1; i >= 0; i--) {
+      const point = sorted[i];
+      while (upper.length >= 2 && this.cross(upper[upper.length - 2], upper[upper.length - 1], point) <= 0) {
+        upper.pop();
+      }
+      upper.push(point);
+    }
+
+    // Remove last point of each half because it's repeated
+    lower.pop();
+    upper.pop();
+    
+    return [...lower, ...upper];
+  }
+
+  private static cross(o: {x: number, y: number}, a: {x: number, y: number}, b: {x: number, y: number}): number {
+    return (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
+  }
+
+  // Financial mathematics
+  static presentValue(futureValue: number, rate: number, periods: number): number {
+    return futureValue / Math.pow(1 + rate, periods);
+  }
+
+  static futureValue(presentValue: number, rate: number, periods: number): number {
+    return presentValue * Math.pow(1 + rate, periods);
+  }
+
+  static compoundInterest(principal: number, rate: number, periods: number, compoundingFrequency: number = 1): number {
+    return principal * Math.pow(1 + rate / compoundingFrequency, compoundingFrequency * periods);
+  }
+
+  static annuityPayment(principal: number, rate: number, periods: number): number {
+    if (rate === 0) return principal / periods;
+    return principal * (rate * Math.pow(1 + rate, periods)) / (Math.pow(1 + rate, periods) - 1);
+  }
 }

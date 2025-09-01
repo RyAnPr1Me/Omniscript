@@ -9,10 +9,16 @@ export * from './http';
 export * from './database';
 export * from './media';
 export * from './ai';
+export * from './validation';
+export * from './logging';
+export * from './cache';
 
 export { MathUtils as Math } from './math';
 export { DateTime } from './datetime';
 export { AI } from './ai';
+export { Validator, Sanitizer } from './validation';
+export { Logger, LoggerFactory, logger } from './logging';
+export { CacheFactory, defaultCache, tieredCache, memoizer } from './cache';
 
 import { SQLiteConnection, PostgresConnection } from './database/connections';
 
