@@ -350,9 +350,29 @@ export class Runtime {
       // Set up other globals if needed
       this.scope.set('console', console);
       this.scope.set('log', console.log.bind(console)); // Add standalone log function
+      
+      // Add other common logging functions that users expect
+      this.scope.set('print', console.log.bind(console)); // Common alternative to log
+      this.scope.set('error', console.error.bind(console)); // For error logging
+      this.scope.set('warn', console.warn.bind(console)); // For warning logging
+      this.scope.set('info', console.info.bind(console)); // For info logging
+      this.scope.set('debug', console.debug.bind(console)); // For debug logging
+      
+      // Add timer functions
       this.scope.set('setTimeout', setTimeout);
       this.scope.set('setInterval', setInterval);
+      this.scope.set('clearTimeout', clearTimeout);
+      this.scope.set('clearInterval', clearInterval);
+      
+      // Add core JS objects
       this.scope.set('Object', Object);
+      this.scope.set('Array', Array);
+      this.scope.set('String', String);
+      this.scope.set('Number', Number);
+      this.scope.set('Boolean', Boolean);
+      this.scope.set('Date', Date);
+      this.scope.set('Math', Math);
+      this.scope.set('JSON', JSON);
       
     } catch (error) {
       logger.warn('Runtime', `Failed to initialize stdlib globals: ${error}`);

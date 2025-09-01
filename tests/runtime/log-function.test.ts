@@ -1,7 +1,4 @@
 import { Omniscript } from '../../src/index';
-import { createWriteStream } from 'fs';
-import { tmpdir } from 'os';
-import path from 'path';
 
 describe('Log Function Integration', () => {
   let omniscript: Omniscript;
@@ -24,6 +21,33 @@ describe('Log Function Integration', () => {
     `;
     
     // This should not throw an error
+    await expect(omniscript.execute(testScript)).resolves.not.toThrow();
+  });
+
+  test('should allow common logging functions to work without errors', async () => {
+    const testScript = `
+      log("Using log");
+      print("Using print");
+      error("Using error");
+      warn("Using warn");
+      info("Using info");
+      debug("Using debug");
+    `;
+    
+    // This should not throw an error
+    await expect(omniscript.execute(testScript)).resolves.not.toThrow();
+  });
+
+  test('should provide access to core JavaScript objects', async () => {
+    const testScript = `
+      const arr = new Array(1, 2, 3);
+      const str = new String("test");
+      const num = new Number(42);
+      const bool = new Boolean(true);
+      const obj = new Object();
+      log("All objects created successfully");
+    `;
+    
     await expect(omniscript.execute(testScript)).resolves.not.toThrow();
   });
 });
