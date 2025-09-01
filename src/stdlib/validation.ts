@@ -629,7 +629,12 @@ export class Sanitizer {
   }
 
   static stripTags(input: string): string {
-    return input.replace(/<[^>]*>/g, '');
+    let previous;
+    do {
+      previous = input;
+      input = input.replace(/<[^>]*>/g, '');
+    } while (input !== previous);
+    return input;
   }
 
   static normalizeWhitespace(input: string): string {
