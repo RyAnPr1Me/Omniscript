@@ -824,8 +824,11 @@ export class Runtime {
     
     // Handle stdlib imports
     if (source === 'stdlib') {
-      // Import from our stdlib
-      const stdlibModule = require('../stdlib/index');
+      // First try to load from Omniscript-based stdlib (*.os files)
+      const omnistdlibModule = this.loadOmniscriptStdlib();
+      
+      // If Omniscript stdlib is available, use it; otherwise fall back to TypeScript stdlib
+      const stdlibModule = omnistdlibModule || require('../stdlib/index');
       const { Database, HTTP, DateTime, Console, HTTPClient, PackageManager, DOM, db } = stdlibModule;
       
       // Make sure HTTP has the correct structure for tests
@@ -860,6 +863,80 @@ export class Runtime {
     // Handle other module imports (could be extended)
     logger.warn('Runtime', `Module imports from '${node.source}' not fully implemented`);
     return {};
+  }
+
+  private loadOmniscriptStdlib(): any {
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      
+      // Check if stdlib-omni directory exists
+      const omnistdlibPath = path.join(__dirname, '../stdlib-omni');
+      if (!fs.existsSync(omnistdlibPath)) {
+        logger.debug('Runtime', 'Omniscript stdlib directory not found, falling back to TypeScript stdlib');
+        return null;
+      }
+
+      // Load and execute Omniscript stdlib modules
+      const omnistdlib: any = {};
+      
+      // List of core modules to load
+      const coreModules = ['index', 'collections', 'math', 'datetime', 'crypto', 'network'];
+      
+      for (const moduleName of coreModules) {
+        const modulePath = path.join(omnistdlibPath, `${moduleName}.os`);
+        if (fs.existsSync(modulePath)) {
+          try {
+            const moduleSource = fs.readFileSync(modulePath, 'utf-8');
+            const moduleExports = this.executeOmniscriptModule(moduleSource, moduleName);
+            Object.assign(omnistdlib, moduleExports);
+            logger.info('Runtime', `Loaded Omniscript stdlib module: ${moduleName}`);
+          } catch (error) {
+            logger.warn('Runtime', `Failed to load Omniscript module ${moduleName}: ${error}`);
+          }
+        }
+      }
+
+      // If we loaded any Omniscript modules, return them; otherwise return null
+      return Object.keys(omnistdlib).length > 0 ? omnistdlib : null;
+    } catch (error) {
+      logger.warn('Runtime', `Error loading Omniscript stdlib: ${error}`);
+      return null;
+    }
+  }
+
+  private executeOmniscriptModule(source: string, moduleName: string): any {
+    try {
+      // Parse and execute the Omniscript module
+      const Parser = require('../parser').Parser;
+      const Compiler = require('../compiler').Compiler;
+      
+      const parser = new Parser();
+      const compiler = new Compiler();
+      
+      const ast = parser.parse(source);
+      const bytecode = compiler.compile(ast);
+      
+      // Create a new runtime context for the module
+      const moduleRuntime = new Runtime();
+      const result = moduleRuntime.execute(bytecode);
+      
+      // Extract exported items from the module
+      const exports: any = {};
+      
+      // For now, extract all classes and functions from the module's scope
+      for (const [key, value] of moduleRuntime.scope.entries()) {
+        if (typeof value === 'function' || (value && typeof value === 'object' && value.constructor !== Object)) {
+          exports[key] = value;
+        }
+      }
+      
+      logger.debug('Runtime', `Omniscript module ${moduleName} exported: ${Object.keys(exports).join(', ')}`);
+      return exports;
+    } catch (error) {
+      logger.error('Runtime', `Failed to execute Omniscript module: ${error}`);
+      throw error;
+    }
   }
 
   private evalUnary(expr: { left: Bytecode; operator: string }): unknown {
