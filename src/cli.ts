@@ -592,4 +592,20 @@ program
     }
   });
 
-program.parse();
+// Handle Windows batch file %* argument issue
+const args = process.argv.slice(2);
+
+// Filter out literal %* arguments which can occur due to Windows batch file issues
+const filteredArgs = args.filter(arg => arg !== '%*');
+
+// If we filtered out %* and have no other args, or if the original args contained only %*
+if ((args.length > 0 && filteredArgs.length === 0) || (args.length === 1 && args[0] === '%*')) {
+  // Show help instead of throwing unknown command error
+  program.help();
+} else if (filteredArgs.length !== args.length) {
+  // If we filtered out some %* arguments, parse with the filtered arguments
+  program.parse(['node', 'omni', ...filteredArgs]);
+} else {
+  // Normal case - no %* issues
+  program.parse();
+}
