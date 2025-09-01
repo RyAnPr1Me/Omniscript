@@ -73,7 +73,8 @@ export class Omniscript {
     try {
       const ast = this.parser.parse(source);
       const bytecode = this.compiler.compile(ast);
-      return this.runtime.execute(bytecode as any);
+      const result = this.runtime.execute(bytecode as any);
+      return result;
     } catch (err) {
       // Preprocess: wrap immediately-invoked lambdas `fn(...)=>... (args)` -> `(fn(...)=>...)(args)`
       try {

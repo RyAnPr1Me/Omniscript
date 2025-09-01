@@ -373,6 +373,115 @@ export class Runtime {
       this.scope.set('Date', Date);
       this.scope.set('Math', Math);
       this.scope.set('JSON', JSON);
+      this.scope.set('RegExp', RegExp);
+      this.scope.set('Error', Error);
+      this.scope.set('Promise', Promise);
+      
+      // Add global utility functions
+      this.scope.set('parseInt', parseInt);
+      this.scope.set('parseFloat', parseFloat);
+      this.scope.set('isNaN', isNaN);
+      this.scope.set('isFinite', isFinite);
+      this.scope.set('encodeURIComponent', encodeURIComponent);
+      this.scope.set('decodeURIComponent', decodeURIComponent);
+      this.scope.set('encodeURI', encodeURI);
+      this.scope.set('decodeURI', decodeURI);
+      
+      // Add Array static methods
+      this.scope.set('isArray', Array.isArray);
+      
+      // Add common array methods as global functions for functional programming
+      this.scope.set('map', (arr: any[], fn: (...args: any[]) => any) => arr.map(fn));
+      this.scope.set('filter', (arr: any[], fn: (...args: any[]) => any) => arr.filter(fn));
+      this.scope.set('reduce', (arr: any[], initial: any, fn?: (...args: any[]) => any) => {
+        if (arguments.length === 2) {
+          return arr.reduce(initial);
+        }
+        return arr.reduce(fn!, initial);
+      });
+      this.scope.set('forEach', (arr: any[], fn: (...args: any[]) => any) => arr.forEach(fn));
+      this.scope.set('find', (arr: any[], fn: (...args: any[]) => any) => arr.find(fn));
+      this.scope.set('findIndex', (arr: any[], fn: (...args: any[]) => any) => arr.findIndex(fn));
+      this.scope.set('includes', (arr: any[], item: any) => arr.includes(item));
+      this.scope.set('indexOf', (arr: any[], item: any) => arr.indexOf(item));
+      this.scope.set('join', (arr: any[], separator?: string) => arr.join(separator));
+      this.scope.set('slice', (arr: any[], start?: number, end?: number) => arr.slice(start, end));
+      this.scope.set('flatMap', (arr: any[], fn: (...args: any[]) => any) => arr.flatMap ? arr.flatMap(fn) : arr.map(fn).flat());
+      this.scope.set('flat', (arr: any[], depth?: number) => arr.flat ? arr.flat(depth) : arr);
+      
+      // Add range function for functional programming
+      this.scope.set('range', (start: number, end?: number, step?: number) => {
+        if (end === undefined) {
+          end = start;
+          start = 0;
+        }
+        if (step === undefined) step = 1;
+        const result: number[] = [];
+        for (let i = start; i < end; i += step) {
+          result.push(i);
+        }
+        return result;
+      });
+      
+      // Add take function for functional programming
+      this.scope.set('take', (arr: any[], count: number) => arr.slice(0, count));
+      
+      // Add function composition utilities
+      this.scope.set('compose', (...fns: ((...args: any[]) => any)[]) => {
+        return (x: any) => fns.reduceRight((acc, fn) => fn(acc), x);
+      });
+      
+      // Add curry function
+      this.scope.set('curry', (fn: (...args: any[]) => any) => {
+        return function curried(this: any, ...args: any[]): any {
+          if (args.length >= fn.length) {
+            return fn.apply(this, args);
+          } else {
+            return function(this: any, ...args2: any[]): any {
+              return curried.apply(this, args.concat(args2));
+            };
+          }
+        };
+      });
+      
+      // Add memoization
+      this.scope.set('memoize', (fn: (...args: any[]) => any) => {
+        const cache = new Map();
+        return (...args: any[]) => {
+          const key = JSON.stringify(args);
+          if (cache.has(key)) {
+            return cache.get(key);
+          }
+          const result = fn(...args);
+          cache.set(key, result);
+          return result;
+        };
+      });
+      
+      // Add lazy evaluation
+      this.scope.set('lazy', (fn: () => any) => {
+        let hasValue = false;
+        let value: any;
+        return () => {
+          if (!hasValue) {
+            value = fn();
+            hasValue = true;
+          }
+          return value;
+        };
+      });
+      
+      this.scope.set('force', (lazyFn: () => any) => lazyFn());
+      
+      // Add some basic Maybe/Option type functionality
+      this.scope.set('just', (value: any) => ({ __tag: 'Some', value }));
+      this.scope.set('nothing', () => ({ __tag: 'None' }));
+      this.scope.set('some', (value: any) => ({ __tag: 'Some', value }));
+      this.scope.set('none', () => ({ __tag: 'None' }));
+      
+      // Add Result type functionality
+      this.scope.set('ok', (value: any) => ({ __tag: 'Ok', value }));
+      this.scope.set('err', (error: any) => ({ __tag: 'Err', error }));
       
     } catch (error) {
       logger.warn('Runtime', `Failed to initialize stdlib globals: ${error}`);
