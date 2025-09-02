@@ -231,11 +231,13 @@ export class Parser {
                             sourceWithoutClasses.substring(match.end);
     }
     
-    // match expressions
+    // Parse all remaining constructs in source order
+    const constructs: Array<{type: string, start: number, end: number, ast: any}> = [];
+    
+    // Find match expressions
     const matchRe = /match\s+([A-Za-z_]\w*)\s*\{([\s\S]*?)\}/g;
     let matchMatch: RegExpExecArray | null;
-    const matchedRanges: Array<{start: number, end: number}> = [];
-    while ((matchMatch = matchRe.exec(sourceWithoutFns)) !== null) {
+    while ((matchMatch = matchRe.exec(sourceWithoutClasses)) !== null) {
       const subjectName = matchMatch[1];
       const armsSrc = matchMatch[2];
       const cases: any[] = [];
@@ -320,28 +322,19 @@ export class Parser {
         }
         cases.push(matchCase);
       }
-      body.push({ type: 'Match', expr: { type: 'Expression', kind: ExpressionKind.Identifier, name: subjectName }, cases });
       
-      // Track the range of this match for removal from source
-      matchedRanges.push({
+      constructs.push({
+        type: 'Match',
         start: matchMatch.index!,
-        end: matchMatch.index! + matchMatch[0].length
+        end: matchMatch.index! + matchMatch[0].length,
+        ast: { type: 'Match', expr: { type: 'Expression', kind: ExpressionKind.Identifier, name: subjectName }, cases }
       });
     }
-
-    // Remove processed match expressions from source for remaining parsing
-    let sourceWithoutMatches = sourceWithoutFns;
-    for (let i = matchedRanges.length - 1; i >= 0; i--) {
-      const range = matchedRanges[i];
-      sourceWithoutMatches = sourceWithoutMatches.substring(0, range.start) + 
-                           ' '.repeat(range.end - range.start) + 
-                           sourceWithoutMatches.substring(range.end);
-    }
     
-    // Parse variable declarations from the remaining source
+    // Find variable declarations
     const varRe = /(let|const|def|var)\s+([A-Za-z_]\w*)(?:\s*(?:::?|:)\s*([A-Za-z_]\w*))?\s*=\s*([^;]+)/g;
     let varMatch;
-    while ((varMatch = varRe.exec(sourceWithoutMatches)) !== null) {
+    while ((varMatch = varRe.exec(sourceWithoutClasses)) !== null) {
       const varType = varMatch[1]; // let, const, def, or var
       const varName = varMatch[2];
       const typeName = varMatch[3]; // type annotation (optional)
@@ -437,12 +430,32 @@ export class Parser {
         initializer = { type: 'Expression', kind: ExpressionKind.Identifier, name: valueExpr };
       }
       
-      body.push({
+      constructs.push({
         type: 'VariableDeclaration',
-        name: varName,
-        varType: typeName,
-        initializer: initializer
+        start: varMatch.index!,
+        end: varMatch.index! + varMatch[0].length,
+        ast: {
+          type: 'VariableDeclaration',
+          name: varName,
+          varType: typeName,
+          initializer: initializer
+        }
       });
+    }
+    
+    // Sort constructs by their position in the source and add to body
+    constructs.sort((a, b) => a.start - b.start);
+    for (const construct of constructs) {
+      body.push(construct.ast);
+    }
+    
+    // Create cleaned source for remaining parsing (remove all processed constructs)
+    let sourceWithoutMatches = sourceWithoutClasses;
+    for (let i = constructs.length - 1; i >= 0; i--) {
+      const construct = constructs[i];
+      sourceWithoutMatches = sourceWithoutMatches.substring(0, construct.start) + 
+                           ' '.repeat(construct.end - construct.start) + 
+                           sourceWithoutMatches.substring(construct.end);
     }
     
     // (Remaining expressions parsing moved to after if statement processing)
@@ -620,7 +633,7 @@ export class Parser {
     */ // End DISABLED import section
 
     // Parse remaining expressions at the end (like method calls) - using cleaned source
-    const remainingLines = sourceWithoutIfs.split(';').map(s => s.trim()).filter(s => s.length > 0);
+    const remainingLines = sourceWithoutIfs.split(';').map((s: string) => s.trim()).filter((s: string) => s.length > 0);
     for (const line of remainingLines) {
       if (line.match(/^(let|const|def|var)\s+/) || line.match(/^\s*$/) || line.match(/^(import|use)\s+/)) {
         // Skip variable declarations (already parsed), import statements, and empty lines
@@ -834,8 +847,8 @@ export class Parser {
     }
 
     // Handle semicolon-separated statements (like "var x = 1; var y = 2; x + y")
-    if (source.includes(';')) {
-      const statements = source.split(';').map(s => s.trim()).filter(s => s.length > 0);
+    if (sourceWithoutMatches.includes(';')) {
+      const statements = sourceWithoutMatches.split(';').map((s: string) => s.trim()).filter((s: string) => s.length > 0);
       for (const stmt of statements) {
         // Check if it's a variable declaration
         const varDeclMatch = stmt.match(/(var|let|const|def)\s+([A-Za-z_]\w*)\s*=\s*(.+)/);
