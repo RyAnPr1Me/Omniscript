@@ -235,7 +235,7 @@ export class Parser {
     const constructs: Array<{type: string, start: number, end: number, ast: any}> = [];
     
     // Find match expressions
-    const matchRe = /match\s+([A-Za-z_]\w*)\s*\{([\s\S]*?)\}/g;
+    const matchRe = /match\s+(["'][^"']*["']|[A-Za-z_]\w*)\s*\{([\s\S]*?)\}/g;
     let matchMatch: RegExpExecArray | null;
     while ((matchMatch = matchRe.exec(sourceWithoutClasses)) !== null) {
       const subjectName = matchMatch[1];
@@ -323,11 +323,21 @@ export class Parser {
         cases.push(matchCase);
       }
       
+      // Parse the subject (can be identifier or string literal)
+      let subjectExpr;
+      if (subjectName.match(/^["'].*["']$/)) {
+        // String literal subject
+        subjectExpr = { type: 'Expression', kind: ExpressionKind.Literal, value: subjectName.slice(1, -1) };
+      } else {
+        // Identifier subject  
+        subjectExpr = { type: 'Expression', kind: ExpressionKind.Identifier, name: subjectName };
+      }
+      
       constructs.push({
         type: 'Match',
         start: matchMatch.index!,
         end: matchMatch.index! + matchMatch[0].length,
-        ast: { type: 'Match', expr: { type: 'Expression', kind: ExpressionKind.Identifier, name: subjectName }, cases }
+        ast: { type: 'Match', expr: subjectExpr, cases }
       });
     }
     
@@ -877,18 +887,28 @@ export class Parser {
             varType: varType,
             initializer: initializer
           });
-        } else if (stmt.includes(' + ') || stmt.includes(' - ') || stmt.includes(' * ') || stmt.includes(' / ')) {
-          // Binary expression
+        } else if (stmt.includes(' + ') || stmt.includes(' - ') || stmt.includes(' * ') || stmt.includes(' / ') || 
+                   stmt.includes(' > ') || stmt.includes(' < ') || stmt.includes(' >= ') || stmt.includes(' <= ') || 
+                   stmt.includes(' == ') || stmt.includes(' != ')) {
+          // Binary expression (arithmetic and comparison)
           body.push({
             type: 'ExpressionStatement',
             expression: this.parseBinaryExpression(stmt)
           });
         } else if (stmt.match(/^[A-Za-z_]\w*$/)) {
-          // Simple identifier
-          body.push({
-            type: 'ExpressionStatement',
-            expression: { type: 'Expression', kind: ExpressionKind.Identifier, name: stmt }
-          });
+          // Simple identifier - check for duplicates
+          const existingIdentifier = body.find(b => 
+            b.type === 'ExpressionStatement' && 
+            b.expression?.type === 'Expression' && 
+            b.expression?.kind === 'Identifier' && 
+            b.expression?.name === stmt
+          );
+          if (!existingIdentifier) {
+            body.push({
+              type: 'ExpressionStatement',
+              expression: { type: 'Expression', kind: ExpressionKind.Identifier, name: stmt }
+            });
+          }
         } else if (stmt.match(/^\d+$/)) {
           // Number literal
           body.push({
@@ -899,7 +919,54 @@ export class Parser {
       }
     }
 
-    if (body.length > 0) return { type: 'Program', body };
+    // If no constructs were found, try to parse as a simple expression
+    if (body.length === 0) {
+      const trimmedSource = sourceWithoutClasses.trim();
+      if (trimmedSource.includes(' + ') || trimmedSource.includes(' - ') || trimmedSource.includes(' * ') || 
+          trimmedSource.includes(' / ') || trimmedSource.includes(' > ') || trimmedSource.includes(' < ') || 
+          trimmedSource.includes(' >= ') || trimmedSource.includes(' <= ') || trimmedSource.includes(' == ') || 
+          trimmedSource.includes(' != ')) {
+        // Simple binary expression
+        body.push({
+          type: 'ExpressionStatement',
+          expression: this.parseBinaryExpression(trimmedSource)
+        });
+      } else if (trimmedSource.match(/^[A-Za-z_]\w*$/)) {
+        // Simple identifier
+        body.push({
+          type: 'ExpressionStatement',
+          expression: { type: 'Expression', kind: ExpressionKind.Identifier, name: trimmedSource }
+        });
+      } else if (trimmedSource.match(/^\d+$/)) {
+        // Number literal
+        body.push({
+          type: 'ExpressionStatement',
+          expression: { type: 'Expression', kind: ExpressionKind.Literal, value: Number(trimmedSource) }
+        });
+      }
+    }
+
+    if (body.length > 0) {
+      // Remove duplicate expression statements with the same identifier
+      const uniqueBody = [];
+      const seenIdentifiers = new Set();
+      
+      for (const stmt of body) {
+        if (stmt.type === 'ExpressionStatement' && 
+            stmt.expression?.type === 'Expression' && 
+            stmt.expression?.kind === 'Identifier') {
+          const identifierName = stmt.expression.name;
+          if (!seenIdentifiers.has(identifierName)) {
+            seenIdentifiers.add(identifierName);
+            uniqueBody.push(stmt);
+          }
+        } else {
+          uniqueBody.push(stmt);
+        }
+      }
+      
+      return { type: 'Program', body: uniqueBody };
+    }
     throw new Error('Fallback parser could not parse input');
   }
 
