@@ -169,6 +169,8 @@ export class Compiler {
         return this.visitImportDeclaration(node);
       case 'Program':
         return this.visitProgram(node);
+      case 'Block':
+        return this.visitBlock(node);
       case 'Match':
       case 'MatchExpression':
         return this.visitMatch(node);
@@ -207,6 +209,13 @@ export class Compiler {
         throw new Error(`Unknown node type: ${n.type}`);
       }
     }
+  }
+
+  private visitBlock(node: any): any {
+    return {
+      type: 'Block',
+      body: (node.body || []).map((stmt: any) => this.visitNode(stmt))
+    };
   }
 
   private visitProgram(node: any): any {
@@ -337,8 +346,8 @@ export class Compiler {
     return {
       type: 'If',
       condition: node.condition,
-      then: { type: 'Block', body: (node.thenBody || []).map((s: any) => this.visitNode(s)) },
-      else: node.elseBody ? { type: 'Block', body: node.elseBody.map((s: any) => this.visitNode(s)) } : undefined
+      then: node.then ? this.visitNode(node.then) : { type: 'Block', body: [] },
+      else: node.else ? this.visitNode(node.else) : undefined
     };
   }
 
