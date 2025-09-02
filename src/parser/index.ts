@@ -232,10 +232,10 @@ export class Parser {
     }
     
     // Parse variable declarations from the remaining source
-    const varRe = /(let|const|def)\s+([A-Za-z_]\w*)(?:\s*(?:::?|:)\s*([A-Za-z_]\w*))?\s*=\s*([^;]+)/g;
+    const varRe = /(let|const|def|var)\s+([A-Za-z_]\w*)(?:\s*(?:::?|:)\s*([A-Za-z_]\w*))?\s*=\s*([^;]+)/g;
     let varMatch;
     while ((varMatch = varRe.exec(sourceWithoutClasses)) !== null) {
-      const varType = varMatch[1]; // let, const, or def
+      const varType = varMatch[1]; // let, const, def, or var
       const varName = varMatch[2];
       const typeName = varMatch[3]; // type annotation (optional)
       const valueExpr = varMatch[4].trim();
@@ -508,10 +508,10 @@ export class Parser {
     }
 
     // simple let/variable declarations: let x: Type = value; or def x :: Type = value;
-    const letRe = /(let|def)\s+([A-Za-z_]\w*)(?:\s*(?:::?|:)\s*([A-Za-z_]\w*))?\s*=\s*([^;\n]+)/g;
+    const letRe = /(let|def|var|const)\s+([A-Za-z_]\w*)(?:\s*(?:::?|:)\s*([A-Za-z_]\w*))?\s*=\s*([^;\n]+)/g;
     let letMatch: RegExpExecArray | null;
     while ((letMatch = letRe.exec(sourceWithoutFns)) !== null) {
-      const varType = letMatch[1]; // let or def
+      const varType = letMatch[1]; // let, def, var, or const
       const name = letMatch[2];
       const typeName = letMatch[3] ? letMatch[3] : undefined;
       const val = letMatch[4].trim();
@@ -730,6 +730,159 @@ export class Parser {
         });
       }
     }
+    
+    // Handle match expressions FIRST (like "match 5 { 1 => 10, x => add(x, 1), _ => 0 }")
+    if (source.includes('match ') && source.includes('{') && !source.includes(';')) {
+      const matchExprMatch = source.match(/match\s+([^{]+)\s*\{([^}]+)\}/);
+      if (matchExprMatch) {
+        const subject = matchExprMatch[1].trim();
+        const armStr = matchExprMatch[2].trim();
+        
+        // Parse subject
+        let subjectExpr;
+        if (subject.match(/^\d+$/)) {
+          subjectExpr = { type: 'Expression', kind: ExpressionKind.Literal, value: Number(subject) };
+        } else {
+          subjectExpr = { type: 'Expression', kind: ExpressionKind.Identifier, name: subject };
+        }
+        
+        // Parse arms (cases) - need to handle commas carefully within function calls
+        const arms = [];
+        let currentArm = '';
+        let parenDepth = 0;
+        let i = 0;
+        
+        while (i < armStr.length) {
+          const char = armStr[i];
+          if (char === '(') parenDepth++;
+          else if (char === ')') parenDepth--;
+          else if (char === ',' && parenDepth === 0) {
+            // This comma separates arms, not function arguments
+            if (currentArm.trim()) {
+              arms.push(currentArm.trim());
+              currentArm = '';
+            }
+            i++;
+            continue;
+          }
+          currentArm += char;
+          i++;
+        }
+        if (currentArm.trim()) {
+          arms.push(currentArm.trim());
+        }
+        
+        const matchArms = [];
+        
+        for (const arm of arms) {
+          const armMatch = arm.match(/(.+)\s*=>\s*(.+)/);
+          if (armMatch) {
+            const pattern = armMatch[1].trim();
+            const action = armMatch[2].trim();
+            
+            // Parse pattern
+            let patternExpr;
+            if (pattern === '_') {
+              patternExpr = { type: 'Wildcard' };
+            } else if (pattern.match(/^\d+$/)) {
+              patternExpr = { type: 'NumberLiteral', value: Number(pattern) };
+            } else if (pattern.match(/^[A-Za-z_]\w*$/)) {
+              patternExpr = { type: 'Identifier', name: pattern };
+            } else {
+              patternExpr = { type: 'Identifier', name: pattern };
+            }
+            
+            // Parse action
+            let actionExpr;
+            if (action.match(/^\d+$/)) {
+              actionExpr = { type: 'Expression', kind: ExpressionKind.Literal, value: Number(action) };
+            } else if (action.match(/^[A-Za-z_]\w*\s*\([^)]*\)$/)) {
+              // Function call like add(x, 1)
+              const callMatch = action.match(/([A-Za-z_]\w*)\s*\(([^)]*)\)/);
+              if (callMatch) {
+                const funcName = callMatch[1];
+                const argsStr = callMatch[2].trim();
+                const args = argsStr ? this.parseArguments(argsStr) : [];
+                
+                actionExpr = {
+                  type: 'Expression',
+                  kind: ExpressionKind.Call,
+                  callee: { type: 'Expression', kind: ExpressionKind.Identifier, name: funcName },
+                  arguments: args
+                };
+              }
+            } else {
+              actionExpr = { type: 'Expression', kind: ExpressionKind.Identifier, name: action };
+            }
+            
+            matchArms.push({
+              pattern: patternExpr,
+              action: actionExpr
+            });
+          }
+        }
+        
+        body.push({
+          type: 'ExpressionStatement',
+          expression: {
+            type: 'Match',
+            expr: subjectExpr,
+            arms: matchArms
+          }
+        });
+        
+        // Return early since we found a match expression
+        return { type: 'Program', body };
+      }
+    }
+
+    // Handle semicolon-separated statements (like "var x = 1; var y = 2; x + y")
+    if (source.includes(';')) {
+      const statements = source.split(';').map(s => s.trim()).filter(s => s.length > 0);
+      for (const stmt of statements) {
+        // Check if it's a variable declaration
+        const varDeclMatch = stmt.match(/(var|let|const|def)\s+([A-Za-z_]\w*)\s*=\s*(.+)/);
+        if (varDeclMatch) {
+          const varType = varDeclMatch[1];
+          const varName = varDeclMatch[2];
+          const valueExpr = varDeclMatch[3].trim();
+          
+          let initializer;
+          if (valueExpr.match(/^\d+$/)) {
+            initializer = { type: 'Expression', kind: ExpressionKind.Literal, value: Number(valueExpr) };
+          } else if (valueExpr.match(/^["'].*["']$/)) {
+            initializer = { type: 'Expression', kind: ExpressionKind.Literal, value: valueExpr.slice(1, -1) };
+          } else {
+            initializer = { type: 'Expression', kind: ExpressionKind.Identifier, name: valueExpr };
+          }
+          
+          body.push({
+            type: 'VariableDeclaration',
+            name: varName,
+            varType: varType,
+            initializer: initializer
+          });
+        } else if (stmt.includes(' + ') || stmt.includes(' - ') || stmt.includes(' * ') || stmt.includes(' / ')) {
+          // Binary expression
+          body.push({
+            type: 'ExpressionStatement',
+            expression: this.parseBinaryExpression(stmt)
+          });
+        } else if (stmt.match(/^[A-Za-z_]\w*$/)) {
+          // Simple identifier
+          body.push({
+            type: 'ExpressionStatement',
+            expression: { type: 'Expression', kind: ExpressionKind.Identifier, name: stmt }
+          });
+        } else if (stmt.match(/^\d+$/)) {
+          // Number literal
+          body.push({
+            type: 'ExpressionStatement',
+            expression: { type: 'Expression', kind: ExpressionKind.Literal, value: Number(stmt) }
+          });
+        }
+      }
+    }
 
     if (body.length > 0) return { type: 'Program', body };
     throw new Error('Fallback parser could not parse input');
@@ -807,9 +960,9 @@ export class Parser {
   }
 
   private parseLetStatement(stmt: string, body: any[]): void {
-    const letMatch = stmt.match(/(let|def)\s+([A-Za-z_]\w*)(?:\s*(?:::?|:)\s*([A-Za-z_]\w*))?\s*=\s*(.+)/);
+    const letMatch = stmt.match(/(let|def|var|const)\s+([A-Za-z_]\w*)(?:\s*(?:::?|:)\s*([A-Za-z_]\w*))?\s*=\s*(.+)/);
     if (letMatch) {
-      const varType = letMatch[1]; // let or def
+      const varType = letMatch[1]; // let, def, var, or const
       const name = letMatch[2];
       const typeName = letMatch[3] || undefined;
       const val = letMatch[4].trim();

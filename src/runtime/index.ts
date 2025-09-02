@@ -379,6 +379,12 @@ export class Runtime {
       // Add global utility functions
       this.scope.set('parseInt', parseInt);
       this.scope.set('parseFloat', parseFloat);
+      
+      // Add basic math functions
+      this.scope.set('add', (a: number, b: number) => a + b);
+      this.scope.set('subtract', (a: number, b: number) => a - b);
+      this.scope.set('multiply', (a: number, b: number) => a * b);
+      this.scope.set('divide', (a: number, b: number) => a / b);
       this.scope.set('isNaN', isNaN);
       this.scope.set('isFinite', isFinite);
       this.scope.set('encodeURIComponent', encodeURIComponent);
