@@ -243,12 +243,13 @@ export class Parser {
     }
     
     // Parse variable declarations from the remaining source
-    const varRe = /(let|const)\s+([A-Za-z_]\w*)\s*=\s*([^;]+)/g;
+    const varRe = /(let|const|def)\s+([A-Za-z_]\w*)(?:\s*(?:::?|:)\s*([A-Za-z_]\w*))?\s*=\s*([^;]+)/g;
     let varMatch;
     while ((varMatch = varRe.exec(sourceWithoutClasses)) !== null) {
-      const varType = varMatch[1]; // let or const
+      const varType = varMatch[1]; // let, const, or def
       const varName = varMatch[2];
-      const valueExpr = varMatch[3].trim();
+      const typeName = varMatch[3]; // type annotation (optional)
+      const valueExpr = varMatch[4].trim();
       
       let initializer = undefined;
       
@@ -318,6 +319,7 @@ export class Parser {
       body.push({
         type: 'VariableDeclaration',
         name: varName,
+        varType: typeName,
         initializer: initializer
       });
     }
@@ -481,7 +483,7 @@ export class Parser {
             member: member
           }
         });
-      } else if (line.match(/^[A-Za-z_]\w*$/) && !line.match(/^(let|const|class|function|fn|import|export)/) && !body.some(b => 
+      } else if (line.match(/^[A-Za-z_]\w*$/) && !line.match(/^(let|const|class|function|fn|import|export|def)/) && !body.some(b => 
         b.type === 'ExpressionStatement' && 
         b.expression?.kind === ExpressionKind.Identifier &&
         b.expression?.name === line
@@ -500,10 +502,10 @@ export class Parser {
       
       for (const stmt of statements) {
         // Try to parse each statement (skip classes - already parsed)
-        if (stmt.match(/^let\s+/)) {
+        if (stmt.match(/^(let|def)\s+/)) {
           // Check if this variable declaration already exists
-          const letMatch = stmt.match(/let\s+([A-Za-z_]\w*)/);
-          const varName = letMatch ? letMatch[1] : null;
+          const letMatch = stmt.match(/(let|def)\s+([A-Za-z_]\w*)/);
+          const varName = letMatch ? letMatch[2] : null;
           if (varName && !body.some(b => b.type === 'VariableDeclaration' && b.name === varName)) {
             this.parseLetStatement(stmt, body);
           }
