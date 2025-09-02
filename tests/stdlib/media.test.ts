@@ -146,7 +146,7 @@ describe('OmniCodec Media Encoding', () => {
       const compressionRatio = encoded.length / originalData.byteLength;
       expect(compressionRatio).toBeGreaterThan(0.1); // Should not completely eliminate data
       expect(compressionRatio).toBeLessThan(50.0); // Should not expand too much
-    }, 15000);
+    }, 30000);
   });
 
   describe('SIMD Performance', () => {

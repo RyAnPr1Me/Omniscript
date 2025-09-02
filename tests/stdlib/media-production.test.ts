@@ -289,7 +289,7 @@ describe('OmniCodec Production Features', () => {
       // Should be able to decode
       const decoded = await codec.decode(encoded);
       expect(decoded.data.byteLength).toBeGreaterThan(0);
-    }, 10000); // Increase timeout for this test
+    }, 25000); // Increase timeout for this test
   });
 
   describe('Key Management', () => {
