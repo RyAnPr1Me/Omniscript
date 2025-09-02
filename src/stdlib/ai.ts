@@ -223,12 +223,20 @@ export class Tensor {
           } else {
             this.gradInfo.grad = result.gradInfo.grad.clone();
           }
+          // Propagate gradient further back
+          if (this.gradInfo.gradFn) {
+            this.gradInfo.gradFn();
+          }
         }
         if (other.gradInfo.requiresGrad && result.gradInfo.grad) {
           if (other.gradInfo.grad) {
             other.gradInfo.grad = other.gradInfo.grad.add(result.gradInfo.grad);
           } else {
             other.gradInfo.grad = result.gradInfo.grad.clone();
+          }
+          // Propagate gradient further back
+          if (other.gradInfo.gradFn) {
+            other.gradInfo.gradFn();
           }
         }
       };
@@ -241,6 +249,27 @@ export class Tensor {
     if (typeof other === 'number') {
       const result = new Tensor(this.data.map(x => x * other));
       result.shape = { ...this.shape };
+      
+      // Setup gradient computation for scalar multiplication
+      if (this.gradInfo.requiresGrad) {
+        result.gradInfo.requiresGrad = true;
+        result.gradInfo.gradFn = () => {
+          if (this.gradInfo.requiresGrad && result.gradInfo.grad) {
+            const grad = result.gradInfo.grad.mul(other);
+            // Accumulate gradient to this tensor
+            if (this.gradInfo.grad) {
+              this.gradInfo.grad = this.gradInfo.grad.add(grad);
+            } else {
+              this.gradInfo.grad = grad;
+            }
+            // Propagate gradient further back if this tensor has its own gradient function
+            if (this.gradInfo.gradFn) {
+              this.gradInfo.gradFn();
+            }
+          }
+        };
+      }
+      
       return result;
     }
 
@@ -266,6 +295,10 @@ export class Tensor {
           } else {
             this.gradInfo.grad = grad;
           }
+          // Propagate gradient further back
+          if (this.gradInfo.gradFn) {
+            this.gradInfo.gradFn();
+          }
         }
         if (other.gradInfo.requiresGrad && result.gradInfo.grad) {
           const grad = result.gradInfo.grad.mul(this);
@@ -273,6 +306,10 @@ export class Tensor {
             other.gradInfo.grad = other.gradInfo.grad.add(grad);
           } else {
             other.gradInfo.grad = grad;
+          }
+          // Propagate gradient further back
+          if (other.gradInfo.gradFn) {
+            other.gradInfo.gradFn();
           }
         }
       };
@@ -304,12 +341,40 @@ export class Tensor {
       result.gradInfo.requiresGrad = true;
       result.gradInfo.gradFn = () => {
         if (this.gradInfo.requiresGrad && result.gradInfo.grad) {
-          const grad = result.gradInfo.grad.matmul(other.transpose());
-          this.gradInfo.grad = this.gradInfo.grad ? this.gradInfo.grad.add(grad) : grad;
+          // Ensure grad is 2D for matrix operations
+          let grad = result.gradInfo.grad;
+          if (grad.shape.ndim === 1) {
+            grad = grad.reshape([1, grad.shape.dimensions[0]]);
+          }
+          
+          const thisGrad = grad.matmul(other.transpose());
+          if (this.gradInfo.grad) {
+            this.gradInfo.grad = this.gradInfo.grad.add(thisGrad);
+          } else {
+            this.gradInfo.grad = thisGrad;
+          }
+          // Propagate gradient further back
+          if (this.gradInfo.gradFn) {
+            this.gradInfo.gradFn();
+          }
         }
         if (other.gradInfo.requiresGrad && result.gradInfo.grad) {
-          const grad = this.transpose().matmul(result.gradInfo.grad);
-          other.gradInfo.grad = other.gradInfo.grad ? other.gradInfo.grad.add(grad) : grad;
+          // Ensure grad is 2D for matrix operations
+          let grad = result.gradInfo.grad;
+          if (grad.shape.ndim === 1) {
+            grad = grad.reshape([1, grad.shape.dimensions[0]]);
+          }
+          
+          const otherGrad = this.transpose().matmul(grad);
+          if (other.gradInfo.grad) {
+            other.gradInfo.grad = other.gradInfo.grad.add(otherGrad);
+          } else {
+            other.gradInfo.grad = otherGrad;
+          }
+          // Propagate gradient further back
+          if (other.gradInfo.gradFn) {
+            other.gradInfo.gradFn();
+          }
         }
       };
     }
@@ -376,7 +441,16 @@ export class Tensor {
         result.gradInfo.gradFn = () => {
           if (result.gradInfo.grad) {
             const grad = Tensor.ones(this.shape.dimensions).mul(result.gradInfo.grad.data[0]);
-            this.gradInfo.grad = this.gradInfo.grad ? this.gradInfo.grad.add(grad) : grad;
+            // Accumulate gradient to this tensor
+            if (this.gradInfo.grad) {
+              this.gradInfo.grad = this.gradInfo.grad.add(grad);
+            } else {
+              this.gradInfo.grad = grad;
+            }
+            // Propagate gradient further back if this tensor has its own gradient function
+            if (this.gradInfo.gradFn) {
+              this.gradInfo.gradFn();
+            }
           }
         };
       }
@@ -705,6 +779,11 @@ export class Linear extends Layer {
               const weightGrad = inputForGrad.transpose().matmul(gradForWeight);
               this.weight.gradInfo.grad = this.weight.gradInfo.grad ? 
                 this.weight.gradInfo.grad.add(weightGrad) : weightGrad;
+              
+              // Propagate gradient further back for weight
+              if (this.weight.gradInfo.gradFn) {
+                this.weight.gradInfo.gradFn();
+              }
             } catch (error) {
               // Simplified fallback for weight gradients
               const weightGrad = Tensor.ones(this.weight.shape.dimensions);
@@ -719,6 +798,11 @@ export class Linear extends Layer {
               result.gradInfo.grad.sum(0) : result.gradInfo.grad;
             this.bias.gradInfo.grad = this.bias.gradInfo.grad ? 
               this.bias.gradInfo.grad.add(biasGrad) : biasGrad;
+            
+            // Propagate gradient further back for bias
+            if (this.bias.gradInfo.gradFn) {
+              this.bias.gradInfo.gradFn();
+            }
           }
           
           // Compute gradients for input: grad_output @ weight^T

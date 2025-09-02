@@ -160,7 +160,7 @@ export class OmniCodec {
   private simd: SIMDProcessor;
   private keyManager: KeyManager;
   private static readonly MAGIC_BYTES = new Uint8Array([0x4F, 0x4D, 0x4E, 0x49]); // "OMNI"
-  private static readonly VERSION = "2.0"; // Updated version for H.264-level features
+  private static readonly VERSION = "1.0"; // Updated version for H.264-level features
   private static readonly MAX_CHUNK_SIZE = 8 * 1024 * 1024; // 8MB chunks for streaming
   
   // H.264-level features
@@ -261,7 +261,7 @@ export class OmniCodec {
       const checksum = await Crypto.hash(Array.from(processedData).join(','), 'SHA-256');
       const header: MediaHeader = {
         version: OmniCodec.VERSION,
-        codec: 'OmniCodec-H264',
+        codec: 'OmniCodec',
         duration: sanitizedMetadata.duration || 0,
         checksum,
         encrypted: opts.enableEncryption,
@@ -2898,9 +2898,12 @@ export class OmniCodec {
    */
   static getCodecInfo(): { name: string; version: string; features: string[] } {
     return {
-      name: 'OmniCodec-H264',
+      name: 'OmniCodec',
       version: OmniCodec.VERSION,
       features: [
+        'DCT-based compression',
+        'SIMD acceleration',
+        'Entropy encoding',
         'H.264-level video compression',
         'B-frame bidirectional temporal prediction',
         'Sub-pixel motion estimation (quarter-pixel accuracy)',

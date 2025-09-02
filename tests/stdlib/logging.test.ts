@@ -257,6 +257,7 @@ describe('Logging Library', () => {
 
   describe('Formatters', () => {
     test('should format log entries as JSON', () => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const { JsonFormatter } = require('../../src/stdlib/logging');
       const formatter = new JsonFormatter();
       
@@ -283,6 +284,7 @@ describe('Logging Library', () => {
     });
 
     test('should format log entries compactly', () => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const { CompactFormatter } = require('../../src/stdlib/logging');
       const formatter = new CompactFormatter();
       
