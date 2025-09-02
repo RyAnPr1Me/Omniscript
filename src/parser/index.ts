@@ -737,6 +737,11 @@ export class Parser {
 
   private parseSimpleStatement(src: string): any {
     src = src.trim();
+    // Remove trailing semicolon if present
+    if (src.endsWith(';')) {
+      src = src.slice(0, -1).trim();
+    }
+    
     // Handle throw statements
     if (src.startsWith('throw ')) {
       const expr = src.substring(6).trim();
