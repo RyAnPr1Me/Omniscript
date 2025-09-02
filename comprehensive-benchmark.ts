@@ -67,7 +67,7 @@ async function comprehensiveBenchmark() {
         }
       },
       {
-        name: 'High Quality',
+        name: 'High Quality + B-frames',
         options: {
           quality: 90,
           enableSIMD: true,
@@ -76,7 +76,10 @@ async function comprehensiveBenchmark() {
           variableBlockSize: true,
           deblockingFilter: true,
           compressionLevel: 8,
-          maxReferenceFrames: 4
+          maxReferenceFrames: 4,
+          enableBFrames: true,
+          subPixelMotionEstimation: true,
+          gopSize: 30
         }
       }
     ];

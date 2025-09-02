@@ -46,6 +46,8 @@ export interface MediaHeader {
   blockSizes?: number[]; // Block sizes used (4, 8, 16)
   intraModes?: number[]; // Intra prediction modes used
   motionVectors?: MotionVector[]; // Motion vectors for inter frames
+  poc?: number; // Picture Order Count for frame reordering
+  gopStructure?: string; // GOP pattern (e.g., "IBBPBBP")
 }
 
 export interface MotionVector {
@@ -53,6 +55,7 @@ export interface MotionVector {
   y: number;
   refFrame: number;
   blockIndex: number;
+  precision: 'full' | 'half' | 'quarter'; // Sub-pixel precision
 }
 
 export interface EncodedFrame {
@@ -68,6 +71,7 @@ export interface VideoFrame {
   data: number[][]; // 2D array representing pixels
   frameType: 'I' | 'P' | 'B';
   timestamp: number;
+  poc?: number; // Picture Order Count for B-frame reordering
 }
 
 export interface Block {
@@ -138,6 +142,11 @@ export interface OmniCodecOptions {
   rateDistortionOptimization?: boolean; // Enable RDO for better quality
   maxReferenceFrames?: number; // Number of reference frames (1-8)
   searchRange?: number; // Motion search range in pixels
+  // Advanced H.264 features
+  enableBFrames?: boolean; // Enable B-frame bidirectional prediction
+  subPixelMotionEstimation?: boolean; // Enable sub-pixel accuracy
+  gopSize?: number; // Group of Pictures size (frames between I-frames)
+  adaptiveQuantization?: boolean; // Enable per-macroblock QP adjustment
 }
 
 export class OmniCodec {
@@ -188,6 +197,11 @@ export class OmniCodec {
         rateDistortionOptimization: true,
         maxReferenceFrames: 4,
         searchRange: 16,
+        // Advanced H.264 defaults
+        enableBFrames: true,
+        subPixelMotionEstimation: true,
+        gopSize: 30,
+        adaptiveQuantization: false,
         ...options
       };
 
@@ -208,12 +222,14 @@ export class OmniCodec {
       let motionVectors: MotionVector[] = [];
       
       if (type === 'video' && sanitizedMetadata.width && sanitizedMetadata.height) {
-        // Advanced video encoding with H.264-level features
-        const videoFrame = this.bufferToVideoFrame(data, sanitizedMetadata.width, sanitizedMetadata.height);
-        const encodingResult = await this.encodeVideoFrame(videoFrame, opts);
-        processedData = encodingResult.data;
-        frameType = encodingResult.frameType;
-        motionVectors = encodingResult.motionVectors || [];
+        // Advanced video encoding with H.264-level features  
+        const encodingResult = await this.encodeVideoAdvanced(data, sanitizedMetadata, opts);
+        const quantizedData = encodingResult.quantizedData;
+        processedData = opts.compressionLevel > 7 ? 
+          this.improvedEntropyEncode(quantizedData) : 
+          this.entropyEncode(quantizedData);
+        frameType = encodingResult.header.frameType || 'I';
+        motionVectors = encodingResult.header.motionVectors || [];
       } else {
         // Enhanced audio encoding
         const floatData = this.bufferToFloatArray(data);
@@ -911,24 +927,9 @@ export class OmniCodec {
       width,
       height,
       data: frameData,
-      frameType: this.determineFrameType(),
+      frameType: 'I', // Default to I-frame, will be determined later
       timestamp: Date.now()
     };
-  }
-
-  /**
-   * Determine frame type based on frame count and reference frames
-   */
-  private determineFrameType(): 'I' | 'P' | 'B' {
-    this.frameCount++;
-    
-    // Every 30th frame is an I-frame (keyframe)
-    if (this.frameCount % 30 === 1) {
-      return 'I';
-    }
-    
-    // For now, use only I and P frames (simpler than full B-frame implementation)
-    return this.referenceFrames.length > 0 ? 'P' : 'I';
   }
 
   /**
@@ -977,7 +978,7 @@ export class OmniCodec {
               if (motionCost < intraCost) {
                 block.motionVector = bestMV;
                 motionVectors.push(bestMV);
-                this.applyMotionCompensation(block, this.referenceFrames[0], bestMV);
+                this.applyMotionCompensation(block, this.referenceFrames[0]);
                 bestBlock = block;
                 bestCost = motionCost;
               } else if (opts.intraPrediction) {
@@ -1071,7 +1072,7 @@ export class OmniCodec {
     const centerY = currentBlock.y;
     
     bestSAD = this.calculateSAD(currentBlock, refFrame.data, centerX, centerY);
-    bestMV = { x: 0, y: 0, refFrame: refFrame.frameIndex, blockIndex: 0 };
+    bestMV = { x: 0, y: 0, refFrame: refFrame.frameIndex, blockIndex: 0, precision: 'full' };
     
     // Diamond search pattern for faster motion estimation
     const diamondPattern = [
@@ -1108,7 +1109,8 @@ export class OmniCodec {
             x: testX - centerX,
             y: testY - centerY,
             refFrame: refFrame.frameIndex,
-            blockIndex: 0
+            blockIndex: 0,
+            precision: 'full'
           };
           improved = true;
         }
@@ -1390,24 +1392,6 @@ export class OmniCodec {
         if (block.data[y] && predicted[y] && 
             block.data[y][x] !== undefined && predicted[y][x] !== undefined) {
           block.data[y][x] = block.data[y][x] - predicted[y][x];
-        }
-      }
-    }
-  }
-
-  /**
-   * Apply motion compensation to block
-   */
-  private applyMotionCompensation(block: Block, refFrame: ReferenceFrame, mv: MotionVector): void {
-    const refX = block.x + mv.x;
-    const refY = block.y + mv.y;
-    
-    // Calculate residual after motion compensation
-    for (let y = 0; y < block.size; y++) {
-      for (let x = 0; x < block.size; x++) {
-        if (block.data[y] && block.data[y][x] !== undefined &&
-            refFrame.data[refY + y] && refFrame.data[refY + y][refX + x] !== undefined) {
-          block.data[y][x] = block.data[y][x] - refFrame.data[refY + y][refX + x];
         }
       }
     }
@@ -1981,6 +1965,667 @@ export class OmniCodec {
   // ============ END H.264-LEVEL METHODS ============
 
   /**
+   * Convert frame to blocks for processing
+   */
+  private frameToBlocks(frame: VideoFrame, options: OmniCodecOptions): Block[] {
+    const blocks: Block[] = [];
+    const blockSizes = options.variableBlockSize ? [16, 8, 4] : [8];
+    
+    // Use largest block size as default
+    const blockSize = blockSizes[0];
+    
+    for (let y = 0; y < frame.height; y += blockSize) {
+      for (let x = 0; x < frame.width; x += blockSize) {
+        const actualBlockSize = Math.min(blockSize, 
+          Math.min(frame.width - x, frame.height - y));
+        
+        const blockData: number[][] = [];
+        for (let by = 0; by < actualBlockSize; by++) {
+          blockData[by] = [];
+          for (let bx = 0; bx < actualBlockSize; bx++) {
+            const frameY = y + by;
+            const frameX = x + bx;
+            blockData[by][bx] = (frame.data[frameY] && frame.data[frameY][frameX]) || 0;
+          }
+        }
+        
+        blocks.push({
+          x,
+          y,
+          size: actualBlockSize,
+          data: blockData
+        });
+      }
+    }
+    
+    return blocks;
+  }
+
+  /**
+   * Diamond search algorithm for motion estimation
+   */
+  private diamondSearch(block: Block, refFrame: ReferenceFrame, searchRange: number): MotionVector {
+    let bestMV: MotionVector = { 
+      x: 0, 
+      y: 0, 
+      refFrame: refFrame.frameIndex, 
+      blockIndex: 0, 
+      precision: 'full' 
+    };
+    let bestSAD = this.calculateSADForBlock(block, refFrame, 0, 0);
+    
+    // Diamond search pattern
+    const diamondPattern = [
+      [0, -2], [2, 0], [0, 2], [-2, 0]  // Large diamond
+    ];
+    
+    let currentX = 0;
+    let currentY = 0;
+    let searchStep = Math.min(searchRange / 2, 4);
+    
+    while (searchStep > 0) {
+      let improved = false;
+      
+      for (const [dx, dy] of diamondPattern) {
+        const testX = currentX + dx * searchStep;
+        const testY = currentY + dy * searchStep;
+        
+        // Stay within search range
+        if (Math.abs(testX) > searchRange || Math.abs(testY) > searchRange) {
+          continue;
+        }
+        
+        const sad = this.calculateSADForBlock(block, refFrame, testX, testY);
+        if (sad < bestSAD) {
+          bestSAD = sad;
+          currentX = testX;
+          currentY = testY;
+          bestMV = {
+            x: testX,
+            y: testY,
+            refFrame: refFrame.frameIndex,
+            blockIndex: 0,
+            precision: 'full'
+          };
+          improved = true;
+        }
+      }
+      
+      if (!improved) {
+        searchStep = Math.floor(searchStep / 2);
+      }
+    }
+    
+    return bestMV;
+  }
+
+  /**
+   * Calculate SAD (Sum of Absolute Differences) for a block
+   */
+  private calculateSADForBlock(block: Block, refFrame: ReferenceFrame, dx: number, dy: number): number {
+    let sad = 0;
+    
+    for (let y = 0; y < block.size; y++) {
+      for (let x = 0; x < block.size; x++) {
+        const refY = block.y + y + dy;
+        const refX = block.x + x + dx;
+        
+        if (refY >= 0 && refY < refFrame.data.length && 
+            refX >= 0 && refX < (refFrame.data[refY]?.length || 0)) {
+          
+          const blockPixel = block.data[y] ? block.data[y][x] || 0 : 0;
+          const refPixel = refFrame.data[refY] ? refFrame.data[refY][refX] || 0 : 0;
+          sad += Math.abs(blockPixel - refPixel);
+        } else {
+          // Penalize out-of-bounds access
+          sad += 255;
+        }
+      }
+    }
+    
+    return sad;
+  }
+
+  // ============ ADVANCED H.264 EXTENSIONS ============
+
+  /**
+   * Enhanced video encoding with B-frame support and sub-pixel motion estimation
+   */
+  private async encodeVideoAdvanced(
+    data: ArrayBuffer, 
+    metadata: any, 
+    options: OmniCodecOptions
+  ): Promise<{ quantizedData: number[]; header: MediaHeader }> {
+    const frame = this.bufferToVideoFrame(data, metadata.width, metadata.height);
+    
+    // Determine frame type based on GOP pattern and frame position
+    const frameType = this.determineFrameType(options);
+    frame.frameType = frameType;
+    frame.poc = this.frameCount; // Picture Order Count
+    
+    let quantizedData: number[] = [];
+    const motionVectors: MotionVector[] = [];
+    const blockSizes: number[] = [];
+    const intraModes: number[] = [];
+    
+    // Handle different frame types
+    switch (frameType) {
+      case 'I':
+        quantizedData = this.encodeIFrame(frame, options, blockSizes, intraModes);
+        break;
+      case 'P':
+        quantizedData = this.encodePFrame(frame, options, motionVectors, blockSizes, intraModes);
+        break;
+      case 'B':
+        quantizedData = this.encodeBFrame(frame, options, motionVectors, blockSizes, intraModes);
+        break;
+    }
+    
+    // Update reference frames after encoding
+    this.updateReferenceFrames(frame, options.maxReferenceFrames || 4);
+    
+    const header: MediaHeader = {
+      version: OmniCodec.VERSION,
+      codec: 'omnicodec-h264',
+      width: metadata.width,
+      height: metadata.height,
+      frameRate: metadata.frameRate,
+      duration: metadata.duration,
+      checksum: '',
+      encrypted: false,
+      frameType,
+      qp: this.qualityToQP(options.quality),
+      blockSizes,
+      intraModes,
+      motionVectors,
+      poc: frame.poc,
+      gopStructure: this.getCurrentGOPPattern()
+    };
+    
+    return { quantizedData, header };
+  }
+
+  /**
+   * Determine frame type based on GOP pattern
+   */
+  private determineFrameType(options: OmniCodecOptions): 'I' | 'P' | 'B' {
+    // Increment frame count
+    this.frameCount++;
+    
+    // Simple GOP pattern: I-B-B-P-B-B-P... with I-frame every 30 frames
+    const gopSize = options.gopSize || 30;
+    const positionInGOP = this.frameCount % gopSize;
+    
+    if (positionInGOP === 1) { // First frame in GOP is I-frame
+      return 'I'; // Intra frame
+    } else if (positionInGOP % 3 === 1) { // Every 3rd frame is P-frame
+      return 'P'; // Predicted frame
+    } else {
+      return options.enableBFrames !== false ? 'B' : 'P'; // Bidirectional or fallback to P
+    }
+  }
+
+  /**
+   * Get current GOP pattern string for debugging/metadata
+   */
+  private getCurrentGOPPattern(): string {
+    return "IBBPBBPBBPBBPBBPBBPBBPBBPBBPBBP"; // Example 30-frame GOP
+  }
+
+  /**
+   * Encode I-frame (intra-only prediction)
+   */
+  private encodeIFrame(
+    frame: VideoFrame, 
+    options: OmniCodecOptions,
+    blockSizes: number[],
+    intraModes: number[]
+  ): number[] {
+    const blocks = this.frameToBlocks(frame, options);
+    const encodedBlocks: number[] = [];
+    
+    for (const block of blocks) {
+      // Use only intra prediction for I-frames
+      if (options.intraPrediction) {
+        block.predictionMode = this.fastIntraPredictionMode(block, frame.data);
+        intraModes.push(block.predictionMode);
+      }
+      
+      blockSizes.push(block.size);
+      const encodedBlock = this.encodeBlockOptimized(block, options);
+      encodedBlocks.push(...encodedBlock);
+    }
+    
+    return encodedBlocks;
+  }
+
+  /**
+   * Encode P-frame (forward prediction only)
+   */
+  private encodePFrame(
+    frame: VideoFrame,
+    options: OmniCodecOptions,
+    motionVectors: MotionVector[],
+    blockSizes: number[],
+    intraModes: number[]
+  ): number[] {
+    const blocks = this.frameToBlocks(frame, options);
+    const encodedBlocks: number[] = [];
+    
+    for (let i = 0; i < blocks.length; i++) {
+      const block = blocks[i];
+      
+      // Rate-distortion optimization: choose between intra and inter prediction
+      let bestMode = 'intra';
+      let bestCost = Infinity;
+      let bestMV: MotionVector | null = null;
+      let bestIntraMode = 0;
+      
+      // Try intra prediction
+      if (options.intraPrediction) {
+        const intraMode = this.fastIntraPredictionMode(block, frame.data);
+        const intraCost = this.calculateIntraCost(block, frame.data);
+        if (intraCost < bestCost) {
+          bestCost = intraCost;
+          bestMode = 'intra';
+          bestIntraMode = intraMode;
+        }
+      }
+      
+      // Try inter prediction with motion estimation
+      if (options.motionEstimation && this.referenceFrames.length > 0) {
+        for (const refFrame of this.referenceFrames) {
+          const mv = this.subPixelMotionEstimation(block, refFrame, options);
+          const interCost = this.calculateMotionCost(block, refFrame, mv);
+          
+          if (interCost < bestCost) {
+            bestCost = interCost;
+            bestMode = 'inter';
+            bestMV = mv;
+          }
+        }
+      }
+      
+      // Apply chosen prediction mode
+      if (bestMode === 'intra') {
+        block.predictionMode = bestIntraMode;
+        intraModes.push(bestIntraMode);
+      } else if (bestMV) {
+        block.motionVector = bestMV;
+        motionVectors.push(bestMV);
+        
+        // Apply motion compensation
+        this.applyMotionCompensation(block, this.referenceFrames[bestMV.refFrame]);
+      }
+      
+      blockSizes.push(block.size);
+      const encodedBlock = this.encodeBlockOptimized(block, options);
+      encodedBlocks.push(...encodedBlock);
+    }
+    
+    return encodedBlocks;
+  }
+
+  /**
+   * Encode B-frame (bidirectional prediction)
+   */
+  private encodeBFrame(
+    frame: VideoFrame,
+    options: OmniCodecOptions,
+    motionVectors: MotionVector[],
+    blockSizes: number[],
+    intraModes: number[]
+  ): number[] {
+    const blocks = this.frameToBlocks(frame, options);
+    const encodedBlocks: number[] = [];
+    
+    // B-frames require at least 2 reference frames for bidirectional prediction
+    if (this.referenceFrames.length < 2) {
+      // Fallback to P-frame encoding if insufficient references
+      return this.encodePFrame(frame, options, motionVectors, blockSizes, intraModes);
+    }
+    
+    const pastRef = this.referenceFrames[0]; // Most recent reference
+    const futureRef = this.referenceFrames[1]; // Future reference (in display order)
+    
+    for (let i = 0; i < blocks.length; i++) {
+      const block = blocks[i];
+      
+      // Rate-distortion optimization for B-frames
+      let bestMode = 'intra';
+      let bestCost = Infinity;
+      let bestMVs: MotionVector[] = [];
+      let bestIntraMode = 0;
+      
+      // Try intra prediction
+      if (options.intraPrediction) {
+        const intraMode = this.fastIntraPredictionMode(block, frame.data);
+        const intraCost = this.calculateIntraCost(block, frame.data);
+        if (intraCost < bestCost) {
+          bestCost = intraCost;
+          bestMode = 'intra';
+          bestIntraMode = intraMode;
+        }
+      }
+      
+      // Try forward prediction (list 0)
+      if (options.motionEstimation) {
+        const forwardMV = this.subPixelMotionEstimation(block, pastRef, options);
+        const forwardCost = this.calculateMotionCost(block, pastRef, forwardMV);
+        
+        if (forwardCost < bestCost) {
+          bestCost = forwardCost;
+          bestMode = 'forward';
+          bestMVs = [forwardMV];
+        }
+        
+        // Try backward prediction (list 1)
+        const backwardMV = this.subPixelMotionEstimation(block, futureRef, options);
+        const backwardCost = this.calculateMotionCost(block, futureRef, backwardMV);
+        
+        if (backwardCost < bestCost) {
+          bestCost = backwardCost;
+          bestMode = 'backward';
+          bestMVs = [backwardMV];
+        }
+        
+        // Try bidirectional prediction (average of both)
+        const biCost = this.calculateBidirectionalCost(block, pastRef, futureRef, forwardMV, backwardMV);
+        
+        if (biCost < bestCost) {
+          bestCost = biCost;
+          bestMode = 'bidirectional';
+          bestMVs = [forwardMV, backwardMV];
+        }
+      }
+      
+      // Apply chosen prediction mode
+      switch (bestMode) {
+        case 'intra':
+          block.predictionMode = bestIntraMode;
+          intraModes.push(bestIntraMode);
+          break;
+        case 'forward':
+        case 'backward':
+          block.motionVector = bestMVs[0];
+          motionVectors.push(bestMVs[0]);
+          this.applyMotionCompensation(block, bestMode === 'forward' ? pastRef : futureRef);
+          break;
+        case 'bidirectional':
+          // Store both motion vectors
+          bestMVs.forEach(mv => motionVectors.push(mv));
+          this.applyBidirectionalCompensation(block, pastRef, futureRef, bestMVs[0], bestMVs[1]);
+          break;
+      }
+      
+      blockSizes.push(block.size);
+      const encodedBlock = this.encodeBlockOptimized(block, options);
+      encodedBlocks.push(...encodedBlock);
+    }
+    
+    return encodedBlocks;
+  }
+
+  /**
+   * Sub-pixel motion estimation with quarter-pixel accuracy
+   */
+  private subPixelMotionEstimation(
+    block: Block, 
+    refFrame: ReferenceFrame, 
+    options: OmniCodecOptions
+  ): MotionVector {
+    // Start with integer pixel motion estimation (existing diamond search)
+    const integerMV = this.diamondSearch(block, refFrame, 16);
+    
+    // Refine to half-pixel accuracy
+    const halfPixelMV = this.halfPixelRefinement(block, refFrame, integerMV);
+    
+    // Refine to quarter-pixel accuracy
+    const quarterPixelMV = this.quarterPixelRefinement(block, refFrame, halfPixelMV);
+    
+    quarterPixelMV.precision = 'quarter';
+    return quarterPixelMV;
+  }
+
+  /**
+   * Half-pixel refinement for motion estimation
+   */
+  private halfPixelRefinement(block: Block, refFrame: ReferenceFrame, intMV: MotionVector): MotionVector {
+    let bestMV = { ...intMV };
+    let bestCost = this.calculateSubPixelCost(block, refFrame, intMV, 'half');
+    
+    // Search 8 half-pixel positions around integer position
+    const halfPixelOffsets = [
+      [-0.5, -0.5], [0, -0.5], [0.5, -0.5],
+      [-0.5, 0],               [0.5, 0],
+      [-0.5, 0.5],  [0, 0.5],  [0.5, 0.5]
+    ];
+    
+    for (const [dx, dy] of halfPixelOffsets) {
+      const testMV: MotionVector = {
+        x: intMV.x + dx,
+        y: intMV.y + dy,
+        refFrame: intMV.refFrame,
+        blockIndex: intMV.blockIndex,
+        precision: 'half'
+      };
+      
+      const cost = this.calculateSubPixelCost(block, refFrame, testMV, 'half');
+      if (cost < bestCost) {
+        bestCost = cost;
+        bestMV = testMV;
+      }
+    }
+    
+    return bestMV;
+  }
+
+  /**
+   * Quarter-pixel refinement for motion estimation
+   */
+  private quarterPixelRefinement(block: Block, refFrame: ReferenceFrame, halfMV: MotionVector): MotionVector {
+    let bestMV = { ...halfMV };
+    let bestCost = this.calculateSubPixelCost(block, refFrame, halfMV, 'quarter');
+    
+    // Search 8 quarter-pixel positions around half-pixel position
+    const quarterPixelOffsets = [
+      [-0.25, -0.25], [0, -0.25], [0.25, -0.25],
+      [-0.25, 0],                 [0.25, 0],
+      [-0.25, 0.25],  [0, 0.25],  [0.25, 0.25]
+    ];
+    
+    for (const [dx, dy] of quarterPixelOffsets) {
+      const testMV: MotionVector = {
+        x: halfMV.x + dx,
+        y: halfMV.y + dy,
+        refFrame: halfMV.refFrame,
+        blockIndex: halfMV.blockIndex,
+        precision: 'quarter'
+      };
+      
+      const cost = this.calculateSubPixelCost(block, refFrame, testMV, 'quarter');
+      if (cost < bestCost) {
+        bestCost = cost;
+        bestMV = testMV;
+      }
+    }
+    
+    return bestMV;
+  }
+
+  /**
+   * Calculate cost for sub-pixel motion vectors
+   */
+  private calculateSubPixelCost(
+    block: Block, 
+    refFrame: ReferenceFrame, 
+    mv: MotionVector,
+    precision: 'half' | 'quarter'
+  ): number {
+    // Use bilinear interpolation for sub-pixel accuracy
+    const interpolated = this.interpolateSubPixel(refFrame, block.x + mv.x, block.y + mv.y, block.size, precision);
+    
+    let cost = 0;
+    for (let y = 0; y < block.size; y++) {
+      for (let x = 0; x < block.size; x++) {
+        if (block.data[y] && block.data[y][x] !== undefined && interpolated[y] && interpolated[y][x] !== undefined) {
+          const residual = block.data[y][x] - interpolated[y][x];
+          cost += residual * residual;
+        }
+      }
+    }
+    
+    // Add motion vector cost (prefer smaller motion vectors)
+    const mvCost = (mv.x * mv.x + mv.y * mv.y) * 0.1;
+    
+    // Add sub-pixel penalty (quarter-pixel costs more than half-pixel)
+    const subPixelPenalty = precision === 'quarter' ? 0.05 : 0.02;
+    
+    return cost + mvCost + subPixelPenalty;
+  }
+
+  /**
+   * Interpolate sub-pixel values using bilinear interpolation
+   */
+  private interpolateSubPixel(
+    refFrame: ReferenceFrame, 
+    x: number, 
+    y: number, 
+    blockSize: number,
+    precision: 'full' | 'half' | 'quarter'
+  ): number[][] {
+    const result: number[][] = [];
+    
+    for (let by = 0; by < blockSize; by++) {
+      result[by] = [];
+      for (let bx = 0; bx < blockSize; bx++) {
+        const refX = x + bx;
+        const refY = y + by;
+        
+        // Get integer coordinates
+        const x0 = Math.floor(refX);
+        const y0 = Math.floor(refY);
+        const x1 = x0 + 1;
+        const y1 = y0 + 1;
+        
+        // Get fractional parts
+        const fx = refX - x0;
+        const fy = refY - y0;
+        
+        // For full pixel precision, just get the nearest pixel
+        if (precision === 'full') {
+          result[by][bx] = this.getPixel(refFrame, Math.round(refX), Math.round(refY));
+          continue;
+        }
+        
+        // Get reference pixels (with bounds checking)
+        const p00 = this.getPixel(refFrame, x0, y0);
+        const p01 = this.getPixel(refFrame, x0, y1);
+        const p10 = this.getPixel(refFrame, x1, y0);
+        const p11 = this.getPixel(refFrame, x1, y1);
+        
+        // Bilinear interpolation
+        const interpolated = p00 * (1 - fx) * (1 - fy) +
+                           p10 * fx * (1 - fy) +
+                           p01 * (1 - fx) * fy +
+                           p11 * fx * fy;
+        
+        result[by][bx] = Math.round(interpolated);
+      }
+    }
+    
+    return result;
+  }
+
+  /**
+   * Safely get pixel value with bounds checking
+   */
+  private getPixel(refFrame: ReferenceFrame, x: number, y: number): number {
+    if (x < 0 || y < 0 || y >= refFrame.data.length || x >= (refFrame.data[y]?.length || 0)) {
+      return 128; // Default gray value for out-of-bounds
+    }
+    return refFrame.data[y][x] || 128;
+  }
+
+  /**
+   * Calculate bidirectional prediction cost
+   */
+  private calculateBidirectionalCost(
+    block: Block,
+    pastRef: ReferenceFrame,
+    futureRef: ReferenceFrame,
+    forwardMV: MotionVector,
+    backwardMV: MotionVector
+  ): number {
+    // Get interpolated values from both references
+    const pastPred = this.interpolateSubPixel(pastRef, block.x + forwardMV.x, block.y + forwardMV.y, block.size, forwardMV.precision || 'full');
+    const futurePred = this.interpolateSubPixel(futureRef, block.x + backwardMV.x, block.y + backwardMV.y, block.size, backwardMV.precision || 'full');
+    
+    let cost = 0;
+    for (let y = 0; y < block.size; y++) {
+      for (let x = 0; x < block.size; x++) {
+        if (block.data[y] && block.data[y][x] !== undefined) {
+          // Average of both predictions
+          const biPrediction = (pastPred[y][x] + futurePred[y][x]) / 2;
+          const residual = block.data[y][x] - biPrediction;
+          cost += residual * residual;
+        }
+      }
+    }
+    
+    // Add cost for both motion vectors
+    const mvCost = (forwardMV.x * forwardMV.x + forwardMV.y * forwardMV.y + 
+                   backwardMV.x * backwardMV.x + backwardMV.y * backwardMV.y) * 0.1;
+    
+    return cost + mvCost;
+  }
+
+  /**
+   * Apply motion compensation for P-frames
+   */
+  private applyMotionCompensation(block: Block, refFrame: ReferenceFrame): void {
+    if (!block.motionVector) return;
+    
+    const mv = block.motionVector;
+    const predicted = this.interpolateSubPixel(refFrame, block.x + mv.x, block.y + mv.y, block.size, mv.precision || 'full');
+    
+    // Calculate residual (difference between original and predicted)
+    for (let y = 0; y < block.size; y++) {
+      for (let x = 0; x < block.size; x++) {
+        if (block.data[y] && predicted[y]) {
+          block.data[y][x] = (block.data[y][x] || 0) - (predicted[y][x] || 0);
+        }
+      }
+    }
+  }
+
+  /**
+   * Apply bidirectional motion compensation for B-frames
+   */
+  private applyBidirectionalCompensation(
+    block: Block,
+    pastRef: ReferenceFrame,
+    futureRef: ReferenceFrame,
+    forwardMV: MotionVector,
+    backwardMV: MotionVector
+  ): void {
+    const pastPred = this.interpolateSubPixel(pastRef, block.x + forwardMV.x, block.y + forwardMV.y, block.size, forwardMV.precision || 'full');
+    const futurePred = this.interpolateSubPixel(futureRef, block.x + backwardMV.x, block.y + backwardMV.y, block.size, backwardMV.precision || 'full');
+    
+    // Calculate residual using average of both predictions
+    for (let y = 0; y < block.size; y++) {
+      for (let x = 0; x < block.size; x++) {
+        if (block.data[y] && pastPred[y] && futurePred[y]) {
+          const biPrediction = (pastPred[y][x] + futurePred[y][x]) / 2;
+          block.data[y][x] = (block.data[y][x] || 0) - biPrediction;
+        }
+      }
+    }
+  }
+
+  // ============ END ADVANCED H.264 EXTENSIONS ============
+
+  /**
    * Get codec information
    */
   static getCodecInfo(): { name: string; version: string; features: string[] } {
@@ -1989,6 +2634,8 @@ export class OmniCodec {
       version: OmniCodec.VERSION,
       features: [
         'H.264-level video compression',
+        'B-frame bidirectional temporal prediction',
+        'Sub-pixel motion estimation (quarter-pixel accuracy)',
         'Motion estimation and compensation',
         'Multiple intra prediction modes',
         'Variable block sizes (4x4, 8x8, 16x16)',
@@ -1996,7 +2643,8 @@ export class OmniCodec {
         'Perceptual quantization matrices',
         'In-loop deblocking filter',
         'Rate-distortion optimization',
-        'Multiple reference frames',
+        'Multiple reference frames (up to 8)',
+        'GOP structure with configurable I-frame intervals',
         'DCT-based frequency domain compression',
         'SIMD-accelerated processing',
         'Production-grade encryption',

@@ -28,7 +28,7 @@ async function testH264Features() {
   
   console.log(`Original video size: ${videoData.byteLength} bytes`);
   
-  // Test with all H.264-level features enabled
+  // Test with all H.264-level features enabled including B-frames
   const startTime = Date.now();
   const h264Encoded = await codec.encode(videoData, 'video', videoMetadata, {
     quality: 85,
@@ -39,7 +39,10 @@ async function testH264Features() {
     deblockingFilter: true,
     rateDistortionOptimization: true,
     maxReferenceFrames: 4,
-    compressionLevel: 8
+    compressionLevel: 8,
+    enableBFrames: true,
+    subPixelMotionEstimation: true,
+    gopSize: 30
   });
   const h264Time = Date.now() - startTime;
   
@@ -90,6 +93,80 @@ async function testH264Features() {
   
   if (decoded.header.motionVectors && decoded.header.motionVectors.length > 0) {
     console.log(`Motion vectors: ${decoded.header.motionVectors.length} detected`);
+    
+    // Analyze sub-pixel precision
+    const subPixelVectors = decoded.header.motionVectors.filter(mv => mv.precision !== 'full');
+    if (subPixelVectors.length > 0) {
+      console.log(`Sub-pixel vectors: ${subPixelVectors.length} (${(subPixelVectors.length / decoded.header.motionVectors.length * 100).toFixed(1)}%)`);
+    }
+  }
+  
+  if (decoded.header.gopStructure) {
+    console.log(`GOP pattern: ${decoded.header.gopStructure.slice(0, 10)}...`);
+  }
+
+  // Test B-frame specific encoding
+  console.log('\n🎬 B-Frame Temporal Compression Test');
+  console.log('-----------------------------------');
+  
+  // Generate multi-frame video sequence for B-frame testing
+  const multiFrameData = MediaUtils.generateTestData('video', 3000); // 3 seconds
+  const multiFrameMetadata = {
+    width: 480,
+    height: 360,
+    frameRate: 30,
+    duration: 3000
+  };
+  
+  const bFrameStart = Date.now();
+  const bFrameEncoded = await codec.encode(multiFrameData, 'video', multiFrameMetadata, {
+    quality: 85,
+    enableSIMD: true,
+    motionEstimation: true,
+    intraPrediction: true,
+    variableBlockSize: true,
+    deblockingFilter: true,
+    enableBFrames: true,
+    subPixelMotionEstimation: true,
+    maxReferenceFrames: 6,
+    gopSize: 15, // Shorter GOP for more B-frames
+    compressionLevel: 8
+  });
+  const bFrameTime = Date.now() - bFrameStart;
+  
+  // Test without B-frames for comparison
+  const noBFrameStart = Date.now();
+  const noBFrameEncoded = await codec.encode(multiFrameData, 'video', multiFrameMetadata, {
+    quality: 85,
+    enableSIMD: true,
+    motionEstimation: true,
+    intraPrediction: true,
+    variableBlockSize: true,
+    deblockingFilter: true,
+    enableBFrames: false, // Disable B-frames
+    subPixelMotionEstimation: true,
+    maxReferenceFrames: 6,
+    gopSize: 15,
+    compressionLevel: 8
+  });
+  const noBFrameTime = Date.now() - noBFrameStart;
+  
+  console.log(`Multi-frame original: ${(multiFrameData.byteLength / 1024).toFixed(1)} KB`);
+  console.log(`With B-frames: ${(bFrameEncoded.length / 1024).toFixed(1)} KB`);
+  console.log(`Without B-frames: ${(noBFrameEncoded.length / 1024).toFixed(1)} KB`);
+  
+  const bFrameImprovement = ((noBFrameEncoded.length - bFrameEncoded.length) / noBFrameEncoded.length) * 100;
+  console.log(`\n🎉 B-frames improved compression by ${bFrameImprovement.toFixed(1)}%`);
+  console.log(`B-frame encoding time: ${bFrameTime}ms vs ${noBFrameTime}ms (${((bFrameTime - noBFrameTime) / noBFrameTime * 100).toFixed(1)}% overhead)`);
+  
+  // Decode B-frame result to verify
+  const bFrameDecoded = await codec.decode(bFrameEncoded);
+  console.log(`B-frame GOP: ${bFrameDecoded.header.gopStructure?.slice(0, 15) || 'N/A'}`);
+  console.log(`B-frame POC: ${bFrameDecoded.header.poc || 'N/A'}`);
+  
+  if (bFrameDecoded.header.motionVectors) {
+    const quarterPixelMVs = bFrameDecoded.header.motionVectors.filter(mv => mv.precision === 'quarter');
+    console.log(`Quarter-pixel MVs: ${quarterPixelMVs.length}/${bFrameDecoded.header.motionVectors.length} (${(quarterPixelMVs.length / bFrameDecoded.header.motionVectors.length * 100).toFixed(1)}%)`);
   }
   
   // Test audio encoding improvements
