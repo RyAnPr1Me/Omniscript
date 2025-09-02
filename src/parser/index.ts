@@ -338,107 +338,7 @@ export class Parser {
       });
     }
     
-    // Parse remaining expressions at the end (like method calls)
-    const remainingLines = sourceWithoutClasses.split(';').map(s => s.trim()).filter(s => s.length > 0);
-    for (const line of remainingLines) {
-      if (line.match(/^(let|const|def)\s+/) || line.match(/^\s*$/) || line.match(/^(import|use)\s+/)) {
-        // Skip variable declarations (already parsed), import statements, and empty lines
-        continue;
-      }
-      
-      if (line.includes('(') && line.includes(')')) {
-        // Method call
-        const callMatch = line.match(/([A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*)\(([^)]*)\)/);
-        if (callMatch) {
-          const callExpr = callMatch[1];
-          const argsStr = callMatch[2].trim();
-          const args = argsStr ? this.parseArguments(argsStr) : [];
-          
-          let calleeObj;
-          if (callExpr.includes('.')) {
-            const [obj, method] = callExpr.split('.');
-            calleeObj = {
-              type: 'Expression',
-              kind: ExpressionKind.MemberAccess,
-              object: { type: 'Expression', kind: ExpressionKind.Identifier, name: obj },
-              member: method
-            };
-          } else {
-            calleeObj = { type: 'Expression', kind: ExpressionKind.Identifier, name: callExpr };
-          }
-          
-          body.push({
-            type: 'ExpressionStatement',
-            expression: {
-              type: 'Expression',
-              kind: ExpressionKind.Call,
-              callee: calleeObj,
-              arguments: args
-            }
-          });
-        }
-      } else if (line.match(/^`.*`$/)) {
-        // Template literal expression
-        body.push({
-          type: 'ExpressionStatement',
-          expression: this.parseTemplateLiteral(line)
-        });
-      } else if (line.match(/^typeof\s+/)) {
-        // typeof expression
-        const typeofMatch = line.match(/^typeof\s+([A-Za-z_]\w*(?:\.[A-Za-z_]\w*)?)$/);
-        if (typeofMatch) {
-          const operand = typeofMatch[1];
-          
-          let operandExpr;
-          if (operand.includes('.')) {
-            const [objName, memberName] = operand.split('.');
-            operandExpr = {
-              type: 'Expression',
-              kind: ExpressionKind.MemberAccess,
-              object: { type: 'Expression', kind: ExpressionKind.Identifier, name: objName },
-              member: memberName
-            };
-          } else {
-            operandExpr = { type: 'Expression', kind: ExpressionKind.Identifier, name: operand };
-          }
-          
-          body.push({
-            type: 'ExpressionStatement',
-            expression: {
-              type: 'Expression',
-              kind: ExpressionKind.Unary,
-              operator: 'typeof',
-              left: operandExpr
-            }
-          });
-        }
-      } else if (line.match(/^[A-Za-z_]\w*\s*[+\-*\/]\s*[A-Za-z_]\w*$/)) {
-        // Binary expression like x + y
-        const binaryMatch = line.match(/^([A-Za-z_]\w*)\s*([+\-*\/])\s*([A-Za-z_]\w*)$/);
-        if (binaryMatch) {
-          const left = binaryMatch[1];
-          const operator = binaryMatch[2];
-          const right = binaryMatch[3];
-          
-          body.push({
-            type: 'ExpressionStatement',
-            expression: {
-              type: 'Expression',
-              kind: ExpressionKind.Binary,
-              operator: operator,
-              left: { type: 'Expression', kind: ExpressionKind.Identifier, name: left },
-              right: { type: 'Expression', kind: ExpressionKind.Identifier, name: right }
-            }
-          });
-        }
-      } else if (line.match(/^[A-Za-z_]\w*$/)) {
-        // Simple identifier
-        body.push({
-          type: 'ExpressionStatement',
-          expression: { type: 'Expression', kind: ExpressionKind.Identifier, name: line }
-        });
-      }
-    }
+    // (Remaining expressions parsing moved to after if statement processing)
     
     // Handle method calls at the beginning if that's all there is
     const methodCallRe = /^([A-Za-z_]\w*)\.([A-Za-z_]\w*)\(([^)]*)\)\s*$/;
@@ -728,6 +628,108 @@ export class Parser {
       body.push({ type: 'ImportDeclaration', imported, from });
     }
     */ // End DISABLED import section
+
+    // Parse remaining expressions at the end (like method calls) - using cleaned source
+    const remainingLines = sourceWithoutIfs.split(';').map(s => s.trim()).filter(s => s.length > 0);
+    for (const line of remainingLines) {
+      if (line.match(/^(let|const|def)\s+/) || line.match(/^\s*$/) || line.match(/^(import|use)\s+/)) {
+        // Skip variable declarations (already parsed), import statements, and empty lines
+        continue;
+      }
+      
+      if (line.includes('(') && line.includes(')')) {
+        // Method call
+        const callMatch = line.match(/([A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*)\(([^)]*)\)/);
+        if (callMatch) {
+          const callExpr = callMatch[1];
+          const argsStr = callMatch[2].trim();
+          const args = argsStr ? this.parseArguments(argsStr) : [];
+          
+          let calleeObj;
+          if (callExpr.includes('.')) {
+            const [obj, method] = callExpr.split('.');
+            calleeObj = {
+              type: 'Expression',
+              kind: ExpressionKind.MemberAccess,
+              object: { type: 'Expression', kind: ExpressionKind.Identifier, name: obj },
+              member: method
+            };
+          } else {
+            calleeObj = { type: 'Expression', kind: ExpressionKind.Identifier, name: callExpr };
+          }
+          
+          body.push({
+            type: 'ExpressionStatement',
+            expression: {
+              type: 'Expression',
+              kind: ExpressionKind.Call,
+              callee: calleeObj,
+              arguments: args
+            }
+          });
+        }
+      } else if (line.match(/^`.*`$/)) {
+        // Template literal expression
+        body.push({
+          type: 'ExpressionStatement',
+          expression: this.parseTemplateLiteral(line)
+        });
+      } else if (line.match(/^typeof\s+/)) {
+        // typeof expression
+        const typeofMatch = line.match(/^typeof\s+([A-Za-z_]\w*(?:\.[A-Za-z_]\w*)?)$/);
+        if (typeofMatch) {
+          const operand = typeofMatch[1];
+          
+          let operandExpr;
+          if (operand.includes('.')) {
+            const [objName, memberName] = operand.split('.');
+            operandExpr = {
+              type: 'Expression',
+              kind: ExpressionKind.MemberAccess,
+              object: { type: 'Expression', kind: ExpressionKind.Identifier, name: objName },
+              member: memberName
+            };
+          } else {
+            operandExpr = { type: 'Expression', kind: ExpressionKind.Identifier, name: operand };
+          }
+          
+          body.push({
+            type: 'ExpressionStatement',
+            expression: {
+              type: 'Expression',
+              kind: ExpressionKind.Unary,
+              operator: 'typeof',
+              left: operandExpr
+            }
+          });
+        }
+      } else if (line.match(/^[A-Za-z_]\w*\s*[+\-*\/]\s*[A-Za-z_]\w*$/)) {
+        // Binary expression like x + y
+        const binaryMatch = line.match(/^([A-Za-z_]\w*)\s*([+\-*\/])\s*([A-Za-z_]\w*)$/);
+        if (binaryMatch) {
+          const left = binaryMatch[1];
+          const operator = binaryMatch[2];
+          const right = binaryMatch[3];
+          
+          body.push({
+            type: 'ExpressionStatement',
+            expression: {
+              type: 'Expression',
+              kind: ExpressionKind.Binary,
+              operator: operator,
+              left: { type: 'Expression', kind: ExpressionKind.Identifier, name: left },
+              right: { type: 'Expression', kind: ExpressionKind.Identifier, name: right }
+            }
+          });
+        }
+      } else if (line.match(/^[A-Za-z_]\w*$/)) {
+        // Simple identifier
+        body.push({
+          type: 'ExpressionStatement',
+          expression: { type: 'Expression', kind: ExpressionKind.Identifier, name: line }
+        });
+      }
+    }
 
     if (body.length > 0) return { type: 'Program', body };
     throw new Error('Fallback parser could not parse input');
