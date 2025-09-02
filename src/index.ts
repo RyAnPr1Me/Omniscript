@@ -38,18 +38,15 @@ export class Omniscript {
 
   async execute(source: string): Promise<any> {
     // Check if source contains functional syntax that ANTLR can't handle properly
+    // Be more conservative - only use functional parser for true functional programming constructs
     const hasFunctionalSyntax = /fn\s*\([^)]*\)\s*=>/g.test(source) || 
-                               /\([^)]*\)\s*=>/g.test(source) ||  // Also detect (args) => syntax
-                               /if\s+\w+\s+then\s+/.test(source) ||
-                               // /match\s+\w+\s*\{/.test(source) ||  // Temporarily disable this to test ANTLR
-                               /\bvar\s+\w+\s*=/.test(source) ||  // Also detect var bindings
-                               /\bdef\s+\w+\s*=/.test(source) ||  // Also detect def bindings
-                               /\bobject\s+\w+\s*\{/.test(source) ||  // Also detect object definitions
-                               /\bclass\s+\w+\s*\{/.test(source) ||  // Also detect class definitions
-                               /\bimport\s+\{/.test(source) ||  // Also detect import statements
-                               /\\\|>/.test(source) ||  // Also detect pipeline operations
-                               /\b(curry|memoize|just|nothing|left|right|head|tail|cons|flip|add|inc)\s*\(/.test(source) || // Detect functional builtins
-                               /\)\s*\(/.test(source); // Detect curried function calls like add(2)(3)
+                               /\([^)]*\)\s*=>\s*[^;{]/.test(source) ||  // Arrow functions not in object context
+                               /if\s+\w+\s+then\s+/.test(source) ||  // Functional if-then syntax
+                               /\\\|>/.test(source) ||  // Pipeline operations
+                               /\b(curry|memoize|just|nothing|left|right|head|tail|cons|flip)\s*\(/.test(source) || // Functional builtins (removed add/inc as they're too common)
+                               /\)\s*\(\s*\w+\s*\)/.test(source) || // Curried function calls like add(2)(3)
+                               /\blet\s+\w+\s*=.*\bin\b/.test(source) || // Let expressions with 'in' 
+                               /\bmatch\s+\w+\s*\{[\s\S]*?case\s+/.test(source); // Match expressions with cases
     
     if (hasFunctionalSyntax) {
       // Use functional parser directly for functional syntax
@@ -70,28 +67,11 @@ export class Omniscript {
       }
     }
     
-    try {
-      const ast = this.parser.parse(source);
-      const bytecode = this.compiler.compile(ast);
-      const result = this.runtime.execute(bytecode as any);
-      return result;
-    } catch (err) {
-      // Preprocess: wrap immediately-invoked lambdas `fn(...)=>... (args)` -> `(fn(...)=>...)(args)`
-      try {
-        let src = source;
-        // Convert arrow function syntax to fn syntax, but avoid method definitions
-        // Look for patterns like `var x = (args) =>` or `= (args) =>` or start of line `(args) =>` or `prop: (args) =>`
-        src = src.replace(/(^|[=,:]\s*)\(([^)]*)\)\s*=>/g, '$1fn($2) =>');
-        // More specific regex for immediately invoked lambdas that won't break nested lambdas
-        src = src.replace(/(fn\s*\([^)]*\)\s*=>\s*[^;\n()]+?)\s+\(([^)]*)\)/g, '($1)($2)');
-        const fparser = new FunctionalParser();
-        const prog = fparser.parse(src);
-        return evalFunctional(prog);
-      } catch (e) {
-        // If functional fallback also fails, rethrow original error
-        throw err;
-      }
-    }
+    // Use ANTLR parser for imperative code
+    const ast = this.parser.parse(source);
+    const bytecode = this.compiler.compile(ast);
+    const result = this.runtime.execute(bytecode as any);
+    return result;
   }
 }
 

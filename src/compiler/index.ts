@@ -326,7 +326,7 @@ export class Compiler {
   }
 
   private visitExpressionStatement(node: any): any {
-    return { type: 'Expr', expr: node };
+    return { type: 'ExpressionStatement', expression: node.expression || node };
   }
 
   private visitVariableDeclaration(node: any): any {
