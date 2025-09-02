@@ -67,9 +67,9 @@ async function comprehensiveBenchmark() {
         }
       },
       {
-        name: 'High Quality + B-frames',
+        name: 'Rate Control 1Mbps',
         options: {
-          quality: 90,
+          quality: 85,
           enableSIMD: true,
           motionEstimation: true,
           intraPrediction: true,
@@ -79,7 +79,9 @@ async function comprehensiveBenchmark() {
           maxReferenceFrames: 4,
           enableBFrames: true,
           subPixelMotionEstimation: true,
-          gopSize: 30
+          gopSize: 30,
+          targetBitrate: 1000,
+          adaptiveQuantization: true
         }
       }
     ];

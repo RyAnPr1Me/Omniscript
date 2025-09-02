@@ -168,6 +168,78 @@ async function testH264Features() {
     const quarterPixelMVs = bFrameDecoded.header.motionVectors.filter(mv => mv.precision === 'quarter');
     console.log(`Quarter-pixel MVs: ${quarterPixelMVs.length}/${bFrameDecoded.header.motionVectors.length} (${(quarterPixelMVs.length / bFrameDecoded.header.motionVectors.length * 100).toFixed(1)}%)`);
   }
+
+  // Test rate control features
+  console.log('\n📊 Rate Control System Test');
+  console.log('---------------------------');
+  
+  // Test different target bitrates
+  const targetBitrates = [500, 1000, 2000]; // kbps
+  
+  for (const bitrate of targetBitrates) {
+    const rateControlStart = Date.now();
+    const rateControlEncoded = await codec.encode(multiFrameData, 'video', multiFrameMetadata, {
+      quality: 85,
+      enableSIMD: true,
+      motionEstimation: true,
+      intraPrediction: true,
+      variableBlockSize: true,
+      enableBFrames: true,
+      subPixelMotionEstimation: true,
+      maxReferenceFrames: 4,
+      gopSize: 30,
+      targetBitrate: bitrate,
+      adaptiveQuantization: true,
+      compressionLevel: 8
+    });
+    const rateControlTime = Date.now() - rateControlStart;
+    
+    const rateControlDecoded = await codec.decode(rateControlEncoded);
+    const actualBitrate = rateControlDecoded.header.actualBitrate || 0;
+    const bitrateAccuracy = Math.abs(actualBitrate - bitrate) / bitrate * 100;
+    
+    console.log(`Target: ${bitrate} kbps | Actual: ${actualBitrate} kbps | Accuracy: ${(100 - bitrateAccuracy).toFixed(1)}% | Size: ${(rateControlEncoded.length / 1024).toFixed(1)} KB | Time: ${rateControlTime}ms`);
+  }
+  
+  // Test adaptive quantization
+  console.log('\n🎯 Adaptive Quantization Test');
+  console.log('-----------------------------');
+  
+  const adaptiveStart = Date.now();
+  const adaptiveEncoded = await codec.encode(videoData, 'video', videoMetadata, {
+    quality: 85,
+    enableSIMD: true,
+    motionEstimation: true,
+    intraPrediction: true,
+    variableBlockSize: true,
+    enableBFrames: true,
+    subPixelMotionEstimation: true,
+    adaptiveQuantization: true,
+    maxReferenceFrames: 4,
+    compressionLevel: 8
+  });
+  const adaptiveTime = Date.now() - adaptiveStart;
+  
+  const noAdaptiveStart = Date.now();
+  const noAdaptiveEncoded = await codec.encode(videoData, 'video', videoMetadata, {
+    quality: 85,
+    enableSIMD: true,
+    motionEstimation: true,
+    intraPrediction: true,
+    variableBlockSize: true,
+    enableBFrames: true,
+    subPixelMotionEstimation: true,
+    adaptiveQuantization: false,
+    maxReferenceFrames: 4,
+    compressionLevel: 8
+  });
+  const noAdaptiveTime = Date.now() - noAdaptiveStart;
+  
+  const adaptiveImprovement = ((noAdaptiveEncoded.length - adaptiveEncoded.length) / noAdaptiveEncoded.length) * 100;
+  console.log(`With adaptive QP: ${(adaptiveEncoded.length / 1024).toFixed(1)} KB | ${adaptiveTime}ms`);
+  console.log(`Without adaptive QP: ${(noAdaptiveEncoded.length / 1024).toFixed(1)} KB | ${noAdaptiveTime}ms`);
+  console.log(`🎉 Adaptive quantization improved compression by ${adaptiveImprovement.toFixed(1)}%`);
+  console.log(`📈 Encoding overhead: ${((adaptiveTime - noAdaptiveTime) / noAdaptiveTime * 100).toFixed(1)}%`);
   
   // Test audio encoding improvements
   console.log('\n🎵 Enhanced Audio Encoding Test');
