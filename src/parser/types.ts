@@ -17,7 +17,8 @@ export enum ExpressionKind {
 		Ternary = "Ternary", // New: ternary expressions
 		Match = "Match", // New: pattern matching expression
 		Await = "Await", // New: await expression
-		Assignment = "Assignment" // New: assignment expression
+		Assignment = "Assignment", // New: assignment expression
+		TemplateLiteral = "TemplateLiteral" // New: template literal expression
 }
 
 /**
@@ -194,6 +195,10 @@ export interface Expression extends ASTNode {
 	subject?: Expression;
 	/** Arms for match expressions (renamed to avoid collision with ASTNode.arms). */
 	matchArms?: { pattern: { kind: 'Wildcard' } | { kind: 'Identifier'; name: string } | { kind: 'Number'; value: number }; guard?: Expression; value: Expression }[];
+	/** Parts for template literal expressions. */
+	parts?: (Expression | string)[];
+	/** Expressions in template literal interpolations. */
+	expressions?: Expression[];
 }
 
 /**
