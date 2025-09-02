@@ -168,6 +168,8 @@ export class Runtime {
           return this.executeExpressionStatement(bytecode as any);
         case 'If':
           return this.executeIf(bytecode as any);
+        case 'IfStatement':
+          return this.executeIf(bytecode as any);
         case 'While':
           return this.executeWhile(bytecode as any);
         case 'For':
@@ -182,8 +184,12 @@ export class Runtime {
           return bytecode.value;
         case 'Binary':
           return this.executeBinary(bytecode as any);
+        case 'BinaryExpression':
+          return this.executeBinary(bytecode as any);
         case 'Identifier':
           return this.executeIdentifier(bytecode as any);
+        case 'ReturnStatement':
+          return this.executeReturn(bytecode);
         case 'Class':
         case 'ClassDeclaration':
           return this.executeClassDeclaration(bytecode as any);
@@ -226,58 +232,47 @@ export class Runtime {
   }
 
   private executeFunction(fn: Bytecode): unknown {
-    // If function has a name, store it in scope
-    if (fn.name) {
-      this.scope.set(fn.name, fn);
-    }
-    
-    // For anonymous functions, return a callable function object
-    if (!fn.name) {
-      return (...args: any[]) => {
-        // Create new scope with parameters
-        const oldScope = new Map(this.scope);
-        
-        // Bind parameters to arguments
-        if (fn.params) {
-          for (let i = 0; i < fn.params.length; i++) {
-            this.scope.set(fn.params[i], args[i]);
-          }
+    // Create a callable function object
+    const callableFunction = (...args: any[]) => {
+      // Create new scope with parameters
+      const oldScope = new Map(this.scope);
+      
+      // Bind parameters to arguments
+      if (fn.params) {
+        for (let i = 0; i < fn.params.length; i++) {
+          this.scope.set(fn.params[i], args[i]);
         }
-        
-        try {
-          let last: unknown = undefined;
-          
-          // If body is a single expression, return its value
-          if (fn.body && fn.body.length === 1 && fn.body[0].type === 'Expression') {
-            last = this.evalExpr(fn.body[0] as any);
-          } else {
-            // Execute all statements in body
-            for (const stmt of fn.body || []) {
-              last = this.execute(stmt as any);
-            }
-          }
-          return last;
-        } catch (e: any) {
-          if (e && e.__return) return e.value;
-          throw e;
-        } finally {
-          // Restore original scope
-          this.scope = oldScope;
-        }
-      };
-    }
-    
-    // For named functions, execute the body to define the function
-    try {
-      let last: unknown = undefined;
-      for (const stmt of fn.body || []) {
-        last = this.execute(stmt as any);
       }
-      return last;
-    } catch (e: any) {
-      if (e && e.__return) return e.value;
-      throw e;
+      
+      try {
+        let last: unknown = undefined;
+        
+        // If body is a single expression, return its value
+        if (fn.body && fn.body.length === 1 && fn.body[0].type === 'Expression') {
+          last = this.evalExpr(fn.body[0] as any);
+        } else {
+          // Execute all statements in body
+          for (const stmt of fn.body || []) {
+            last = this.execute(stmt as any);
+          }
+        }
+        return last;
+      } catch (e: any) {
+        if (e && e.__return) return e.value;
+        throw e;
+      } finally {
+        // Restore original scope
+        this.scope = oldScope;
+      }
+    };
+
+    // If function has a name, store the callable function in scope
+    if (fn.name) {
+      this.scope.set(fn.name, callableFunction);
     }
+    
+    // Return the callable function object
+    return callableFunction;
   }
 
   private async executeFunctionAsync(fn: Bytecode): Promise<unknown> {
@@ -1055,6 +1050,10 @@ export class Runtime {
         // Handle Function expressions by returning a callable function
         return this.executeFunction(expr as any);
       }
+      case 'TemplateLiteral': {
+        // Handle template literals with interpolation
+        return this.evalTemplateLiteral(expr as any);
+      }
       default:
         return undefined;
     }
@@ -1069,6 +1068,24 @@ export class Runtime {
       }
     }
     return undefined;
+  }
+
+  private evalTemplateLiteral(expr: { parts?: (any | string)[], expressions?: any[] }): string {
+    if (!expr.parts) return '';
+    
+    let result = '';
+    
+    for (const part of expr.parts) {
+      if (typeof part === 'string') {
+        result += part;
+      } else {
+        // It's an expression, evaluate it and convert to string
+        const value = this.evalExpr(part);
+        result += String(value);
+      }
+    }
+    
+    return result;
   }
 
   private matchPattern(value: unknown, pattern: { kind: string; value?: unknown }): boolean {

@@ -62,22 +62,11 @@ export class Parser {
     return false;
   }
 
-  parseExpression(expr: Expression | string): Expression {
-    if (typeof expr === 'string') {
-      const inputStream = CharStreams.fromString(expr);
-      const lexer = new OmniscriptLexer(inputStream);
-      const tokenStream = new CommonTokenStream(lexer);
-      const parser = new OmniscriptParser(tokenStream);
-      return parser.expression();
-    }
-    return expr;
-  }
-
   parsePatternMatching(node: ASTNode): any {
     if (node.type === 'MatchExpression') {
       return {
         type: 'Match',
-        subject: node.subject ? this.parseExpression(node.subject) : null,
+        subject: node.subject ? node.subject : null,
         arms: (node.arms || []).map((arm: any) => this.parseMatchArm(arm))
       };
     }
@@ -87,7 +76,7 @@ export class Parser {
   private parseMatchArm(arm: any): any {
     return {
       pattern: this.parsePattern(arm.pattern),
-      expression: this.parseExpression(arm.expression)
+      expression: arm.expression
     };
   }
 
@@ -120,7 +109,7 @@ export class Parser {
   private parseMatchExpression(node: ASTNode): any {
     return {
       type: 'MatchExpression',
-      subject: node.subject ? this.parseExpression(node.subject) : null,
+      subject: node.subject ? node.subject : null,
       arms: (node.arms || []).map((arm: any) => this.parseMatchArm(arm))
     };
   }
@@ -165,7 +154,7 @@ export class Parser {
       }
       
       const fnBody = retArg ? [{ type: 'ReturnStatement', argument: retArg }] : [];
-      body.push({ type: 'FunctionDeclaration', name, params, body: fnBody });
+      body.push({ type: 'Function', name, params, body: fnBody });
     }
     
     // Remove function declarations from source for remaining parsing
@@ -269,6 +258,9 @@ export class Parser {
             isConstructor: true
           };
         }
+      } else if (valueExpr.match(/^`.*`$/)) {
+        // Template literal with possible interpolation
+        initializer = this.parseTemplateLiteral(valueExpr);
       } else if (valueExpr.match(/^["'].*["']$/)) {
         // String literal (both single and double quotes)
         initializer = { type: 'Expression', kind: ExpressionKind.Literal, value: valueExpr.slice(1, -1) };
@@ -318,6 +310,21 @@ export class Parser {
       } else if (valueExpr.includes(' + ') || valueExpr.includes(' - ') || valueExpr.includes(' * ') || valueExpr.includes(' / ')) {
         // Binary expression
         initializer = this.parseBinaryExpression(valueExpr);
+      } else if (valueExpr.match(/[A-Za-z_]\w*\s*\([^)]*\)/)) {
+        // Function call like add(5, 3)
+        const callMatch = valueExpr.match(/([A-Za-z_]\w*)\s*\(([^)]*)\)/);
+        if (callMatch) {
+          const funcName = callMatch[1];
+          const argsStr = callMatch[2].trim();
+          const args = argsStr ? this.parseArguments(argsStr) : [];
+          
+          initializer = {
+            type: 'Expression',
+            kind: ExpressionKind.Call,
+            callee: { type: 'Expression', kind: ExpressionKind.Identifier, name: funcName },
+            arguments: args
+          };
+        }
       } else {
         // Identifier or expression
         initializer = { type: 'Expression', kind: ExpressionKind.Identifier, name: valueExpr };
@@ -370,6 +377,12 @@ export class Parser {
             }
           });
         }
+      } else if (line.match(/^`.*`$/)) {
+        // Template literal expression
+        body.push({
+          type: 'ExpressionStatement',
+          expression: this.parseTemplateLiteral(line)
+        });
       } else if (line.match(/^typeof\s+/)) {
         // typeof expression
         const typeofMatch = line.match(/^typeof\s+([A-Za-z_]\w*(?:\.[A-Za-z_]\w*)?)$/);
@@ -647,6 +660,64 @@ export class Parser {
       });
     }
 
+    // Parse if statements: if (condition) { ... } else { ... }
+    const ifRe = /if\s*\(([^)]+)\)\s*\{([^}]*)\}(?:\s*else\s*\{([^}]*)\})?/g;
+    let ifMatch: RegExpExecArray | null;
+    while ((ifMatch = ifRe.exec(sourceWithoutFns)) !== null) {
+      const condition = ifMatch[1].trim();
+      const thenBlock = ifMatch[2].trim();
+      const elseBlock = ifMatch[3] ? ifMatch[3].trim() : undefined;
+      
+      // Parse condition - handle simple comparisons like result > 5
+      let conditionExpr;
+      const comparisonMatch = condition.match(/([A-Za-z_]\w*)\s*([><=!]+)\s*([A-Za-z_]\w*|\d+)/);
+      if (comparisonMatch) {
+        const left = comparisonMatch[1];
+        const operator = comparisonMatch[2];
+        const right = comparisonMatch[3];
+        
+        let rightExpr;
+        if (right.match(/^\d+$/)) {
+          rightExpr = { type: 'Expression', kind: ExpressionKind.Literal, value: Number(right) };
+        } else {
+          rightExpr = { type: 'Expression', kind: ExpressionKind.Identifier, name: right };
+        }
+        
+        conditionExpr = {
+          type: 'Expression',
+          kind: ExpressionKind.Binary,
+          operator: operator,
+          left: { type: 'Expression', kind: ExpressionKind.Identifier, name: left },
+          right: rightExpr
+        };
+      } else {
+        // Simple identifier condition
+        conditionExpr = { type: 'Expression', kind: ExpressionKind.Identifier, name: condition };
+      }
+      
+      // Parse then and else blocks (simple statements for now)
+      const thenStmts = thenBlock ? [this.parseSimpleStatement(thenBlock)] : [];
+      const elseStmts = elseBlock ? [this.parseSimpleStatement(elseBlock)] : undefined;
+      
+      body.push({ 
+        type: 'IfStatement',
+        condition: conditionExpr,
+        then: { type: 'Block', body: thenStmts },
+        else: elseStmts ? { type: 'Block', body: elseStmts } : undefined
+      });
+    }
+
+    // Remove if statements from source for remaining parsing
+    let sourceWithoutIfs = sourceWithoutFns;
+    ifRe.lastIndex = 0; // Reset regex
+    while ((ifMatch = ifRe.exec(sourceWithoutFns)) !== null) {
+      const start = ifMatch.index!;
+      const end = start + ifMatch[0].length;
+      sourceWithoutIfs = sourceWithoutIfs.substring(0, start) + 
+                        ' '.repeat(end - start) + 
+                        sourceWithoutIfs.substring(end);
+    }
+
     // DISABLED: duplicate import parsing
     /*
     // simple import statements: import { A } from 'module';
@@ -671,6 +742,27 @@ export class Parser {
         { type: 'Expression', kind: ExpressionKind.Literal, value: Number(expr) } :
         { type: 'Expression', kind: ExpressionKind.Identifier, name: expr };
       return { type: 'ThrowStatement', argument };
+    }
+    
+    // Handle console.log statements
+    if (src.startsWith('console.log(') && src.endsWith(')')) {
+      const argsStr = src.substring(12, src.length - 1); // Remove 'console.log(' and ')'
+      const args = argsStr ? this.parseArguments(argsStr) : [];
+      
+      return {
+        type: 'ExpressionStatement',
+        expression: {
+          type: 'Expression',
+          kind: ExpressionKind.Call,
+          callee: {
+            type: 'Expression',
+            kind: ExpressionKind.MemberAccess,
+            object: { type: 'Expression', kind: ExpressionKind.Identifier, name: 'console' },
+            member: 'log'
+          },
+          arguments: args
+        }
+      };
     }
     
     // Handle simple expressions (numbers, identifiers)
@@ -1108,6 +1200,9 @@ export class Parser {
       } else if (trimmed.match(/^'.*'$/)) {
         // Single-quoted string literal
         args.push({ type: 'Expression', kind: ExpressionKind.Literal, value: trimmed.slice(1, -1) });
+      } else if (trimmed.match(/^`.*`$/)) {
+        // Template literal
+        args.push(this.parseTemplateLiteral(trimmed));
       } else if (trimmed.match(/^\d+$/)) {
         // Number literal
         args.push({ type: 'Expression', kind: ExpressionKind.Literal, value: Number(trimmed) });
@@ -1135,6 +1230,21 @@ export class Parser {
           }
         }
         args.push({ type: 'Expression', kind: ExpressionKind.ObjectLiteral, properties });
+      } else if (trimmed.includes('.') && !trimmed.match(/^\d+\.\d+$/)) {
+        // Member access like obj.prop (but not decimal numbers)
+        const parts = trimmed.split('.');
+        let current: any = { type: 'Expression', kind: ExpressionKind.Identifier, name: parts[0] };
+        
+        for (let i = 1; i < parts.length; i++) {
+          current = {
+            type: 'Expression',
+            kind: ExpressionKind.MemberAccess,
+            object: current,
+            member: parts[i]
+          };
+        }
+        
+        args.push(current);
       } else {
         // Identifier
         args.push({ type: 'Expression', kind: ExpressionKind.Identifier, name: trimmed });
@@ -1338,5 +1448,94 @@ export class Parser {
       // Identifier
       return { type: 'Expression', kind: ExpressionKind.Identifier, name: trimmed };
     }
+  }
+
+  private parseTemplateLiteral(templateStr: string): any {
+    // Parse template literal like: `Hello ${name}!`
+    const content = templateStr.slice(1, -1); // Remove backticks
+    
+    const parts: (string | any)[] = [];
+    const expressions: any[] = [];
+    
+    let currentString = '';
+    let i = 0;
+    
+    while (i < content.length) {
+      if (content[i] === '$' && content[i + 1] === '{') {
+        // Found interpolation expression
+        if (currentString) {
+          parts.push(currentString);
+          currentString = '';
+        }
+        
+        // Find the matching closing brace
+        let braceCount = 1;
+        let j = i + 2;
+        let exprContent = '';
+        
+        while (j < content.length && braceCount > 0) {
+          if (content[j] === '{') {
+            braceCount++;
+          } else if (content[j] === '}') {
+            braceCount--;
+          }
+          
+          if (braceCount > 0) {
+            exprContent += content[j];
+          }
+          j++;
+        }
+        
+        // Parse the expression inside the interpolation
+        const expr = this.parseExpression(exprContent);
+        expressions.push(expr);
+        parts.push(expr);
+        
+        i = j;
+      } else {
+        currentString += content[i];
+        i++;
+      }
+    }
+    
+    if (currentString) {
+      parts.push(currentString);
+    }
+    
+    return {
+      type: 'Expression',
+      kind: ExpressionKind.TemplateLiteral,
+      parts,
+      expressions
+    };
+  }
+
+  private parseExpression(expr: string): any {
+    const trimmed = expr.trim();
+    
+    // Handle binary expressions first
+    if (trimmed.includes(' + ') || trimmed.includes(' - ') || trimmed.includes(' * ') || trimmed.includes(' / ')) {
+      return this.parseBinaryExpression(trimmed);
+    }
+    
+    // Handle member access
+    if (trimmed.includes('.') && !trimmed.match(/^["'].*["']$/)) {
+      const [obj, ...memberParts] = trimmed.split('.');
+      let current = { type: 'Expression', kind: ExpressionKind.Identifier, name: obj };
+      
+      for (const member of memberParts) {
+        current = {
+          type: 'Expression',
+          kind: ExpressionKind.MemberAccess,
+          object: current,
+          member: member
+        } as any;
+      }
+      
+      return current;
+    }
+    
+    // Handle simple expressions
+    return this.parseSimpleExpression(trimmed);
   }
 }
