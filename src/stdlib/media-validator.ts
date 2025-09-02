@@ -11,7 +11,7 @@ export class MediaValidator {
   private static readonly MAX_DIMENSIONS = 8192; // Max video width/height
   private static readonly MAX_SAMPLE_RATE = 192000; // Max audio sample rate
   private static readonly MAX_CHANNELS = 8; // Max audio channels
-  private static readonly SUPPORTED_VERSIONS = ['1.0']; // Supported codec versions
+  private static readonly SUPPORTED_VERSIONS = ['1.0', '2.0']; // Supported codec versions
 
   /**
    * Validate input data for encoding
@@ -229,8 +229,8 @@ export class MediaValidator {
       );
     }
 
-    if (!header.codec || header.codec !== 'OmniCodec') {
-      throw new ValidationError(`Invalid codec: ${header.codec}. Expected 'OmniCodec'`);
+    if (!header.codec || (header.codec !== 'OmniCodec' && header.codec !== 'OmniCodec-H264')) {
+      throw new ValidationError(`Invalid codec: ${header.codec}. Expected 'OmniCodec' or 'OmniCodec-H264'`);
     }
 
     if (typeof header.duration !== 'number' || header.duration < 0) {
