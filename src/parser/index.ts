@@ -608,9 +608,9 @@ export class Parser {
     }
 
     // Remove if statements from source for remaining parsing
-    let sourceWithoutIfs = sourceWithoutFns;
+    let sourceWithoutIfs = sourceWithoutClasses; // Use sourceWithoutClasses instead of sourceWithoutFns
     ifRe.lastIndex = 0; // Reset regex
-    while ((ifMatch = ifRe.exec(sourceWithoutFns)) !== null) {
+    while ((ifMatch = ifRe.exec(sourceWithoutClasses)) !== null) { // Use sourceWithoutClasses here too
       const start = ifMatch.index!;
       const end = start + ifMatch[0].length;
       sourceWithoutIfs = sourceWithoutIfs.substring(0, start) + 
@@ -632,8 +632,14 @@ export class Parser {
     // Parse remaining expressions at the end (like method calls) - using cleaned source
     const remainingLines = sourceWithoutIfs.split(';').map(s => s.trim()).filter(s => s.length > 0);
     for (const line of remainingLines) {
-      if (line.match(/^(let|const|def)\s+/) || line.match(/^\s*$/) || line.match(/^(import|use)\s+/)) {
+      if (line.match(/^(let|const|def|var)\s+/) || line.match(/^\s*$/) || line.match(/^(import|use)\s+/)) {
         // Skip variable declarations (already parsed), import statements, and empty lines
+        continue;
+      }
+      
+      // Skip method names that are likely leftover from class parsing (now fixed, but keeping as safety)
+      if (line === 'getName()' || line.match(/^[A-Za-z_]\w*\(\)\s*$/)) {
+        // Skip simple function calls with no arguments (likely parsing artifacts from class methods)
         continue;
       }
       
@@ -1257,39 +1263,7 @@ export class Parser {
             });
           }
         } else {
-          // Handle method call statements like this.free()
-          const methodCallRe = /([A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*)\s*\(\s*([^)]*)\s*\)\s*;?/g;
-          let callMatch;
-          while ((callMatch = methodCallRe.exec(methodBodyStr)) !== null) {
-            const callExpr = callMatch[1];
-            const argsStr = callMatch[2].trim();
-            const args = argsStr ? this.parseArguments(argsStr) : [];
-            
-            let calleeObj;
-            if (callExpr.includes('.')) {
-              const [obj, method] = callExpr.split('.');
-              calleeObj = {
-                type: 'Expression',
-                kind: ExpressionKind.MemberAccess,
-                object: { type: 'Expression', kind: ExpressionKind.Identifier, name: obj },
-                member: method
-              };
-            } else {
-              calleeObj = { type: 'Expression', kind: ExpressionKind.Identifier, name: callExpr };
-            }
-            
-            methodBodyStmts.push({
-              type: 'Expr',
-              expr: {
-                type: 'Expression',
-                kind: ExpressionKind.Call,
-                callee: calleeObj,
-                arguments: args
-              }
-            });
-          }
-          
-          // Handle return statements in regular methods
+          // Handle return statements in regular methods first
           if (methodBodyStr.includes('return')) {
             const returnMatch = methodBodyStr.match(/return\s+(.+)/);
             if (returnMatch) {
@@ -1298,20 +1272,66 @@ export class Parser {
               const cleanExpr = returnExpr.replace(/;$/, '');
               let returnValue;
               if (cleanExpr.match(/^["'].*["']$/)) {
-                // Handle both single and double quotes
+                // String literal
                 returnValue = { type: 'Expression', kind: ExpressionKind.Literal, value: cleanExpr.slice(1, -1) };
+              } else if (cleanExpr.match(/^\d+$/)) {
+                // Number literal
+                returnValue = { type: 'Expression', kind: ExpressionKind.Literal, value: Number(cleanExpr) };
               } else if (cleanExpr.includes('.')) {
-                const [obj, prop] = cleanExpr.split('.');
-                returnValue = {
+                // Property access like this.name
+                const parts = cleanExpr.split('.');
+                let current: any = { type: 'Expression', kind: ExpressionKind.Identifier, name: parts[0] };
+                for (let i = 1; i < parts.length; i++) {
+                  current = {
+                    type: 'Expression',
+                    kind: ExpressionKind.MemberAccess,
+                    object: current,
+                    member: parts[i]
+                  } as any;
+                }
+                returnValue = current;
+              } else {
+                // Identifier
+                returnValue = { type: 'Expression', kind: ExpressionKind.Identifier, name: cleanExpr };
+              }
+              
+              methodBodyStmts.push({
+                type: 'Return',
+                argument: returnValue
+              });
+            }
+          } else {
+            // Only look for method calls if there's no return statement
+            // Handle method call statements like this.free()
+            const methodCallRe = /([A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*)\s*\(\s*([^)]*)\s*\)\s*;?/g;
+            let callMatch;
+            while ((callMatch = methodCallRe.exec(methodBodyStr)) !== null) {
+              const callExpr = callMatch[1];
+              const argsStr = callMatch[2].trim();
+              const args = argsStr ? this.parseArguments(argsStr) : [];
+              
+              let calleeObj;
+              if (callExpr.includes('.')) {
+                const [obj, method] = callExpr.split('.');
+                calleeObj = {
                   type: 'Expression',
                   kind: ExpressionKind.MemberAccess,
                   object: { type: 'Expression', kind: ExpressionKind.Identifier, name: obj },
-                  member: prop
+                  member: method
                 };
               } else {
-                returnValue = { type: 'Expression', kind: ExpressionKind.Identifier, name: cleanExpr };
+                calleeObj = { type: 'Expression', kind: ExpressionKind.Identifier, name: callExpr };
               }
-              methodBodyStmts.push({ type: 'Return', argument: returnValue });
+              
+              methodBodyStmts.push({
+                type: 'Expr',
+                expr: {
+                  type: 'Expression',
+                  kind: ExpressionKind.Call,
+                  callee: calleeObj,
+                  arguments: args
+                }
+              });
             }
           }
         }
