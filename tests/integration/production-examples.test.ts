@@ -17,7 +17,7 @@ describe('Production Examples Integration', () => {
       const source = readExample('ecommerce-app.os');
       
       // Test that it contains expected patterns  
-      expect(source).toContain('use { HTTP, Database, Crypto }');
+      expect(source).toContain('use { HTTP, Database, Crypto, DateTime, Console } from \'stdlib\'');
       expect(source).toContain('class User {');
       expect(source).toContain('@id id: number');
       expect(source).toContain('const authenticateUser'); // Fixed from async authenticateUser

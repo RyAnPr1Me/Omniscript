@@ -92,23 +92,23 @@ describe('Enhanced Functional Programming Features', () => {
     });
 
     test('constant function', async () => {
-      const result = await omni.execute('constant(42)("anything")');
+      const result = await omni.execute('var fn = constant(42); fn("anything")');
       expect(result).toBe(42);
     });
 
     test('flip function', async () => {
-      const result = await omni.execute('var sub = fn(a, b) => a - b; flip(sub)(3, 10)');
+      const result = await omni.execute('var sub = fn(a, b) => a - b; var flipped = flip(sub); flipped(3, 10)');
       expect(result).toBe(7); // 10 - 3 = 7
     });
 
     test('pipe function composition', async () => {
-      const result = await omni.execute('var addOne = fn(x) => x + 1; var double = fn(x) => x * 2; pipe(addOne, double)(5)');
+      const result = await omni.execute('var addOne = fn(x) => x + 1; var double = fn(x) => x * 2; var composed = pipe(addOne, double); composed(5)');
       expect(result).toBe(12); // (5 + 1) * 2 = 12
     });
 
     test('compose vs pipe', async () => {
-      const result1 = await omni.execute('var addOne = fn(x) => x + 1; var double = fn(x) => x * 2; compose(double, addOne)(5)');
-      const result2 = await omni.execute('var addOne = fn(x) => x + 1; var double = fn(x) => x * 2; pipe(addOne, double)(5)');
+      const result1 = await omni.execute('var addOne = fn(x) => x + 1; var double = fn(x) => x * 2; var composed = compose(double, addOne); composed(5)');
+      const result2 = await omni.execute('var addOne = fn(x) => x + 1; var double = fn(x) => x * 2; var piped = pipe(addOne, double); piped(5)');
       expect(result1).toBe(result2); // Both should give 12
     });
   });

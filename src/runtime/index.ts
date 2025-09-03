@@ -429,11 +429,21 @@ export class Runtime {
       });
       
       // Add take function for functional programming
-      this.scope.set('take', (arr: any[], count: number) => arr.slice(0, count));
+      this.scope.set('take', (arr: any[], count: number) => {
+        if (!Array.isArray(arr)) {
+          throw new Error(`take expects an array, got ${typeof arr}`);
+        }
+        return arr.slice(0, count);
+      });
       
       // Add function composition utilities
       this.scope.set('compose', (...fns: ((...args: any[]) => any)[]) => {
         return (x: any) => fns.reduceRight((acc, fn) => fn(acc), x);
+      });
+      
+      // Add pipe function (left-to-right composition)
+      this.scope.set('pipe', (...fns: ((...args: any[]) => any)[]) => {
+        return (x: any) => fns.reduce((acc, fn) => fn(acc), x);
       });
       
       // Add curry function
@@ -496,13 +506,28 @@ export class Runtime {
       this.scope.set('cons', (head: any, tail: any[]) => [head, ...tail]);
       this.scope.set('flip', (fn: (a: any, b: any) => any) => (b: any, a: any) => fn(a, b));
       this.scope.set('id', (x: any) => x);
+      this.scope.set('identity', (x: any) => x); // Alias for id
       this.scope.set('const', (x: any) => () => x);
+      this.scope.set('constant', (x: any) => () => x); // Alias for const
       this.scope.set('apply', (fn: (...args: any[]) => any, args: any[]) => fn(...args));
       
-      // Add higher-order array functions  
-      this.scope.set('reverse', (arr: any[]) => [...arr].reverse());
-      this.scope.set('sort', (arr: any[], compareFn?: (a: any, b: any) => number) => [...arr].sort(compareFn));
-      this.scope.set('concat', (...arrays: any[][]) => ([] as any[]).concat(...arrays));
+      // Add higher-order array functions with type safety
+      this.scope.set('reverse', (arr: any[]) => {
+        if (!Array.isArray(arr)) {
+          throw new Error(`reverse expects an array, got ${typeof arr}`);
+        }
+        return [...arr].reverse();
+      });
+      this.scope.set('sort', (arr: any[], compareFn?: (a: any, b: any) => number) => {
+        if (!Array.isArray(arr)) {
+          throw new Error(`sort expects an array, got ${typeof arr}`);
+        }
+        return [...arr].sort(compareFn);
+      });
+      this.scope.set('concat', (...arrays: any[][]) => {
+        const validArrays = arrays.filter(arr => Array.isArray(arr));
+        return ([] as any[]).concat(...validArrays);
+      });
       this.scope.set('zip', (arr1: any[], arr2: any[]) => {
         const result = [];
         const minLength = Math.min(arr1.length, arr2.length);

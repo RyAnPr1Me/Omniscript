@@ -109,7 +109,7 @@ export class Compiler {
     if (!node) return;
     
     // Check function declarations for type errors
-    if (node.type === 'FunctionDeclaration' && node.params) {
+    if ((node.type === 'Function' || node.type === 'FunctionDeclaration') && node.params) {
       const hasTypeAnnotations = node.params.some((param: any) => param.type || param.paramType);
       if (hasTypeAnnotations) {
         // Check for obvious type mismatches in the function body
@@ -123,6 +123,11 @@ export class Compiler {
     
     // Recursively check child nodes
     if (node.body && Array.isArray(node.body)) {
+      node.body.forEach((child: any) => this.checkNodeForTypeErrors(child));
+    }
+    
+    // Also check Program body
+    if (node.type === 'Program' && node.body && Array.isArray(node.body)) {
       node.body.forEach((child: any) => this.checkNodeForTypeErrors(child));
     }
   }
@@ -178,6 +183,7 @@ export class Compiler {
       case 'ClassDecl':
       case 'ClassDeclaration':
         return this.visitClassDeclaration(node);
+      case 'Function':
       case 'FunctionDeclaration':
         return this.visitFunctionDeclaration(node);
       case 'ReturnStatement':
