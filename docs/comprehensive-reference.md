@@ -1269,6 +1269,302 @@ DOM.setAttribute(newElement, "class", "highlight");
 DOM.appendChild(parent, newElement);
 ```
 
+### String Utilities
+
+#### `StringUtils.isEmpty(str)`
+Check if string is empty or only whitespace.
+```omniscript
+def empty = StringUtils.isEmpty("   "); // true
+def notEmpty = StringUtils.isEmpty("hello"); // false
+```
+
+#### `StringUtils.capitalize(str)`
+Capitalize first letter.
+```omniscript
+def result = StringUtils.capitalize("hello world"); // "Hello world"
+```
+
+#### `StringUtils.camelCase(str)` / `StringUtils.pascalCase(str)`
+Convert to camelCase or PascalCase.
+```omniscript
+def camel = StringUtils.camelCase("hello world"); // "helloWorld"
+def pascal = StringUtils.pascalCase("hello world"); // "HelloWorld"
+```
+
+#### `StringUtils.kebabCase(str)` / `StringUtils.snakeCase(str)`
+Convert to kebab-case or snake_case.
+```omniscript
+def kebab = StringUtils.kebabCase("Hello World"); // "hello-world"
+def snake = StringUtils.snakeCase("Hello World"); // "hello_world"
+```
+
+#### `StringUtils.truncate(str, maxLength, suffix?)`
+Truncate string with optional suffix.
+```omniscript
+def short = StringUtils.truncate("Long text here", 8); // "Long tex..."
+```
+
+#### `StringUtils.isEmail(str)` / `StringUtils.isUrl(str)`
+Validate email or URL format.
+```omniscript
+def validEmail = StringUtils.isEmail("user@domain.com"); // true
+def validUrl = StringUtils.isUrl("https://example.com"); // true
+```
+
+#### `StringUtils.random(length, charset?)`
+Generate random string.
+```omniscript
+def id = StringUtils.random(8); // "aB3xY9mP"
+def numeric = StringUtils.randomNumeric(6); // "123456"
+```
+
+#### `StringUtils.similarity(str1, str2)`
+Calculate string similarity (0-1).
+```omniscript
+def sim = StringUtils.similarity("hello", "hallo"); // 0.8
+```
+
+#### `StringUtils.escapeHtml(str)` / `StringUtils.unescapeHtml(str)`
+Escape/unescape HTML entities.
+```omniscript
+def escaped = StringUtils.escapeHtml("<div>Hello</div>"); // "&lt;div&gt;Hello&lt;/div&gt;"
+```
+
+### Async Utilities
+
+#### `AsyncUtils.sleep(ms)`
+Sleep for specified milliseconds.
+```omniscript
+await AsyncUtils.sleep(1000); // Wait 1 second
+```
+
+#### `AsyncUtils.timeout(promise, ms)`
+Add timeout to promise.
+```omniscript
+def result = await AsyncUtils.timeout(
+  fetch("/api/data"),
+  5000  // 5 second timeout
+);
+```
+
+#### `AsyncUtils.retry(fn, options)`
+Retry function with backoff.
+```omniscript
+def result = await AsyncUtils.retry(
+  () => unstableApiCall(),
+  {
+    maxRetries: 3,
+    delay: 1000,
+    backoff: "exponential"
+  }
+);
+```
+
+#### `AsyncUtils.parallel(tasks, maxConcurrency?)`
+Execute tasks with limited concurrency.
+```omniscript
+def results = await AsyncUtils.parallel([
+  () => fetchUser(1),
+  () => fetchUser(2),
+  () => fetchUser(3)
+], 2); // Max 2 concurrent requests
+```
+
+#### `AsyncUtils.debounce(fn, delay)` / `AsyncUtils.throttle(fn, delay)`
+Debounce or throttle function calls.
+```omniscript
+def debouncedSave = AsyncUtils.debounce(saveDocument, 500);
+def throttledResize = AsyncUtils.throttle(handleResize, 100);
+```
+
+#### `AsyncUtils.poll(fn, options)`
+Poll until condition is met.
+```omniscript
+def result = await AsyncUtils.poll(
+  () => checkJobStatus(jobId),
+  {
+    interval: 1000,
+    timeout: 30000,
+    condition: (status) => status === "completed"
+  }
+);
+```
+
+### URL Utilities
+
+#### `UrlUtils.parse(url)`
+Parse URL into components.
+```omniscript
+def parsed = UrlUtils.parse("https://api.example.com/users?page=1#results");
+Console.log(parsed.hostname); // "api.example.com"
+Console.log(parsed.searchParams.get("page")); // "1"
+```
+
+#### `UrlUtils.join(...paths)`
+Join URL paths correctly.
+```omniscript
+def url = UrlUtils.join("https://api.com", "v1", "users", "123");
+// "https://api.com/v1/users/123"
+```
+
+#### `UrlUtils.addParams(url, params)`
+Add query parameters.
+```omniscript
+def newUrl = UrlUtils.addParams("https://api.com/search", {
+  q: "omniscript",
+  page: 1,
+  limit: 10
+});
+// "https://api.com/search?q=omniscript&page=1&limit=10"
+```
+
+#### `UrlBuilder`
+Builder pattern for URLs.
+```omniscript
+def url = new UrlBuilder("https://api.com")
+  .path("/v1/users")
+  .param("page", 1)
+  .param("limit", 10)
+  .build();
+```
+
+#### `UrlUtils.getDomain(url)` / `UrlUtils.getSubdomain(url)`
+Extract domain parts.
+```omniscript
+def domain = UrlUtils.getDomain("https://api.example.com"); // "api.example.com"
+def subdomain = UrlUtils.getSubdomain("https://api.example.com"); // "api"
+def root = UrlUtils.getRootDomain("https://api.example.com"); // "example.com"
+```
+
+### Random Utilities
+
+#### `RandomUtils.int(min, max)` / `RandomUtils.float(min, max)`
+Generate random numbers.
+```omniscript
+def randomInt = RandomUtils.int(1, 10); // 1-10
+def randomFloat = RandomUtils.float(0, 1); // 0.0-1.0
+```
+
+#### `RandomUtils.choice(array)` / `RandomUtils.sample(array, count)`
+Pick from arrays.
+```omniscript
+def colors = ["red", "green", "blue"];
+def randomColor = RandomUtils.choice(colors);
+def twoColors = RandomUtils.sample(colors, 2); // No duplicates
+```
+
+#### `RandomUtils.shuffle(array)`
+Shuffle array using Fisher-Yates.
+```omniscript
+def deck = [1, 2, 3, 4, 5];
+def shuffled = RandomUtils.shuffle(deck);
+```
+
+#### `RandomUtils.weightedChoice(items)`
+Weighted random selection.
+```omniscript
+def items = [
+  { item: "rare", weight: 1 },
+  { item: "common", weight: 10 }
+];
+def selected = RandomUtils.weightedChoice(items);
+```
+
+#### `RandomUtils.string(length, charset?)` / `RandomUtils.uuid()`
+Generate random strings.
+```omniscript
+def id = RandomUtils.alphanumeric(8); // "aB3xY9mP"
+def uuid = RandomUtils.uuid(); // "550e8400-e29b-41d4-a716-446655440000"
+```
+
+#### `RandomUtils.password(length, options)`
+Generate secure passwords.
+```omniscript
+def password = RandomUtils.password(12, {
+  includeSymbols: true,
+  excludeAmbiguous: true
+});
+```
+
+#### `RandomUtils.setSeed(seed)` / `RandomUtils.resetSeed()`
+Seeded random for reproducibility.
+```omniscript
+RandomUtils.setSeed(12345);
+def a = RandomUtils.int(1, 100); // Always same result
+def b = RandomUtils.int(1, 100); // Predictable sequence
+RandomUtils.resetSeed(); // Back to Math.random()
+```
+
+### Enhanced Math Functions
+
+#### Advanced Number Theory
+```omniscript
+def prime = MathUtils.isPrime(17); // true
+def nextPrime = MathUtils.nextPrime(17); // 19
+def factors = MathUtils.primeFactors(24); // [2, 2, 2, 3]
+```
+
+#### Combinatorics
+```omniscript
+def permutations = MathUtils.permutations(5, 3); // 60
+def combinations = MathUtils.combinations(5, 3); // 10
+```
+
+#### Trigonometry in Degrees
+```omniscript
+def sinDeg = MathUtils.sinDeg(90); // 1
+def cosDeg = MathUtils.cosDeg(180); // -1
+```
+
+#### Statistical Functions
+```omniscript
+def data = [1, 2, 3, 4, 5];
+def percentile = MathUtils.percentile(data, 50); // Median
+def quartiles = MathUtils.quartiles(data);
+def correlation = MathUtils.correlation(x, y);
+```
+
+#### Random Distributions
+```omniscript
+def normal = MathUtils.randomGaussian(0, 1); // Normal distribution
+def uniform = MathUtils.randomFloat(0, 1); // Uniform distribution
+```
+
+#### Utility Functions
+```omniscript
+def clamped = MathUtils.clamp(value, 0, 100); // Keep within bounds
+def mapped = MathUtils.map(value, 0, 10, 0, 100); // Scale range
+def smooth = MathUtils.smoothstep(0, 1, 0.5); // Smooth interpolation
+```
+
+### Enhanced Collections
+
+#### Advanced List Methods
+```omniscript
+def list = new List<number>();
+await list.push(1);
+await list.push(2);
+await list.push(3);
+
+// Functional operations
+def found = await list.find(x => x > 2); // 3
+def hasEven = await list.some(x => x % 2 === 0); // true
+def allPositive = await list.every(x => x > 0); // true
+
+// Grouping and partitioning
+def grouped = await list.groupBy(x => x % 2); // Group by even/odd
+def [evens, odds] = await list.partition(x => x % 2 === 0);
+
+// Taking and dropping
+def first2 = await list.take(2); // First 2 elements
+def withoutFirst = await list.drop(1); // Skip first element
+def whileSmall = await list.takeWhile(x => x < 3); // [1, 2]
+
+// Unique and zip
+def unique = await list.unique(); // Remove duplicates
+def zipped = await list.zip(otherList); // Pair with another list
+```
+
 ---
 
 ## Advanced Features

@@ -14,8 +14,14 @@ This index provides a quick reference to find any feature, function, keyword, or
 - [Actor Model](./comprehensive-reference.md#actor-model) - Runtime concurrency primitives
 - [Array Types](./comprehensive-reference.md#array-types) - Type system for arrays
 - [async](./comprehensive-reference.md#async) - Asynchronous function declaration
+- [AsyncUtils.debounce](./comprehensive-reference.md#asyncutilsdebouncefn-delay--asyncutilsthrottlefn-delay) - Debounce function calls
+- [AsyncUtils.parallel](./comprehensive-reference.md#asyncutilsparalleltasks-maxconcurrency) - Execute tasks with concurrency
+- [AsyncUtils.poll](./comprehensive-reference.md#asyncutilspollfn-options) - Poll until condition met
+- [AsyncUtils.retry](./comprehensive-reference.md#asyncutilsretryfn-options) - Retry with backoff
+- [AsyncUtils.sleep](./comprehensive-reference.md#asyncutilssleepms) - Sleep for milliseconds
+- [AsyncUtils.throttle](./comprehensive-reference.md#asyncutilsdebouncefn-delay--asyncutilsthrottlefn-delay) - Throttle function calls
+- [AsyncUtils.timeout](./comprehensive-reference.md#asyncutilstimeoutpromise-ms) - Add timeout to promise
 - [await](./comprehensive-reference.md#await) - Wait for promise resolution
-- [AsyncUtils](./comprehensive-reference.md#asyncutils) - Network utilities
 
 ### B
 - [BinarySearchTree](./comprehensive-reference.md#binarysearchtree) - BST data structure
@@ -103,6 +109,13 @@ This index provides a quick reference to find any feature, function, keyword, or
 - [QueryBuilder](./comprehensive-reference.md#querybuilder) - Database query construction
 
 ### R
+- [RandomUtils.choice](./comprehensive-reference.md#randomutilschoicearray--randomutilssamplearray-count) - Pick random from array
+- [RandomUtils.int](./comprehensive-reference.md#randomutilsintmin-max--randomutilsfloatmin-max) - Generate random integers
+- [RandomUtils.password](./comprehensive-reference.md#randomutilspasswordlength-options) - Generate secure passwords
+- [RandomUtils.shuffle](./comprehensive-reference.md#randomutilsshufflearray) - Shuffle array
+- [RandomUtils.string](./comprehensive-reference.md#randomutilsstringlength-charset--randomutilsuuid) - Generate random strings
+- [RandomUtils.uuid](./comprehensive-reference.md#randomutilsstringlength-charset--randomutilsuuid) - Generate UUID
+- [RandomUtils.weightedChoice](./comprehensive-reference.md#randomutilsweightedchoiceitems) - Weighted selection
 - [Reactive Programming](./comprehensive-reference.md#reactive-programming) - Stream, Signal, Observable
 - [Reflection](./comprehensive-reference.md#reflection) - Runtime type inspection
 - [Result Type](./comprehensive-reference.md#result-type) - Error handling type
@@ -117,6 +130,15 @@ This index provides a quick reference to find any feature, function, keyword, or
 - [Standard Library](./comprehensive-reference.md#standard-library) - Built-in functions and classes
 - [Stream](./comprehensive-reference.md#stream) - Event stream processing
 - [string](./comprehensive-reference.md#string) - String primitive type
+- [StringUtils.camelCase](./comprehensive-reference.md#stringutilscamelcasestr--stringutilspascalcasestr) - Convert to camelCase
+- [StringUtils.capitalize](./comprehensive-reference.md#stringutilscapitalizestr) - Capitalize first letter
+- [StringUtils.escapeHtml](./comprehensive-reference.md#stringutilsescapehtmlstr--stringutilsunescapehtmlstr) - Escape HTML entities
+- [StringUtils.isEmpty](./comprehensive-reference.md#stringutilsisemptystr) - Check if empty/whitespace
+- [StringUtils.isEmail](./comprehensive-reference.md#stringutilsisemailstr--stringutilsisurlstr) - Validate email format
+- [StringUtils.kebabCase](./comprehensive-reference.md#stringutilskebabcasestr--stringutilssnakecasestr) - Convert to kebab-case
+- [StringUtils.random](./comprehensive-reference.md#stringutilsrandomlength-charset) - Generate random string
+- [StringUtils.similarity](./comprehensive-reference.md#stringutilssimilaritystr1-str2) - Calculate string similarity
+- [StringUtils.truncate](./comprehensive-reference.md#stringutilstruncatestr-maxlength-suffix) - Truncate with suffix
 
 ### T
 - [Testing Framework](./comprehensive-reference.md#testing-framework) - Unit testing tools
@@ -130,6 +152,11 @@ This index provides a quick reference to find any feature, function, keyword, or
 ### U
 - [undefined](./comprehensive-reference.md#undefined) - Undefined literal
 - [Union Types](./comprehensive-reference.md#union-types) - Alternative types
+- [UrlBuilder](./comprehensive-reference.md#urlbuilder) - Builder pattern for URLs
+- [UrlUtils.addParams](./comprehensive-reference.md#urlutilsaddparamsurl-params) - Add query parameters
+- [UrlUtils.getDomain](./comprehensive-reference.md#urlutilsgetdomainurl--urlutilsgetsubdomainurl) - Extract domain parts
+- [UrlUtils.join](./comprehensive-reference.md#urlutilsjoinpaths) - Join URL paths
+- [UrlUtils.parse](./comprehensive-reference.md#urlutilsparseurl) - Parse URL components
 - [use](./comprehensive-reference.md#use) - Import statement
 
 ### V

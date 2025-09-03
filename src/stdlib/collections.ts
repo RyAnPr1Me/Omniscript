@@ -149,6 +149,268 @@ export class List<T> {
       this.lock.release();
     }
   }
+
+  // Enhanced functional programming methods
+  async find(predicate: (item: T, index: number) => boolean): Promise<T | undefined> {
+    await this.lock.acquire();
+    try {
+      return this.items.find(predicate);
+    } finally {
+      this.lock.release();
+    }
+  }
+
+  async findIndex(predicate: (item: T, index: number) => boolean): Promise<number> {
+    await this.lock.acquire();
+    try {
+      return this.items.findIndex(predicate);
+    } finally {
+      this.lock.release();
+    }
+  }
+
+  async some(predicate: (item: T, index: number) => boolean): Promise<boolean> {
+    await this.lock.acquire();
+    try {
+      return this.items.some(predicate);
+    } finally {
+      this.lock.release();
+    }
+  }
+
+  async every(predicate: (item: T, index: number) => boolean): Promise<boolean> {
+    await this.lock.acquire();
+    try {
+      return this.items.every(predicate);
+    } finally {
+      this.lock.release();
+    }
+  }
+
+  async flatMap<R>(mapper: (item: T, index: number) => R[]): Promise<List<R>> {
+    await this.lock.acquire();
+    try {
+      const flatMappedItems = this.items.flatMap(mapper);
+      const newList = new List<R>();
+      for (const item of flatMappedItems) {
+        await newList.push(item);
+      }
+      return newList;
+    } finally {
+      this.lock.release();
+    }
+  }
+
+  async groupBy<K>(keySelector: (item: T) => K): Promise<Map<K, List<T>>> {
+    await this.lock.acquire();
+    try {
+      const groups = new globalThis.Map<K, T[]>();
+      
+      for (const item of this.items) {
+        const key = keySelector(item);
+        if (!groups.has(key)) {
+          groups.set(key, []);
+        }
+        groups.get(key)!.push(item);
+      }
+      
+      const result = new Map<K, List<T>>();
+      for (const [key, items] of groups) {
+        const list = new List<T>();
+        for (const item of items) {
+          await list.push(item);
+        }
+        await result.set(key, list);
+      }
+      
+      return result;
+    } finally {
+      this.lock.release();
+    }
+  }
+
+  async partition(predicate: (item: T) => boolean): Promise<[List<T>, List<T>]> {
+    await this.lock.acquire();
+    try {
+      const truthy = new List<T>();
+      const falsy = new List<T>();
+      
+      for (const item of this.items) {
+        if (predicate(item)) {
+          await truthy.push(item);
+        } else {
+          await falsy.push(item);
+        }
+      }
+      
+      return [truthy, falsy];
+    } finally {
+      this.lock.release();
+    }
+  }
+
+  async take(count: number): Promise<List<T>> {
+    await this.lock.acquire();
+    try {
+      const taken = this.items.slice(0, count);
+      const newList = new List<T>();
+      for (const item of taken) {
+        await newList.push(item);
+      }
+      return newList;
+    } finally {
+      this.lock.release();
+    }
+  }
+
+  async drop(count: number): Promise<List<T>> {
+    await this.lock.acquire();
+    try {
+      const dropped = this.items.slice(count);
+      const newList = new List<T>();
+      for (const item of dropped) {
+        await newList.push(item);
+      }
+      return newList;
+    } finally {
+      this.lock.release();
+    }
+  }
+
+  async takeWhile(predicate: (item: T) => boolean): Promise<List<T>> {
+    await this.lock.acquire();
+    try {
+      const taken: T[] = [];
+      for (const item of this.items) {
+        if (predicate(item)) {
+          taken.push(item);
+        } else {
+          break;
+        }
+      }
+      
+      const newList = new List<T>();
+      for (const item of taken) {
+        await newList.push(item);
+      }
+      return newList;
+    } finally {
+      this.lock.release();
+    }
+  }
+
+  async dropWhile(predicate: (item: T) => boolean): Promise<List<T>> {
+    await this.lock.acquire();
+    try {
+      let index = 0;
+      for (const item of this.items) {
+        if (predicate(item)) {
+          index++;
+        } else {
+          break;
+        }
+      }
+      
+      const dropped = this.items.slice(index);
+      const newList = new List<T>();
+      for (const item of dropped) {
+        await newList.push(item);
+      }
+      return newList;
+    } finally {
+      this.lock.release();
+    }
+  }
+
+  async unique(keySelector?: (item: T) => any): Promise<List<T>> {
+    await this.lock.acquire();
+    try {
+      const seen = new Set();
+      const unique: T[] = [];
+      
+      for (const item of this.items) {
+        const key = keySelector ? keySelector(item) : item;
+        if (!seen.has(key)) {
+          seen.add(key);
+          unique.push(item);
+        }
+      }
+      
+      const newList = new List<T>();
+      for (const item of unique) {
+        await newList.push(item);
+      }
+      return newList;
+    } finally {
+      this.lock.release();
+    }
+  }
+
+  async zip<U>(other: List<U>): Promise<List<[T, U]>> {
+    await this.lock.acquire();
+    try {
+      const otherItems = await other.toArray();
+      const zipped: [T, U][] = [];
+      const minLength = Math.min(this.items.length, otherItems.length);
+      
+      for (let i = 0; i < minLength; i++) {
+        zipped.push([this.items[i], otherItems[i]]);
+      }
+      
+      const newList = new List<[T, U]>();
+      for (const pair of zipped) {
+        await newList.push(pair);
+      }
+      return newList;
+    } finally {
+      this.lock.release();
+    }
+  }
+
+  async isEmpty(): Promise<boolean> {
+    await this.lock.acquire();
+    try {
+      return this.items.length === 0;
+    } finally {
+      this.lock.release();
+    }
+  }
+
+  async count(predicate?: (item: T) => boolean): Promise<number> {
+    await this.lock.acquire();
+    try {
+      if (!predicate) return this.items.length;
+      return this.items.filter(predicate).length;
+    } finally {
+      this.lock.release();
+    }
+  }
+
+  async min(compareFn?: (a: T, b: T) => number): Promise<T | undefined> {
+    await this.lock.acquire();
+    try {
+      if (this.items.length === 0) return undefined;
+      if (!compareFn) {
+        return this.items.reduce((min, current) => current < min ? current : min);
+      }
+      return this.items.reduce((min, current) => compareFn(current, min) < 0 ? current : min);
+    } finally {
+      this.lock.release();
+    }
+  }
+
+  async max(compareFn?: (a: T, b: T) => number): Promise<T | undefined> {
+    await this.lock.acquire();
+    try {
+      if (this.items.length === 0) return undefined;
+      if (!compareFn) {
+        return this.items.reduce((max, current) => current > max ? current : max);
+      }
+      return this.items.reduce((max, current) => compareFn(current, max) > 0 ? current : max);
+    } finally {
+      this.lock.release();
+    }
+  }
 }
 
 export class Map<K, V> {
