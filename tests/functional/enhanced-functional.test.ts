@@ -45,42 +45,42 @@ describe('Enhanced Functional Programming Features', () => {
 
   describe('Enhanced list operations', () => {
     test('head function', async () => {
-      const result = await omni.execute('head([1, 2, 3])');
+      const result = await omni.execute('var arr = [1, 2, 3]; head(arr)');
       expect(result).toBe(1);
     });
 
     test('tail function', async () => {
-      const result = await omni.execute('tail([1, 2, 3])');
+      const result = await omni.execute('var arr = [1, 2, 3]; tail(arr)');
       expect(result).toEqual([2, 3]);
     });
 
     test('cons function', async () => {
-      const result = await omni.execute('cons(0, [1, 2, 3])');
+      const result = await omni.execute('var arr = [1, 2, 3]; cons(0, arr)');
       expect(result).toEqual([0, 1, 2, 3]);
     });
 
     test('reverse function', async () => {
-      const result = await omni.execute('reverse([1, 2, 3, 4])');
+      const result = await omni.execute('var arr = [1, 2, 3, 4]; reverse(arr)');
       expect(result).toEqual([4, 3, 2, 1]);
     });
 
     test('take function', async () => {
-      const result = await omni.execute('take(2, [1, 2, 3, 4])');
+      const result = await omni.execute('var arr = [1, 2, 3, 4]; take(2, arr)');
       expect(result).toEqual([1, 2]);
     });
 
     test('drop function', async () => {
-      const result = await omni.execute('drop(2, [1, 2, 3, 4])');
+      const result = await omni.execute('var arr = [1, 2, 3, 4]; drop(2, arr)');
       expect(result).toEqual([3, 4]);
     });
 
     test('zip function', async () => {
-      const result = await omni.execute('zip([1, 2, 3], ["a", "b", "c"])');
+      const result = await omni.execute('var arr1 = [1, 2, 3]; var arr2 = ["a", "b", "c"]; zip(arr1, arr2)');
       expect(result).toEqual([[1, "a"], [2, "b"], [3, "c"]]);
     });
 
     test('sortBy function', async () => {
-      const result = await omni.execute('sortBy(fn(x) => -x, [3, 1, 4, 1, 5])');
+      const result = await omni.execute('var arr = [3, 1, 4, 1, 5]; var sortFn = fn(x) => -x; sortBy(sortFn, arr)');
       expect(result).toEqual([5, 4, 3, 1, 1]);
     });
   });
@@ -144,22 +144,22 @@ describe('Enhanced Functional Programming Features', () => {
 
   describe('Error handling and edge cases', () => {
     test('head on empty array', async () => {
-      const result = await omni.execute('head([])');
+      const result = await omni.execute('var arr = []; head(arr)');
       expect(result).toBe(null);
     });
 
     test('tail on empty array', async () => {
-      const result = await omni.execute('tail([])');
+      const result = await omni.execute('var arr = []; tail(arr)');
       expect(result).toEqual([]);
     });
 
     test('take more than available', async () => {
-      const result = await omni.execute('take(5, [1, 2])');
+      const result = await omni.execute('var arr = [1, 2]; take(5, arr)');
       expect(result).toEqual([1, 2]);
     });
 
     test('drop more than available', async () => {
-      const result = await omni.execute('drop(5, [1, 2])');
+      const result = await omni.execute('var arr = [1, 2]; drop(5, arr)');
       expect(result).toEqual([]);
     });
   });

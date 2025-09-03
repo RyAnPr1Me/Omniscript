@@ -429,11 +429,19 @@ export class Runtime {
       });
       
       // Add take function for functional programming
-      this.scope.set('take', (arr: any[], count: number) => {
+      this.scope.set('take', (count: number, arr: any[]) => {
         if (!Array.isArray(arr)) {
           throw new Error(`take expects an array, got ${typeof arr}`);
         }
         return arr.slice(0, count);
+      });
+      
+      // Add drop function for functional programming
+      this.scope.set('drop', (count: number, arr: any[]) => {
+        if (!Array.isArray(arr)) {
+          throw new Error(`drop expects an array, got ${typeof arr}`);
+        }
+        return arr.slice(count);
       });
       
       // Add function composition utilities
@@ -535,6 +543,21 @@ export class Runtime {
           result.push([arr1[i], arr2[i]]);
         }
         return result;
+      });
+      
+      // Add sortBy function
+      this.scope.set('sortBy', (fn: (x: any) => any, arr: any[]) => {
+        if (!Array.isArray(arr)) {
+          throw new Error(`sortBy expects an array, got ${typeof arr}`);
+        }
+        if (typeof fn !== 'function') {
+          throw new Error(`sortBy expects a function, got ${typeof fn}`);
+        }
+        return [...arr].sort((a, b) => {
+          const aVal = fn(a);
+          const bVal = fn(b);
+          return aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
+        });
       });
       
       // Add mathematical utilities
