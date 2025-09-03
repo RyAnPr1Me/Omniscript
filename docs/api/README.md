@@ -1,5 +1,9 @@
 # Omniscript API Reference
 
+> **📚 Looking for a complete language reference?** Check out the [Comprehensive Language Reference](../comprehensive-reference.md) which documents every function, keyword, operator, and feature in Omniscript with examples.
+
+> **📑 Need to find something quickly?** Use the [Language Index](../language-index.md) for alphabetical access to all language features.
+
 ## Core Runtime Features
 
 ### Memory Management
