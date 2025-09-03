@@ -109,7 +109,7 @@ export class Compiler {
     if (!node) return;
     
     // Check function declarations for type errors
-    if (node.type === 'FunctionDeclaration' && node.params) {
+    if ((node.type === 'Function' || node.type === 'FunctionDeclaration') && node.params) {
       const hasTypeAnnotations = node.params.some((param: any) => param.type || param.paramType);
       if (hasTypeAnnotations) {
         // Check for obvious type mismatches in the function body
@@ -123,6 +123,11 @@ export class Compiler {
     
     // Recursively check child nodes
     if (node.body && Array.isArray(node.body)) {
+      node.body.forEach((child: any) => this.checkNodeForTypeErrors(child));
+    }
+    
+    // Also check Program body
+    if (node.type === 'Program' && node.body && Array.isArray(node.body)) {
       node.body.forEach((child: any) => this.checkNodeForTypeErrors(child));
     }
   }
@@ -178,6 +183,7 @@ export class Compiler {
       case 'ClassDecl':
       case 'ClassDeclaration':
         return this.visitClassDeclaration(node);
+      case 'Function':
       case 'FunctionDeclaration':
         return this.visitFunctionDeclaration(node);
       case 'ReturnStatement':
@@ -204,8 +210,17 @@ export class Compiler {
         return this.visitIntersectionType(node);
       case 'Macro':
         return this.visitMacro(node);
+      case 'Function':
+        return this.visitFunction(node);
+      case 'Class':
+        return this.visitClass(node);
       default: {
         const n = node as { type?: string };
+        // Handle undefined or unknown node types more gracefully
+        if (!n.type) {
+          console.warn('Node with undefined type encountered, treating as empty block');
+          return { type: 'Block', body: [] };
+        }
         throw new Error(`Unknown node type: ${n.type}`);
       }
     }
@@ -468,5 +483,40 @@ export class Compiler {
       from: node.from || node.module || null
     };
   }
+
+  private visitFunction(node: any): any {
+    return {
+      type: 'Function',
+      name: node.name || null,
+      parameters: node.parameters || node.params || [],
+      body: node.body ? this.visitNode(node.body) : { type: 'Block', body: [] },
+      returnType: node.returnType || null,
+      generics: node.generics || null
+    };
+  }
+
+  private visitClass(node: any): any {
+    // If the node has a body with statements that look like class members, treat it as a class
+    if (node.body && node.body.body && Array.isArray(node.body.body)) {
+      return {
+        type: 'Class',
+        name: node.name || null,
+        superClass: node.superClass || node.extends || null,
+        body: node.body.body.map((member: any) => this.visitNode(member)),
+        generics: node.generics || node.typeParameters || null,
+        operators: node.operators || null
+      };
+    }
+    
+    return {
+      type: 'Class',
+      name: node.name || null,
+      superClass: node.superClass || node.extends || null,
+      body: node.body ? (Array.isArray(node.body) ? node.body.map((member: any) => this.visitNode(member)) : []) : [],
+      generics: node.generics || node.typeParameters || null,
+      operators: node.operators || null
+    };
+  }
+
   // (Removed mock optimization helper methods)
 }

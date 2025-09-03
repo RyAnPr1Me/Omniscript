@@ -23,7 +23,8 @@ module.exports = [
       '*.log',
       '.omni/**/*',
       'demo.js',
-      'eslint.config.js'
+      'eslint.config.js',
+      'bin/cli.js'  // Ignore CLI wrapper script
     ]
   },
 

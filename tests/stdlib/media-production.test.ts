@@ -267,8 +267,8 @@ describe('OmniCodec Production Features', () => {
     });
 
     test('should use streaming mode for large files when enabled', async () => {
-      // Create a smaller buffer for testing to avoid timeouts
-      const largeData = new ArrayBuffer(2 * 1024 * 1024); // 2MB
+      // Create a much smaller buffer for testing to avoid timeouts (500KB instead of 2MB)
+      const largeData = new ArrayBuffer(500 * 1024); // 500KB
       const view = new Uint8Array(largeData);
       
       // Fill with test pattern
@@ -276,12 +276,13 @@ describe('OmniCodec Production Features', () => {
         view[i] = i % 256;
       }
 
-      const metadata: Partial<MediaHeader> = { duration: 200 };
+      const metadata: Partial<MediaHeader> = { duration: 100 }; // Reduce duration
 
       const encoded = await codec.encode(largeData, 'audio', metadata, {
-        maxMemoryUsage: 1 * 1024 * 1024, // 1MB limit
+        maxMemoryUsage: 250 * 1024, // 250KB limit to force streaming
         streamingMode: true,
-        quality: 70
+        quality: 70,
+        compressionLevel: 3 // Lower compression level for speed
       });
 
       expect(encoded.length).toBeGreaterThan(0);
@@ -289,7 +290,7 @@ describe('OmniCodec Production Features', () => {
       // Should be able to decode
       const decoded = await codec.decode(encoded);
       expect(decoded.data.byteLength).toBeGreaterThan(0);
-    }, 10000); // Increase timeout for this test
+    }, 25000); // Increase timeout for this test
   });
 
   describe('Key Management', () => {

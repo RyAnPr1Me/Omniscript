@@ -16,20 +16,20 @@ describe('Production Examples Integration', () => {
     test('ecommerce-app.os has valid syntax', async () => {
       const source = readExample('ecommerce-app.os');
       
-      // Test that it contains expected patterns
-      expect(source).toContain('import { HTTP, Database, Crypto }');
-      expect(source).toContain('class User {');
-      expect(source).toContain('@id id: number');
-      expect(source).toContain('const authenticateUser'); // Fixed from async authenticateUser
+      // Test that it contains expected patterns  
+      expect(source).toContain('use { HTTP, Database, Crypto, DateTime, Console } from \'stdlib\'');
+      expect(source).toContain('object User {');
+      expect(source).toContain('@id id :: number');
+      expect(source).toContain('def authenticateUser'); // Fixed from const authenticateUser
       expect(source).toContain('app.post("/auth/register"');
-      expect(source).toContain('match err.type {');
+      expect(source).toContain('match error.name {');
       
       // Test that it can be parsed (will throw if syntax is invalid)
       expect(() => {
         // Basic syntax validation by attempting to parse imports and class definitions
         const lines = source.split('\n');
-        const importLines = lines.filter(line => line.trim().startsWith('import'));
-        const classLines = lines.filter(line => line.trim().startsWith('class'));
+        const importLines = lines.filter(line => line.trim().startsWith('use'));
+        const classLines = lines.filter(line => line.trim().startsWith('object'));
         
         expect(importLines.length).toBeGreaterThan(0);
         expect(classLines.length).toBeGreaterThan(0);
