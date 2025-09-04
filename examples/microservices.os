@@ -793,11 +793,12 @@ def main :: () -> void = () => {
   });
   
   // Start API Gateway
-  createAPIGateway(3000, serviceRegistry, serviceProxy);
+  def PORT :: number = parseInt(process.env.PORT) || 3000;
+  createAPIGateway(PORT, serviceRegistry, serviceProxy);
   
   Console.log('✅ All services started successfully!');
   Console.log('📋 Available endpoints:');
-  Console.log('  🌐 API Gateway: http://localhost:3000');
+  Console.log(`  🌐 API Gateway: http://localhost:${PORT}`);
   Console.log('  👤 User Service: http://localhost:3001, http://localhost:3002');
   Console.log('  📦 Order Service: http://localhost:3003, http://localhost:3004');
   Console.log('');
@@ -827,5 +828,5 @@ export { ServiceRegistry, LoadBalancer, CircuitBreaker, ServiceProxy, createAPIG
 
 // Example usage:
 // Run this file to start the microservices architecture demo
-// The API gateway will be available at http://localhost:3000
+// The API gateway will be available at http://localhost:3000 (or PORT env var)
 // Health checks can be monitored at http://localhost:3000/health

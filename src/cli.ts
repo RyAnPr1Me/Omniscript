@@ -43,7 +43,7 @@ function startRepl(engine: Omniscript) {
 program
   .name('omni')
   .description('Omniscript CLI')
-  .version('0.1.0', '-v, --version', 'output the version number');
+  .version('2.0.0', '-v, --version', 'output the version number');
 
 program
   .command('run')
@@ -510,10 +510,10 @@ program
       
       // Read package.json for version
       const packagePath = './package.json';
-      let version = '0.1.0';
+      let version = '2.0.0';
       try {
         const packageJson = JSON.parse(fs.readFileSync(packagePath, 'utf-8'));
-        version = packageJson.version || '0.1.0';
+        version = packageJson.version || '2.0.0';
       } catch {
         console.warn('Could not read package.json, using default version');
       }

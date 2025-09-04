@@ -23,7 +23,7 @@ export class OmniscriptInstaller {
     'package.json': {
       content: `{
         "name": "omniscript",
-        "version": "0.1.0",
+        "version": "2.0.0",
         "bin": {
           "omni": "./dist/cli.js",
           "omniscript-installer": "./dist/bin/install.js"

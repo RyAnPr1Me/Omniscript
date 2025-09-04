@@ -15,12 +15,12 @@ describe('CLI', () => {
   describe('Version Commands', () => {
     test('should display version with -v flag', async () => {
       const { stdout } = await execAsync(`node ${cliPath} -v`);
-      expect(stdout.trim()).toBe('0.1.0');
+      expect(stdout.trim()).toBe('2.0.0');
     });
 
     test('should display version with --version flag', async () => {
       const { stdout } = await execAsync(`node ${cliPath} --version`);
-      expect(stdout.trim()).toBe('0.1.0');
+      expect(stdout.trim()).toBe('2.0.0');
     });
   });
 

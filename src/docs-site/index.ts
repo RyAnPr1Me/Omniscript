@@ -512,7 +512,7 @@ export async function generateDocSite(config: Partial<DocSiteConfig>): Promise<v
     name: 'Omniscript',
     description: 'A modern programming language for full-stack development',
     baseUrl: 'https://omniscript.dev',
-    version: '0.1.0',
+    version: '2.0.0',
     outputDir: './docs-site',
     sourceDir: './docs',
     theme: 'auto',

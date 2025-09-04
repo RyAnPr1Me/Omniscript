@@ -1,6 +1,6 @@
 # Omniscript
 
-**Production-Ready Release v0.1.0** 🚀
+**Production-Ready Release v2.0.0** 🚀
 
 A modern programming language for full-stack development with first-class support for:
 - Type safety and inference

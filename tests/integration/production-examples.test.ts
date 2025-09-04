@@ -92,11 +92,11 @@ describe('Production Examples Integration', () => {
     test('examples use decorators correctly', () => {
       const ecommerce = readExample('ecommerce-app.os');
       
-      // Check for decorator usage
-      expect(ecommerce).toContain('@id id: number');
-      expect(ecommerce).toContain('@field name: string');
-      expect(ecommerce).toContain('@timestamp createdAt: DateTime');
-      expect(ecommerce).toContain('@relation orders: Order[]');
+      // Check for decorator usage - fix syntax to match Omniscript
+      expect(ecommerce).toContain('@id id :: number');
+      expect(ecommerce).toContain('@field name :: string');
+      expect(ecommerce).toContain('@timestamp createdAt :: DateTime');
+      expect(ecommerce).toContain('@relation orders :: Order[]');
     });
 
     test('examples use pattern matching correctly', () => {
@@ -177,7 +177,10 @@ describe('Production Examples Integration', () => {
       for (const source of sources) {
         const hasLogging = source.includes('console.log') || 
                           source.includes('console.error') || 
-                          source.includes('console.warn');
+                          source.includes('console.warn') ||
+                          source.includes('Console.log') ||
+                          source.includes('Console.error') ||
+                          source.includes('Console.warn');
         expect(hasLogging).toBe(true);
       }
     });
