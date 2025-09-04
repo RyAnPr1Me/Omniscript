@@ -1,307 +1,179 @@
-# Security & Sandboxing API Reference
+# API Documentation
 
-## Overview
-Omniscript provides comprehensive security features including sandboxed execution, resource monitoring, and audit logging. These features allow you to safely execute untrusted code with configurable security policies and resource limits.
+Auto-generated API documentation for Omniscript.
 
-## Core Security Classes
+## Table of Contents
 
-### SecurityManager
-The central security management class that handles sandbox creation and audit logging.
+- [security](#security)
 
-```typescript
-import { SecurityManager } from 'omniscript';
+## security
 
-const security = SecurityManager.getInstance();
+**File**: `/home/runner/work/Omniscript/Omniscript/src/security/index.ts`
 
-// Create a sandbox with default policy
-const sandbox = security.createSandbox();
+### Classes
 
-// Create a sandbox with custom policy
-const customSandbox = security.createSandbox({
-  allowFileSystem: false,
-  allowNetwork: true,
-  maxMemoryMB: 100,
-  maxExecutionTimeMs: 30000
-});
-```
+#### SecurityManager
 
-### SandboxedEnvironment
-Provides isolated execution environment for untrusted code.
+**Properties**:
 
-```typescript
-// Execute code in sandbox
-const result = await sandbox.execute(`
-  const x = 1 + 2;
-  console.log("Result:", x);
-  return x;
-`);
+- `instance: SecurityManager` - 
+- `defaultPolicy: SecurityPolicy` - 
+- `auditLog: Array<{
+    timestamp: number;
+    action: string;
+    allowed: boolean;
+    context: any;
+  }>` - 
 
-// Get resource usage
-const usage = sandbox.getResourceUsage();
-console.log('Memory used:', usage.memoryUsage);
-console.log('Execution time:', usage.executionTime);
+**Methods**:
 
-// Clean up sandbox
-sandbox.destroy();
-```
+##### getInstance
 
-### SecurityPolicy Interface
-Defines security constraints for sandbox execution.
+**Signature**: `static getInstance(): SecurityManager`
 
-```typescript
-interface SecurityPolicy {
-  allowFileSystem: boolean;       // Allow file system access
-  allowNetwork: boolean;          // Allow network requests
-  allowProcessExecution: boolean; // Allow process execution
-  maxMemoryMB: number;           // Memory limit in MB
-  maxExecutionTimeMs: number;    // Execution time limit in ms
-  maxCallStackDepth: number;     // Call stack depth limit
-  allowedModules: string[];      // Allowed module imports
-  deniedFunctions: string[];     // Forbidden function names
-}
-```
+##### createSandbox
 
-## Security Examples
+**Signature**: `createSandbox(policy?: Partial<SecurityPolicy>): SandboxedEnvironment`
 
-### Basic Sandboxing
-```typescript
-import { Runtime } from 'omniscript';
+##### checkResourceAccess
 
-const runtime = new Runtime();
+**Signature**: `checkResourceAccess(action: string, resource: string, context: ExecutionContext): boolean`
 
-// Execute untrusted code safely
-const result = await runtime.executeSecure(`
-  // This code runs in a sandbox
-  const data = { value: 42 };
-  return data.value * 2;
-`, {
-  maxMemoryMB: 50,
-  maxExecutionTimeMs: 5000,
-  allowFileSystem: false,
-  allowNetwork: false
-});
+##### evaluateAccess
 
-console.log(result); // { status: 'executed', sandbox: true }
-```
+**Signature**: `private evaluateAccess(action: string, resource: string, context: ExecutionContext): boolean`
 
-### Advanced Security Policy
-```typescript
-const strictPolicy = {
-  allowFileSystem: false,
-  allowNetwork: false,
-  allowProcessExecution: false,
-  maxMemoryMB: 32,
-  maxExecutionTimeMs: 10000,
-  maxCallStackDepth: 100,
-  allowedModules: ['math', 'string'],
-  deniedFunctions: ['eval', 'Function', 'setTimeout', 'setInterval']
-};
+##### checkModuleAccess
 
-const sandbox = security.createSandbox(strictPolicy);
+**Signature**: `private checkModuleAccess(moduleName: string, policy: SecurityPolicy): boolean`
 
-try {
-  // This will throw SecurityError
-  await sandbox.execute('eval("malicious code")');
-} catch (error) {
-  console.error('Security violation:', error.message);
-}
-```
+##### logAction
 
-### Resource Monitoring
-```typescript
-import { ResourceMonitor } from 'omniscript';
+**Signature**: `private logAction(action: string, allowed: boolean, context: any): void`
 
-const limits = {
-  maxMemoryBytes: 100 * 1024 * 1024, // 100MB
-  maxCpuTimeMs: 30000,
-  maxFileDescriptors: 50,
-  maxNetworkConnections: 10
-};
+##### sanitizeContext
 
-// Start monitoring resources
-ResourceMonitor.startMonitoring('app', limits, (data) => {
-  if (data.violations.length > 0) {
-    console.warn('Resource violations detected:', data.violations);
-  }
-  
-  console.log('Current usage:', data.usage);
-});
+**Signature**: `private sanitizeContext(context: ExecutionContext): any`
 
-// Stop monitoring
-ResourceMonitor.stopMonitoring('app');
-```
+##### getAuditLog
 
-## Audit Logging
+**Signature**: `getAuditLog(since?: number): Array<any>`
 
-### Retrieving Audit Logs
-```typescript
-// Get all audit entries
-const allLogs = security.getAuditLog();
+##### clearAuditLog
 
-// Get logs since timestamp
-const recentLogs = security.getAuditLog(Date.now() - 3600000); // Last hour
+**Signature**: `clearAuditLog(): void`
 
-// Filter security violations
-const violations = allLogs.filter(entry => !entry.allowed);
+#### SandboxedEnvironment
 
-console.log('Security violations:', violations);
-```
+**Properties**:
 
-### Audit Log Entry Format
-```typescript
-interface AuditEntry {
-  timestamp: number;    // Unix timestamp
-  action: string;       // Action type (e.g., 'file_read', 'network_request')
-  allowed: boolean;     // Whether action was allowed
-  context: {
-    resource?: string;  // Resource being accessed
-    memoryUsage: number;
-    executionTime: number;
-    // ... other context data
-  };
-}
-```
+- `context: ExecutionContext` - 
+- `originalConsole: Console` - 
+- `sandboxedGlobals: any` - 
 
-## Error Handling
+**Methods**:
 
-### Security Exceptions
-```typescript
-import { SecurityError, ResourceLimitExceededError } from 'omniscript';
+##### setupSandboxedEnvironment
 
-try {
-  await sandbox.execute(suspiciousCode);
-} catch (error) {
-  if (error instanceof SecurityError) {
-    console.error('Security policy violation:', error.message);
-  } else if (error instanceof ResourceLimitExceededError) {
-    console.error('Resource limit exceeded:', error.message);
-  }
-}
-```
+**Signature**: `private setupSandboxedEnvironment(): void`
 
-## Integration with Runtime
+##### createSandboxedConsole
 
-### Runtime Security Methods
-```typescript
-const runtime = new Runtime();
+**Signature**: `private createSandboxedConsole(): Console`
 
-// Create secure sandbox
-const sandbox = runtime.createSecureSandbox({
-  maxMemoryMB: 100,
-  allowNetwork: true
-});
+##### createRestrictedFunction
 
-// Execute code securely with automatic cleanup
-const result = await runtime.executeSecure(code, policy);
+**Signature**: `private createRestrictedFunction(name: string): Function`
 
-// Access audit logs
-const auditLog = runtime.getSecurityAuditLog();
-runtime.clearSecurityAuditLog();
-```
+##### createRestrictedRequire
 
-## Best Practices
+**Signature**: `private createRestrictedRequire(): Function`
 
-### Secure Code Execution
-1. **Always use minimal privileges**: Only grant necessary permissions
-2. **Set appropriate resource limits**: Prevent resource exhaustion attacks
-3. **Monitor audit logs**: Regularly review security events
-4. **Validate inputs**: Sanitize code before execution
-5. **Handle errors gracefully**: Don't expose internal information
+##### createRestrictedImport
 
-### Policy Configuration
-```typescript
-// Development environment - more permissive
-const devPolicy = {
-  allowFileSystem: true,
-  allowNetwork: true,
-  maxMemoryMB: 500,
-  maxExecutionTimeMs: 60000,
-  allowedModules: ['*'],
-  deniedFunctions: ['eval']
-};
+**Signature**: `private createRestrictedImport(): Function`
 
-// Production environment - strict security
-const prodPolicy = {
-  allowFileSystem: false,
-  allowNetwork: false,
-  maxMemoryMB: 100,
-  maxExecutionTimeMs: 30000,
-  allowedModules: ['stdlib/*'],
-  deniedFunctions: ['eval', 'Function', 'setTimeout', 'setInterval']
-};
-```
+##### execute
 
-### Resource Management
-```typescript
-class SecureRunner {
-  private activeSandboxes = new Set<SandboxedEnvironment>();
+**Signature**: `execute(code: string): Promise<any>`
 
-  async executeCode(code: string, policy: Partial<SecurityPolicy>) {
-    const sandbox = SecurityManager.getInstance().createSandbox(policy);
-    this.activeSandboxes.add(sandbox);
-    
-    try {
-      return await sandbox.execute(code);
-    } finally {
-      sandbox.destroy();
-      this.activeSandboxes.delete(sandbox);
-    }
-  }
+##### checkExecutionLimits
 
-  cleanup() {
-    // Clean up all active sandboxes
-    for (const sandbox of this.activeSandboxes) {
-      sandbox.destroy();
-    }
-    this.activeSandboxes.clear();
-  }
-}
-```
+**Signature**: `private checkExecutionLimits(): void`
 
-## Configuration Examples
+##### executeInIsolation
 
-### Web Application Security
-```typescript
-const webAppPolicy = {
-  allowFileSystem: false,      // No file access
-  allowNetwork: true,          // Allow API calls
-  allowProcessExecution: false, // No process spawning
-  maxMemoryMB: 64,            // Reasonable memory limit
-  maxExecutionTimeMs: 15000,   // 15 second timeout
-  maxCallStackDepth: 500,     // Prevent stack overflow
-  allowedModules: [
-    'stdlib/http',
-    'stdlib/crypto',
-    'stdlib/datetime'
-  ],
-  deniedFunctions: [
-    'eval', 'Function',
-    'setTimeout', 'setInterval',
-    'require', 'import'
-  ]
-};
-```
+**Signature**: `private executeInIsolation(code: string): any`
 
-### Data Processing Security
-```typescript
-const dataProcessingPolicy = {
-  allowFileSystem: true,       // File access needed
-  allowNetwork: false,         // No network access
-  allowProcessExecution: false,
-  maxMemoryMB: 1024,          // Higher memory for data processing
-  maxExecutionTimeMs: 120000,  // 2 minute timeout
-  maxCallStackDepth: 1000,
-  allowedModules: [
-    'stdlib/collections',
-    'stdlib/math',
-    'stdlib/datetime'
-  ],
-  deniedFunctions: ['eval', 'Function']
-};
-```
+##### getResourceUsage
 
-## See Also
-- [Runtime API Reference](./runtime/README.md)
-- [Error Handling Guide](./error-handling.md)
-- [Performance Optimization Guide](./performance.md)
-- [Best Practices](../best-practices.md)
+**Signature**: `getResourceUsage():`
+
+##### destroy
+
+**Signature**: `destroy(): void`
+
+#### SecurityError
+
+**Extends**: `OmniscriptError`
+
+#### ResourceLimitExceededError
+
+**Extends**: `SecurityError`
+
+#### ResourceMonitor
+
+**Properties**:
+
+- `intervals: Map<string, NodeJS.Timeout>` - 
+
+**Methods**:
+
+##### startMonitoring
+
+**Signature**: `static startMonitoring(name: string, limits: ResourceLimits, callback: (usage: any) => void): void`
+
+##### stopMonitoring
+
+**Signature**: `static stopMonitoring(name: string): void`
+
+##### getCurrentUsage
+
+**Signature**: `private static getCurrentUsage(): any`
+
+### Interfaces
+
+#### SecurityPolicy
+
+**Properties**:
+
+- `allowFileSystem: boolean` - 
+- `allowNetwork: boolean` - 
+- `allowProcessExecution: boolean` - 
+- `maxMemoryMB: number` - 
+- `maxExecutionTimeMs: number` - 
+- `maxCallStackDepth: number` - 
+- `allowedModules: string[]` - 
+- `deniedFunctions: string[]` - 
+
+#### ResourceLimits
+
+**Properties**:
+
+- `maxMemoryBytes: number` - 
+- `maxCpuTimeMs: number` - 
+- `maxFileDescriptors: number` - 
+- `maxNetworkConnections: number` - 
+
+#### ExecutionContext
+
+**Properties**:
+
+- `policy: SecurityPolicy` - 
+- `startTime: number` - 
+- `memoryUsage: number` - 
+- `callStackDepth: number` - 
+- `openFileDescriptors: Set<string>` - 
+- `networkConnections: Set<string>` - 
+
+

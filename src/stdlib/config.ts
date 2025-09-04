@@ -107,6 +107,7 @@ export class FileSource implements ConfigSource {
   name: string;
   priority = 50;
   private watchers: ConfigChangeListener[] = [];
+  private watchTimer?: NodeJS.Timeout;
   
   constructor(
     private filename: string,
@@ -158,11 +159,13 @@ export class FileSource implements ConfigSource {
   watch(callback: ConfigChangeListener): void {
     this.watchers.push(callback);
     
-    // Only set up file watching if not in CLI context
+    // Only set up file watching if not in CLI context and not already watching
     const isCLI = process.argv.some(arg => arg.includes('cli.js') || arg.includes('bin/cli'));
-    if (!isCLI) {
-      // Simulate file watching
-      setInterval(() => {
+    const isTest = process.env.NODE_ENV === 'test' || process.argv.some(arg => arg.includes('jest'));
+    
+    if (!isCLI && !isTest && !this.watchTimer) {
+      // Simulate file watching with unref() to allow process to exit
+      this.watchTimer = setInterval(() => {
         // In production, this would use real file system watchers
         if (Math.random() < 0.01) { // 1% chance of simulated change
           callback({
@@ -173,7 +176,18 @@ export class FileSource implements ConfigSource {
           });
         }
       }, 1000);
+      
+      // Allow process to exit even with timer running
+      this.watchTimer.unref();
     }
+  }
+
+  stopWatching(): void {
+    if (this.watchTimer) {
+      clearInterval(this.watchTimer);
+      this.watchTimer = undefined;
+    }
+    this.watchers = [];
   }
 
   async save(config: Record<string, any>): Promise<void> {
@@ -509,6 +523,16 @@ export class Config {
 
   isTest(): boolean {
     return this.getSync('NODE_ENV') === 'test';
+  }
+
+  cleanup(): void {
+    // Stop watching all sources
+    for (const source of this.sources) {
+      if (source instanceof FileSource) {
+        source.stopWatching();
+      }
+    }
+    this.listeners = [];
   }
 }
 

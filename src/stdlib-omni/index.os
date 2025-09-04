@@ -76,13 +76,13 @@ class Database {
     if (!this.storage.has(entityName)) {
       this.storage.set(entityName, []);
     }
-    
+
     def entities = this.storage.get(entityName)!;
     // Simple ID assignment
     if (!(entity as any).id) {
       (entity as any).id = entities.length + 1;
     }
-    
+
     entities.push(entity);
     return entity;
   }
@@ -243,7 +243,7 @@ class DOM {
     }
     return null;
   }
-  
+
   static createElement(tag:: string):: Element | null {
     if (typeof document !== 'undefined') {
       return document.createElement(tag);
@@ -448,26 +448,26 @@ class GC {
 module.exports = {
   // Collections
   List, Map, Set, PriorityQueue, Graph, BinarySearchTree, Mutex,
-  
+
   // Math
   MathUtils, Vector2D, Vector3D, Matrix,
   Math: MathUtils, // Alias for compatibility
-  
+
   // DateTime
   DateTime, DateTimeUtils, Timezone,
-  
+
   // Crypto
   Crypto, SecureRandom,
-  
+
   // Network
   HTTPClient, HTTP, WebSocketClient, WebSocket, AsyncUtils, EventSourcingServer, RestClient,
-  
+
   // Database
   Database, QueryBuilder, db,
-  
+
   // Utilities
   Console, DOM, PackageManager, Thread, GC, sleep,
-  
+
   // Core functions
   console: Console // Alias for compatibility
 };

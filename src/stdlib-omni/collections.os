@@ -19,12 +19,12 @@ class Mutex {
   }
 
   async acquireWithTimeout(timeoutMs:: number):: Promise<boolean> {
-    def timeoutPromise = new Promise<false>(resolve => 
-      setTimeout(() => resolve(false), timeoutMs)
-    );
-    def acquirePromise = this.acquire().then(() => true);
-    return Promise.race([acquirePromise, timeoutPromise]);
-  }
+    def timeoutPromise = new Promise<false>(resolve =>
+    setTimeout(() => resolve(false), timeoutMs)
+  );
+  def acquirePromise = this.acquire().then(() => true);
+  return Promise.race([acquirePromise, timeoutPromise]);
+}
 }
 
 // Enhanced List implementation
@@ -77,7 +77,7 @@ class List<T> {
     try {
       return [...this.items];
     } finally {
-      this.lock.release(); 
+      this.lock.release();
     }
   }
 
@@ -318,40 +318,40 @@ class Set<T> {
     def result = new Set<T>();
     def thisArray = await this.toArray();
     def otherArray = await other.toArray();
-    
+
     for (def item of thisArray) {
       await result.add(item);
     }
     for (def item of otherArray) {
       await result.add(item);
     }
-    
+
     return result;
   }
 
   async intersection(other:: Set<T>):: Promise<Set<T>> {
     def result = new Set<T>();
     def thisArray = await this.toArray();
-    
+
     for (def item of thisArray) {
       if (await other.has(item)) {
         await result.add(item);
       }
     }
-    
+
     return result;
   }
 
   async difference(other:: Set<T>):: Promise<Set<T>> {
     def result = new Set<T>();
     def thisArray = await this.toArray();
-    
+
     for (def item of thisArray) {
       if (!(await other.has(item))) {
         await result.add(item);
       }
     }
-    
+
     return result;
   }
 }
@@ -375,15 +375,15 @@ class PriorityQueue<T> {
     await this.lock.acquire();
     try {
       if (this.heap.length === 0) return undefined;
-      
+
       def result = this.heap[0].item;
       def last = this.heap.pop()!;
-      
+
       if (this.heap.length > 0) {
         this.heap[0] = last;
         this.heapifyDown(0);
       }
-      
+
       return result;
     } finally {
       this.lock.release();
@@ -409,7 +409,7 @@ class PriorityQueue<T> {
 
   private heapifyUp(index:: number):: void {
     if (index === 0) return;
-    
+
     def parentIndex = Math.floor((index - 1) / 2);
     if (this.heap[index].priority > this.heap[parentIndex].priority) {
       [this.heap[index], this.heap[parentIndex]] = [this.heap[parentIndex], this.heap[index]];
@@ -472,7 +472,7 @@ class Graph<T> {
     try {
       def edgeId = `${from}-${to}`;
       this.edges.set(edgeId, { from, to, weight });
-      
+
       if (!this.adjacencyList.has(from)) {
         this.adjacencyList.set(from, []);
       }
@@ -507,7 +507,7 @@ class Graph<T> {
     while (queue.length > 0) {
       def current = queue.shift()!;
       if (current === to) return true;
-      
+
       if (visited.has(current)) continue;
       visited.add(current);
 
@@ -524,13 +524,13 @@ class Graph<T> {
 
     while (queue.length > 0) {
       def { node: current, path } = queue.shift()!;
-      
+
       if (current === to) return path;
       if (visited.has(current)) continue;
-      
+
       visited.add(current);
       def neighbors = await this.getNeighbors(current);
-      
+
       for (def neighbor of neighbors) {
         if (!visited.has(neighbor)) {
           queue.push({ node: neighbor, path: [...path, neighbor] });

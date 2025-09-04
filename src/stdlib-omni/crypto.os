@@ -20,8 +20,8 @@ class Crypto {
       def dataBuffer = encoder.encode(data);
       def hashBuffer = await crypto.subtle.digest(algorithm, dataBuffer);
       return Array.from(new Uint8Array(hashBuffer))
-        .map(b => b.toString(16).padStart(2, '0'))
-        .join('');
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
     } catch (error) {
       console.error('Crypto: Hashing failed:', error);
       throw new Error(`Failed to hash data: ${error}`);
@@ -38,7 +38,7 @@ class Crypto {
       def encoder = new TextEncoder();
       def keyBuffer = encoder.encode(key);
       def dataBuffer = encoder.encode(data);
-      
+
       def cryptoKey = await crypto.subtle.importKey(
         'raw',
         keyBuffer,
@@ -46,11 +46,11 @@ class Crypto {
         false,
         ['sign']
       );
-      
+
       def signature = await crypto.subtle.sign('HMAC', cryptoKey, dataBuffer);
       return Array.from(new Uint8Array(signature))
-        .map(b => b.toString(16).padStart(2, '0'))
-        .join('');
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
     } catch (error) {
       console.error('Crypto: HMAC generation failed:', error);
       throw new Error(`Failed to generate HMAC: ${error}`);
@@ -62,14 +62,14 @@ class Crypto {
     try {
       def encoder = new TextEncoder();
       def dataBuffer = encoder.encode(data);
-      
+
       // Ensure key is the right length (32 bytes for AES-256)
       def keyHash = await this.hash(key, 'SHA-256');
       def keyBytes = new Uint8Array(32);
       for (var i = 0; i < 32; i++) {
         keyBytes[i] = parseInt(keyHash.substring(i * 2, i * 2 + 2), 16);
       }
-      
+
       def cryptoKey = await crypto.subtle.importKey(
         'raw',
         keyBytes,
@@ -77,14 +77,14 @@ class Crypto {
         false,
         ['encrypt']
       );
-      
+
       def iv = crypto.getRandomValues(new Uint8Array(algorithm === 'AES-GCM' ? 12 : 16));
-      def encryptParams = algorithm === 'AES-GCM' 
-        ? { name: algorithm, iv }
-        : { name: algorithm, iv };
-      
+      def encryptParams = algorithm === 'AES-GCM'
+      ? { name: algorithm, iv }
+      : { name: algorithm, iv };
+
       def encrypted = await crypto.subtle.encrypt(encryptParams, cryptoKey, dataBuffer);
-      
+
       return {
         encrypted: this.bufferToBase64(encrypted),
         iv: this.arrayToBase64(iv),
@@ -99,14 +99,14 @@ class Crypto {
   static async decrypt(encryptionResult:: EncryptionResult, key:: string):: Promise<string> {
     try {
       def { encrypted, iv, algorithm } = encryptionResult;
-      
+
       // Recreate the key
       def keyHash = await this.hash(key, 'SHA-256');
       def keyBytes = new Uint8Array(32);
       for (var i = 0; i < 32; i++) {
         keyBytes[i] = parseInt(keyHash.substring(i * 2, i * 2 + 2), 16);
       }
-      
+
       def cryptoKey = await crypto.subtle.importKey(
         'raw',
         keyBytes,
@@ -114,16 +114,16 @@ class Crypto {
         false,
         ['decrypt']
       );
-      
+
       def ivBuffer = this.base64ToArray(iv);
       def encryptedBuffer = this.base64ToBuffer(encrypted);
-      
-      def decryptParams = algorithm === 'AES-GCM' 
-        ? { name: algorithm, iv: ivBuffer }
-        : { name: algorithm, iv: ivBuffer };
-      
+
+      def decryptParams = algorithm === 'AES-GCM'
+      ? { name: algorithm, iv: ivBuffer }
+      : { name: algorithm, iv: ivBuffer };
+
       def decrypted = await crypto.subtle.decrypt(decryptParams, cryptoKey, encryptedBuffer);
-      
+
       def decoder = new TextDecoder();
       return decoder.decode(decrypted);
     } catch (error) {
@@ -136,14 +136,14 @@ class Crypto {
   static async generateKey(length:: number = 32):: Promise<string> {
     def keyBytes = crypto.getRandomValues(new Uint8Array(length));
     return Array.from(keyBytes)
-      .map(b => b.toString(16).padStart(2, '0'))
-      .join('');
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
   }
 
   static async generateKeyPair(algorithm:: 'RSA-OAEP' | 'ECDSA' = 'RSA-OAEP'):: Promise<KeyPair> {
     try {
       var keyParams:: any;
-      
+
       if (algorithm === 'RSA-OAEP') {
         keyParams = {
           name: 'RSA-OAEP',
@@ -157,16 +157,16 @@ class Crypto {
           namedCurve: 'P-384'
         };
       }
-      
+
       def keyPair = await crypto.subtle.generateKey(
         keyParams,
         true,
         algorithm === 'RSA-OAEP' ? ['encrypt', 'decrypt'] : ['sign', 'verify']
       );
-      
+
       def publicKey = await crypto.subtle.exportKey('spki', keyPair.publicKey);
       def privateKey = await crypto.subtle.exportKey('pkcs8', keyPair.privateKey);
-      
+
       return {
         publicKey: this.bufferToBase64(publicKey),
         privateKey: this.bufferToBase64(privateKey)
@@ -183,10 +183,10 @@ class Crypto {
       def encoder = new TextEncoder();
       def dataBuffer = encoder.encode(data);
       def keyBuffer = this.base64ToBuffer(privateKey);
-      
+
       var importParams:: any;
       var signParams:: any;
-      
+
       if (algorithm === 'ECDSA') {
         importParams = { name: 'ECDSA', namedCurve: 'P-384' };
         signParams = { name: 'ECDSA', hash: 'SHA-384' };
@@ -194,7 +194,7 @@ class Crypto {
         importParams = { name: 'RSA-PSS', hash: 'SHA-256' };
         signParams = { name: 'RSA-PSS', saltLength: 32 };
       }
-      
+
       def cryptoKey = await crypto.subtle.importKey(
         'pkcs8',
         keyBuffer,
@@ -202,7 +202,7 @@ class Crypto {
         false,
         ['sign']
       );
-      
+
       def signature = await crypto.subtle.sign(signParams, cryptoKey, dataBuffer);
       return this.bufferToBase64(signature);
     } catch (error) {
@@ -217,10 +217,10 @@ class Crypto {
       def dataBuffer = encoder.encode(data);
       def signatureBuffer = this.base64ToBuffer(signature);
       def keyBuffer = this.base64ToBuffer(publicKey);
-      
+
       var importParams:: any;
       var verifyParams:: any;
-      
+
       if (algorithm === 'ECDSA') {
         importParams = { name: 'ECDSA', namedCurve: 'P-384' };
         verifyParams = { name: 'ECDSA', hash: 'SHA-384' };
@@ -228,7 +228,7 @@ class Crypto {
         importParams = { name: 'RSA-PSS', hash: 'SHA-256' };
         verifyParams = { name: 'RSA-PSS', saltLength: 32 };
       }
-      
+
       def cryptoKey = await crypto.subtle.importKey(
         'spki',
         keyBuffer,
@@ -236,7 +236,7 @@ class Crypto {
         false,
         ['verify']
       );
-      
+
       return await crypto.subtle.verify(verifyParams, cryptoKey, signatureBuffer, dataBuffer);
     } catch (error) {
       console.error('Crypto: Verification failed:', error);
@@ -262,7 +262,7 @@ class Crypto {
     def randomBytes = this.generateRandomBytes(16);
     randomBytes[6] = (randomBytes[6] & 0x0f) | 0x40; // Version 4
     randomBytes[8] = (randomBytes[8] & 0x3f) | 0x80; // Variant bits
-    
+
     def hex = Array.from(randomBytes).map(b => b.toString(16).padStart(2, '0')).join('');
     return `${hex.substring(0, 8)}-${hex.substring(8, 12)}-${hex.substring(12, 16)}-${hex.substring(16, 20)}-${hex.substring(20, 32)}`;
   }
@@ -273,7 +273,7 @@ class Crypto {
       def encoder = new TextEncoder();
       def passwordBuffer = encoder.encode(password);
       def saltBuffer = encoder.encode(salt);
-      
+
       def keyMaterial = await crypto.subtle.importKey(
         'raw',
         passwordBuffer,
@@ -281,7 +281,7 @@ class Crypto {
         false,
         ['deriveBits']
       );
-      
+
       def derivedBits = await crypto.subtle.deriveBits(
         {
           name: 'PBKDF2',
@@ -292,10 +292,10 @@ class Crypto {
         keyMaterial,
         256 // 32 bytes
       );
-      
+
       return Array.from(new Uint8Array(derivedBits))
-        .map(b => b.toString(16).padStart(2, '0'))
-        .join('');
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
     } catch (error) {
       console.error('Crypto: Key derivation failed:', error);
       throw new Error(`Failed to derive key: ${error}`);
@@ -359,13 +359,13 @@ class Crypto {
     // In production, use a proper MD5 library
     var hash = 0;
     if (data.length === 0) return hash.toString(16);
-    
+
     for (var i = 0; i < data.length; i++) {
       def char = data.charCodeAt(i);
       hash = ((hash << 5) - hash) + char;
       hash = hash & hash; // Convert to 32-bit integer
     }
-    
+
     return Math.abs(hash).toString(16).padStart(8, '0');
   }
 
@@ -379,11 +379,11 @@ class Crypto {
       } else {
         buffer = fileContent;
       }
-      
+
       def hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
       return Array.from(new Uint8Array(hashBuffer))
-        .map(b => b.toString(16).padStart(2, '0'))
-        .join('');
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
     } catch (error) {
       console.error('Crypto: File hashing failed:', error);
       throw new Error(`Failed to hash file: ${error}`);
@@ -409,12 +409,12 @@ class Crypto {
     if (a.length !== b.length) {
       return false;
     }
-    
+
     var result = 0;
     for (var i = 0; i < a.length; i++) {
       result |= a.charCodeAt(i) ^ b.charCodeAt(i);
     }
-    
+
     return result === 0;
   }
 }
@@ -425,7 +425,7 @@ class SecureRandom {
     def range = max - min + 1;
     def bytesNeeded = Math.ceil(Math.log2(range) / 8);
     def maxValid = 2 ** (bytesNeeded * 8) - (2 ** (bytesNeeded * 8) % range);
-    
+
     var randomValue:: number;
     do {
       def randomBytes = Crypto.generateRandomBytes(bytesNeeded);
@@ -434,7 +434,7 @@ class SecureRandom {
         randomValue = (randomValue << 8) + randomBytes[i];
       }
     } while (randomValue >= maxValid);
-    
+
     return min + (randomValue % range);
   }
 

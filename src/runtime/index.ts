@@ -154,6 +154,8 @@ export class Runtime {
       switch (bytecode.type) {
         case 'Block':
           return this.executeBlock(bytecode.body || []);
+        case 'Program':
+          return this.executeBlock(bytecode.body || []);
         case 'Function':
           return this.executeFunction(bytecode);
         case 'Return':
@@ -197,6 +199,8 @@ export class Runtime {
           return this.executeMatch(bytecode as any);
         case 'Import':
           return this.executeImport(bytecode as any);
+        case 'GuardExpression':
+          return this.executeGuardExpression(bytecode as any);
         default:
           throw new Error(`Unknown bytecode type: ${bytecode.type}`);
       }
@@ -212,6 +216,10 @@ export class Runtime {
   async executeAsync(bytecode: Bytecode): Promise<unknown> {
     try {
       switch (bytecode.type) {
+        case 'Block':
+          return await this.executeBlockAsync(bytecode.body || []);
+        case 'Program':
+          return await this.executeBlockAsync(bytecode.body || []);
         case 'Function':
           return await this.executeFunctionAsync(bytecode as any);
         case 'Return': {
@@ -221,7 +229,8 @@ export class Runtime {
         case 'Value':
           return bytecode.value;
         default:
-          throw new Error(`Unknown bytecode type: ${bytecode.type}`);
+          // Fall back to sync execution for most cases
+          return this.execute(bytecode);
       }
     } catch (error) {
       if (error && (error as any).__return) throw error;
@@ -848,6 +857,19 @@ export class Runtime {
     }
   }
 
+  private async executeBlockAsync(stmts: Bytecode[]): Promise<unknown> {
+    this.pushEnv();
+    try {
+      let last;
+      for (const s of stmts) {
+        last = await this.executeAsync(s);
+      }
+      return last;
+    } finally {
+      this.popEnv();
+    }
+  }
+
   private executeVarDecl(node: { name: string; initializer?: Bytecode }): unknown {
     const val = node.initializer ? this.evalExpr(node.initializer) : undefined;
     this.setVar(node.name, val);
@@ -992,6 +1014,16 @@ export class Runtime {
     }
     
     throw new Error('Non-exhaustive pattern match');
+  }
+
+  private executeGuardExpression(node: any): unknown {
+    // A guard expression is a conditional expression in pattern matching
+    // It should evaluate the condition and return true/false
+    if (node.condition) {
+      return this.evalExpr(node.condition);
+    }
+    // If no condition, default to true
+    return true;
   }
 
   // ------- Minimal expression evaluator for parser Expressions -------

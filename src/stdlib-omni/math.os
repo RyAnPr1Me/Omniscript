@@ -20,25 +20,25 @@ class MathUtils {
   static median(numbers:: number[]):: number {
     def sorted = [...numbers].sort((a, b) => a - b);
     def mid = Math.floor(sorted.length / 2);
-    return sorted.length % 2 === 0 
-      ? (sorted[mid - 1] + sorted[mid]) / 2
-      : sorted[mid];
+    return sorted.length % 2 === 0
+    ? (sorted[mid - 1] + sorted[mid]) / 2
+    : sorted[mid];
   }
 
   static mode(numbers:: number[]):: number | number[] {
     def frequency:: Map<number, number> = new Map();
     var maxCount = 0;
-    
+
     for (def num of numbers) {
       def count = (frequency.get(num) || 0) + 1;
       frequency.set(num, count);
       maxCount = Math.max(maxCount, count);
     }
-    
+
     def modes = Array.from(frequency.entries())
-      .filter(([_, count]) => count === maxCount)
-      .map(([num, _]) => num);
-    
+    .filter(([_, count]) => count === maxCount)
+    .map(([num, _]) => num);
+
     return modes.length === 1 ? modes[0] : modes;
   }
 
@@ -70,7 +70,7 @@ class MathUtils {
   static factorial(n:: number):: number {
     if (n < 0) throw new Error("Factorial is not defined for negative numbers");
     if (n === 0 || n === 1) return 1;
-    
+
     // Use iterative approach for better performance
     var result = 1;
     for (var i = 2; i <= n; i++) {
@@ -82,7 +82,7 @@ class MathUtils {
   static fibonacci(n:: number):: number {
     if (n < 0) throw new Error("Fibonacci is not defined for negative numbers");
     if (n <= 1) return n;
-    
+
     var a = 0, b = 1;
     for (var i = 2; i <= n; i++) {
       [a, b] = [b, a + b];
@@ -110,7 +110,7 @@ class MathUtils {
     if (n < 2) return false;
     if (n === 2) return true;
     if (n % 2 === 0) return false;
-    
+
     for (var i = 3; i <= Math.sqrt(n); i += 2) {
       if (n % i === 0) return false;
     }
@@ -210,7 +210,7 @@ class MathUtils {
     if (a[0].length !== b.length) {
       throw new Error('Matrix dimensions do not match for multiplication');
     }
-    
+
     def result:: number[][] = [];
     for (var i = 0; i < a.length; i++) {
       result[i] = [];
@@ -321,34 +321,34 @@ class MathUtils {
   static integral(fn:: (x:: number) => number, a:: number, b:: number, n:: number = 1000):: number {
     def h = (b - a) / n;
     var sum = (fn(a) + fn(b)) / 2;
-    
+
     for (var i = 1; i < n; i++) {
       sum += fn(a + i * h);
     }
-    
+
     return sum * h;
   }
 
   static newtonRaphson(fn:: (x:: number) => number, x0:: number, maxIterations:: number = 100, tolerance:: number = 1e-10):: number {
     var x = x0;
-    
+
     for (var i = 0; i < maxIterations; i++) {
       def fx = fn(x);
       def dfx = this.derivative(fn, x);
-      
+
       if (Math.abs(dfx) < tolerance) {
         throw new Error('Derivative is too small, no convergence');
       }
-      
+
       def newX = x - fx / dfx;
-      
+
       if (Math.abs(newX - x) < tolerance) {
         return newX;
       }
-      
+
       x = newX;
     }
-    
+
     throw new Error('No convergence after maximum iterations');
   }
 
@@ -359,22 +359,22 @@ class MathUtils {
 
   static distance3D(p1:: {x:: number, y:: number, z:: number}, p2:: {x:: number, y:: number, z:: number}):: number {
     return Math.sqrt(
-      Math.pow(p2.x - p1.x, 2) + 
-      Math.pow(p2.y - p1.y, 2) + 
+      Math.pow(p2.x - p1.x, 2) +
+      Math.pow(p2.y - p1.y, 2) +
       Math.pow(p2.z - p1.z, 2)
     );
   }
 
   static pointInPolygon(point:: {x:: number, y:: number}, polygon:: {x:: number, y:: number}[]):: boolean {
     var inside = false;
-    
+
     for (var i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
       if (((polygon[i].y > point.y) !== (polygon[j].y > point.y)) &&
-          (point.x < (polygon[j].x - polygon[i].x) * (point.y - polygon[i].y) / (polygon[j].y - polygon[i].y) + polygon[i].x)) {
+      (point.x < (polygon[j].x - polygon[i].x) * (point.y - polygon[i].y) / (polygon[j].y - polygon[i].y) + polygon[i].x)) {
         inside = !inside;
       }
     }
-    
+
     return inside;
   }
 
@@ -406,7 +406,7 @@ class MathUtils {
     // Remove last point of each half because it's repeated
     lower.pop();
     upper.pop();
-    
+
     return [...lower, ...upper];
   }
 
