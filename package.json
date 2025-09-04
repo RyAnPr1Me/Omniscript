@@ -1,6 +1,6 @@
 {
   "name": "omniscript",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "A modern programming language for full-stack development with type safety, async/await, pattern matching, and built-in ORM",
   "type": "commonjs",
   "main": "dist/index.js",
