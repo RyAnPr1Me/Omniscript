@@ -39,7 +39,7 @@ export class FunctionalParser {
       if (this.peek('EOF')) break;
       
       // Handle imports at the top level
-      if (this.peek('IMPORT')) {
+      if (this.peek('IMPORT') || this.peek('USE')) {
         body.push(this.importDecl());
       } else {
         body.push(this.expression());
@@ -52,7 +52,12 @@ export class FunctionalParser {
   }
 
   private importDecl(): Expression {
-    this.consume('IMPORT');
+    // Handle both 'import' and 'use' keywords
+    if (this.peek('IMPORT')) {
+      this.consume('IMPORT');
+    } else {
+      this.consume('USE');
+    }
     this.consume('LBRACE');
     const imports: string[] = [];
     if (!this.peek('RBRACE')) {

@@ -821,3 +821,11 @@ process.on('SIGTERM', () => {
 
 // Start the application
 main();
+
+// Export main functionality
+export { ServiceRegistry, LoadBalancer, CircuitBreaker, ServiceProxy, createAPIGateway, main };
+
+// Example usage:
+// Run this file to start the microservices architecture demo
+// The API gateway will be available at http://localhost:3000
+// Health checks can be monitored at http://localhost:3000/health
