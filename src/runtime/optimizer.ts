@@ -21,7 +21,7 @@ export interface OptimizedBytecode {
  * Just-In-Time compiler for hot code paths
  */
 export class JITCompiler {
-  private compiledFunctions = new Map<string, Function>();
+  private compiledFunctions = new Map<string, (...args: any[]) => any>();
   private compilationThreshold = 10;
   private profile: OptimizationProfile;
 
@@ -38,7 +38,7 @@ export class JITCompiler {
     return callCount >= this.compilationThreshold && !this.compiledFunctions.has(functionName);
   }
 
-  compile(functionName: string, bytecode: any[]): Function {
+  compile(functionName: string, bytecode: any[]): (...args: any[]) => any {
     if (this.compiledFunctions.has(functionName)) {
       return this.compiledFunctions.get(functionName)!;
     }
@@ -48,7 +48,7 @@ export class JITCompiler {
     
     try {
       // Create function with optimizations
-      const compiledFn = new Function('runtime', 'args', jsCode);
+      const compiledFn = new Function('runtime', 'args', jsCode) as (...args: any[]) => any;
       this.compiledFunctions.set(functionName, compiledFn);
       
       console.log(`JIT compiled function: ${functionName}`);
@@ -121,13 +121,13 @@ export class JITCompiler {
     }
   }
 
-  private createInterpreterFallback(bytecode: any[]): Function {
+  private createInterpreterFallback(bytecode: any[]): (runtime: any, args: any[]) => any {
     return (runtime: any, args: any[]) => {
       return runtime.execute(bytecode, args);
     };
   }
 
-  getCompiledFunction(name: string): Function | undefined {
+  getCompiledFunction(name: string): ((...args: any[]) => any) | undefined {
     return this.compiledFunctions.get(name);
   }
 
@@ -389,11 +389,11 @@ export class RuntimeOptimizer {
     return this.jitCompiler.shouldCompile(functionName);
   }
 
-  compileFunction(name: string, bytecode: any[]): Function {
+  compileFunction(name: string, bytecode: any[]): (...args: any[]) => any {
     return this.jitCompiler.compile(name, bytecode);
   }
 
-  getCompiledFunction(name: string): Function | undefined {
+  getCompiledFunction(name: string): ((...args: any[]) => any) | undefined {
     return this.jitCompiler.getCompiledFunction(name);
   }
 

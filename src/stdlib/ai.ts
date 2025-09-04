@@ -1229,7 +1229,7 @@ export class AIUtils {
   }
 
   static getMemoryStats(): { pooledArrays: number, simdProcessors: number } {
-    let totalPooledArrays = 0;
+    const totalPooledArrays = 0;
     // Access private pools through a method if needed
     const simdProcessors = simdCache.length;
     

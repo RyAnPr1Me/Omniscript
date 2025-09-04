@@ -201,8 +201,8 @@ export class WebSocketClient {
   private reconnectCount = 0;
   private isReconnecting = false;
   private heartbeatTimer?: NodeJS.Timeout;
-  private messageHandlers: Map<string, Function[]> = new Map();
-  private eventHandlers: Map<string, Function[]> = new Map();
+  private messageHandlers: Map<string, ((...args: any[]) => any)[]> = new Map();
+  private eventHandlers: Map<string, ((...args: any[]) => any)[]> = new Map();
 
   constructor(private url: string, options: WebSocketOptions = {}) {
     this.options = {
@@ -320,14 +320,14 @@ export class WebSocketClient {
     }
   }
 
-  on(event: string, handler: Function): void {
+  on(event: string, handler: (...args: any[]) => any): void {
     if (!this.eventHandlers.has(event)) {
       this.eventHandlers.set(event, []);
     }
     this.eventHandlers.get(event)!.push(handler);
   }
 
-  off(event: string, handler?: Function): void {
+  off(event: string, handler?: (...args: any[]) => any): void {
     if (!this.eventHandlers.has(event)) return;
     
     if (handler) {

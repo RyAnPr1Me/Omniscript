@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
+/* eslint-disable @typescript-eslint/no-this-alias */
+/* eslint-disable no-duplicate-case */
 import { debug as logger, DebugLevel } from '../debug';
 import { SIMDProcessor } from './simd';
 import { MemoryPoolManager } from './memory-pool';

@@ -301,7 +301,7 @@ export class Fuzzer {
       
       // Check for memory leaks
       if (i % 50 === 0) {
-        global.gc && global.gc();
+        if (global.gc) global.gc();
         const currentMemory = process.memoryUsage().heapUsed;
         if (currentMemory > initialMemory * 10) {
           console.error('Potential memory leak detected');

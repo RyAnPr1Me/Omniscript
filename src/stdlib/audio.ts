@@ -239,7 +239,7 @@ export class Synthesizer {
           sample = (Math.random() * 2 - 1) * amplitude;
           break;
           
-        case 'pink':
+        case 'pink': {
           // Paul Kellett's pink noise algorithm
           const white = Math.random() * 2 - 1;
           b0 = 0.99886 * b0 + white * 0.0555179;
@@ -251,13 +251,15 @@ export class Synthesizer {
           sample = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * amplitude * 0.11;
           b6 = white * 0.115926;
           break;
+        }
           
-        case 'brown':
+        case 'brown': {
           // Brown noise (integrated white noise)
           const brownWhite = Math.random() * 2 - 1;
           b0 = (b0 + brownWhite * 0.02) * 0.99;
           sample = b0 * 3.5 * amplitude;
           break;
+        }
       }
       
       samples[i] = Math.max(-1, Math.min(1, sample)); // Clamp to [-1, 1]
@@ -279,9 +281,10 @@ export class Synthesizer {
       case 'sawtooth':
         return 2 * (time * frequency - Math.floor(time * frequency + 0.5));
         
-      case 'triangle':
+      case 'triangle': {
         const saw = 2 * (time * frequency - Math.floor(time * frequency + 0.5));
         return 2 * Math.abs(saw) - 1;
+      }
         
       case 'noise':
         return Math.random() * 2 - 1;

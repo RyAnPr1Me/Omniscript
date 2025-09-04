@@ -35,7 +35,7 @@ export class Path {
   static join(...paths: string[]): string {
     if (paths.length === 0) return '.';
     
-    let joined = paths.filter(p => p && p.length > 0).join(this.sep);
+    const joined = paths.filter(p => p && p.length > 0).join(this.sep);
     return this.normalize(joined);
   }
 

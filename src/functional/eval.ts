@@ -413,7 +413,7 @@ function evalExpr(expr: Expression, env: Env): any {
 					
 					for (const importName of i.imports) {
 						if (stdlib[importName]) {
-							let importValue = stdlib[importName];
+							const importValue = stdlib[importName];
 							
 							// Special handling for HTTP to match runtime behavior
 							if (importName === 'HTTP' && !importValue.Server) {

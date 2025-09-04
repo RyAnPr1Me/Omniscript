@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 /// <reference types="node" />
+/* eslint-disable no-inner-declarations */
+/* eslint-disable no-useless-escape */
 import { Command } from 'commander';
 import { readFile } from 'node:fs/promises';
 import { Interface as ReadlineInterface, createInterface } from 'node:readline';

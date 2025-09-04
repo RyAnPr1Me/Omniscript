@@ -18,8 +18,9 @@ export interface Point3D {
   z: number;
 }
 
-export interface Vector2D extends Point2D {}
-export interface Vector3D extends Point3D {}
+// Vector types are aliases for points
+export type Vector2D = Point2D;
+export type Vector3D = Point3D;
 
 export interface Color {
   r: number; // 0-255
@@ -259,6 +260,7 @@ export class SoftwareRenderer implements GraphicsContext {
     const endX = Math.floor(end.x);
     const endY = Math.floor(end.y);
 
+    // eslint-disable-next-line no-constant-condition
     while (true) {
       this.drawPixel(x, y, color);
       

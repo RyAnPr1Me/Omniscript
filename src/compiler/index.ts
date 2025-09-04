@@ -210,10 +210,6 @@ export class Compiler {
         return this.visitIntersectionType(node);
       case 'Macro':
         return this.visitMacro(node);
-      case 'Function':
-        return this.visitFunction(node);
-      case 'Class':
-        return this.visitClass(node);
       default: {
         const n = node as { type?: string };
         // Handle undefined or unknown node types more gracefully

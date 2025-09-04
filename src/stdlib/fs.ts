@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 import { debug } from '../debug';
 
 export interface FileStats {
@@ -23,6 +24,7 @@ export class FileSystem {
   static async readFile(path: string, encoding: string = 'utf8'): Promise<string> {
     try {
       if (typeof require !== 'undefined') {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
         const fs = require('fs').promises;
         return await fs.readFile(path, encoding);
       }
@@ -39,6 +41,7 @@ export class FileSystem {
   static async writeFile(path: string, data: string, encoding: string = 'utf8'): Promise<void> {
     try {
       if (typeof require !== 'undefined') {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
         const fs = require('fs').promises;
         await fs.writeFile(path, data, encoding);
       } else {

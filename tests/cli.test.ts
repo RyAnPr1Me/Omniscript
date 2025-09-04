@@ -2,6 +2,7 @@
  * CLI Integration Tests
  * Tests for command-line interface functionality
  */
+/* eslint-disable @typescript-eslint/no-require-imports */
 
 import { exec } from 'child_process';
 import { promisify } from 'util';
