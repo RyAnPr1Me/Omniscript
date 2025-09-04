@@ -109,57 +109,62 @@ export class OmniscriptError extends Error {
 
   private getErrorIcon(): string {
     switch (this.severity) {
-      case "error": return "❌";
-      case "warning": return "⚠️";
-      case "info": return "ℹ️";
-      default: return "•";
+      case "error":
+        return "❌";
+      case "warning":
+        return "⚠️";
+      case "info":
+        return "ℹ️";
+      default:
+        return "•";
     }
   }
 
   private formatLocation(): string {
     if (!this.location) return "";
-    
+
     let locationStr = `\n  --> ${this.location.filename}:${this.location.line}:${this.location.column}`;
-    
+
     if (this.location.length) {
       locationStr += `-${this.location.column + this.location.length}`;
     }
-    
+
     return locationStr;
   }
 
   private formatSuggestions(): string {
     if (this.suggestions.length === 0) return "";
-    
+
     let formatted = "\n\n💡 Suggestions:";
     this.suggestions.forEach((suggestion, index) => {
       formatted += `\n  ${index + 1}. ${suggestion}`;
     });
-    
+
     return formatted;
   }
 
   private formatQuickFixes(): string {
     const quickFixes = this.context?.quickFixes;
     if (!quickFixes || quickFixes.length === 0) return "";
-    
+
     let formatted = "\n\n🔧 Quick Fixes:";
     quickFixes.forEach((fix, index) => {
-      const icon = fix.type === "fix" ? "🔧" : fix.type === "suggestion" ? "💡" : "ℹ️";
+      const icon =
+        fix.type === "fix" ? "🔧" : fix.type === "suggestion" ? "💡" : "ℹ️";
       formatted += `\n  ${index + 1}. ${icon} ${fix.message}`;
-      
+
       if (fix.action) {
         formatted += ` (${fix.action.type}${fix.action.text ? `: "${fix.action.text}"` : ""})`;
       }
     });
-    
+
     return formatted;
   }
 
   private formatDocumentation(): string {
     const docs = this.context?.documentation;
     if (!docs) return "";
-    
+
     return `\n\n📚 Learn more: ${docs.description}\n    ${docs.url}`;
   }
 
@@ -200,46 +205,64 @@ export class TypeMismatchError extends OmniscriptError {
     expectedType: string,
     actualType: string,
   ) {
-    const suggestions = TypeMismatchError.generateSuggestions(expectedType, actualType);
+    const suggestions = TypeMismatchError.generateSuggestions(
+      expectedType,
+      actualType,
+    );
     const context = TypeMismatchError.generateContext(expectedType, actualType);
-    
+
     super(message, location, "E001", suggestions, context);
     this.expectedType = expectedType;
     this.actualType = actualType;
   }
 
-  private static generateSuggestions(expected: string, actual: string): string[] {
+  private static generateSuggestions(
+    expected: string,
+    actual: string,
+  ): string[] {
     const suggestions: string[] = [];
-    
+
     // Type conversion suggestions
     if (expected === "string" && actual === "number") {
-      suggestions.push("Convert to string using toString() or String() constructor");
+      suggestions.push(
+        "Convert to string using toString() or String() constructor",
+      );
       suggestions.push("Use template literals: `${value}`");
     } else if (expected === "number" && actual === "string") {
-      suggestions.push("Convert to number using Number() constructor or parseInt()");
+      suggestions.push(
+        "Convert to number using Number() constructor or parseInt()",
+      );
       suggestions.push("Use the unary plus operator: +value");
-    } else if (expected === "boolean" && (actual === "string" || actual === "number")) {
+    } else if (
+      expected === "boolean" &&
+      (actual === "string" || actual === "number")
+    ) {
       suggestions.push("Convert to boolean using Boolean() constructor");
       suggestions.push("Use double negation: !!value");
     }
-    
+
     // Array/object suggestions
     if (expected.includes("[]") && !actual.includes("[]")) {
       suggestions.push("Wrap value in an array: [value]");
     }
-    
+
     // Null/undefined suggestions
     if (actual === "null" || actual === "undefined") {
       suggestions.push(`Provide a default value: value || defaultValue`);
-      suggestions.push("Check if value exists before using: if (value) { ... }");
+      suggestions.push(
+        "Check if value exists before using: if (value) { ... }",
+      );
     }
-    
+
     return suggestions;
   }
 
-  private static generateContext(expected: string, actual: string): DiagnosticContext {
+  private static generateContext(
+    expected: string,
+    actual: string,
+  ): DiagnosticContext {
     const quickFixes: ErrorSuggestion[] = [];
-    
+
     // Generate quick fixes based on common patterns
     if (expected === "string" && actual === "number") {
       quickFixes.push({
@@ -247,17 +270,17 @@ export class TypeMismatchError extends OmniscriptError {
         message: "Convert to string",
         action: {
           type: "replace",
-          text: "String()"
-        }
+          text: "String()",
+        },
       });
     }
-    
+
     return {
       quickFixes,
       documentation: {
         url: "https://omniscript.dev/docs/types",
-        description: "Learn about type conversions and type safety"
-      }
+        description: "Learn about type conversions and type safety",
+      },
     };
   }
 }
@@ -357,14 +380,47 @@ export class ErrorAnalyzer {
   ]);
 
   private static readonly COMMON_METHODS = new Map([
-    ["array", ["push", "pop", "shift", "unshift", "slice", "splice", "map", "filter", "reduce", "forEach"]],
-    ["string", ["length", "charAt", "substring", "indexOf", "replace", "split", "trim", "toLowerCase", "toUpperCase"]],
-    ["object", ["keys", "values", "entries", "hasOwnProperty", "toString", "valueOf"]],
+    [
+      "array",
+      [
+        "push",
+        "pop",
+        "shift",
+        "unshift",
+        "slice",
+        "splice",
+        "map",
+        "filter",
+        "reduce",
+        "forEach",
+      ],
+    ],
+    [
+      "string",
+      [
+        "length",
+        "charAt",
+        "substring",
+        "indexOf",
+        "replace",
+        "split",
+        "trim",
+        "toLowerCase",
+        "toUpperCase",
+      ],
+    ],
+    [
+      "object",
+      ["keys", "values", "entries", "hasOwnProperty", "toString", "valueOf"],
+    ],
   ]);
 
-  static analyzeUndefinedVariable(varName: string, availableVars: string[]): ErrorSuggestion[] {
+  static analyzeUndefinedVariable(
+    varName: string,
+    availableVars: string[],
+  ): ErrorSuggestion[] {
     const suggestions: ErrorSuggestion[] = [];
-    
+
     // Check for typos
     const typoFix = this.COMMON_TYPOS.get(varName.toLowerCase());
     if (typoFix) {
@@ -373,24 +429,24 @@ export class ErrorAnalyzer {
         message: `Did you mean '${typoFix}'?`,
         action: {
           type: "replace",
-          text: typoFix
-        }
+          text: typoFix,
+        },
       });
     }
-    
+
     // Find similar variable names
     const similar = this.findSimilarNames(varName, availableVars);
-    similar.forEach(name => {
+    similar.forEach((name) => {
       suggestions.push({
         type: "suggestion",
         message: `Did you mean '${name}'?`,
         action: {
           type: "replace",
-          text: name
-        }
+          text: name,
+        },
       });
     });
-    
+
     // Suggest declaration if no similar names found
     if (similar.length === 0) {
       suggestions.push({
@@ -398,87 +454,103 @@ export class ErrorAnalyzer {
         message: `Declare variable: const ${varName} = ...`,
         action: {
           type: "insert",
-          text: `const ${varName} = `
-        }
+          text: `const ${varName} = `,
+        },
       });
     }
-    
+
     return suggestions;
   }
 
-  static analyzeMethodNotFound(methodName: string, objectType: string): ErrorSuggestion[] {
+  static analyzeMethodNotFound(
+    methodName: string,
+    objectType: string,
+  ): ErrorSuggestion[] {
     const suggestions: ErrorSuggestion[] = [];
-    
+
     // Get available methods for the object type
-    const availableMethods = this.COMMON_METHODS.get(objectType.toLowerCase()) || [];
-    
+    const availableMethods =
+      this.COMMON_METHODS.get(objectType.toLowerCase()) || [];
+
     // Find similar method names
     const similar = this.findSimilarNames(methodName, availableMethods);
-    similar.forEach(method => {
+    similar.forEach((method) => {
       suggestions.push({
         type: "suggestion",
         message: `Did you mean '${method}'?`,
         action: {
           type: "replace",
-          text: method
-        }
+          text: method,
+        },
       });
     });
-    
+
     // Type-specific suggestions
     if (objectType === "array") {
       if (methodName.includes("add")) {
         suggestions.push({
           type: "suggestion",
           message: "Use 'push()' to add elements to an array",
-          action: { type: "replace", text: "push" }
+          action: { type: "replace", text: "push" },
         });
       }
       if (methodName.includes("size")) {
         suggestions.push({
           type: "suggestion",
           message: "Use 'length' property to get array size",
-          action: { type: "replace", text: "length" }
+          action: { type: "replace", text: "length" },
         });
       }
     }
-    
+
     return suggestions;
   }
 
-  static analyzeSyntaxError(source: string, line: number, column: number): ErrorSuggestion[] {
+  static analyzeSyntaxError(
+    source: string,
+    line: number,
+    column: number,
+  ): ErrorSuggestion[] {
     const suggestions: ErrorSuggestion[] = [];
-    const lines = source.split('\n');
+    const lines = source.split("\n");
     const currentLine = lines[line - 1];
-    
+
     if (!currentLine) return suggestions;
-    
+
     // Check for common syntax issues
-    if (currentLine.includes('=') && !currentLine.includes('==') && !currentLine.includes('===')) {
-      if (currentLine.includes('if') || currentLine.includes('while')) {
+    if (
+      currentLine.includes("=") &&
+      !currentLine.includes("==") &&
+      !currentLine.includes("===")
+    ) {
+      if (currentLine.includes("if") || currentLine.includes("while")) {
         suggestions.push({
           type: "fix",
           message: "Use '==' or '===' for comparison instead of '='",
           action: {
             type: "replace",
-            text: "=="
-          }
+            text: "==",
+          },
         });
       }
     }
-    
+
     // Check for missing semicolons
-    if (!currentLine.trim().endsWith(';') && !currentLine.trim().endsWith('{') && !currentLine.trim().endsWith('}')) {
+    if (
+      !currentLine.trim().endsWith(";") &&
+      !currentLine.trim().endsWith("{") &&
+      !currentLine.trim().endsWith("}")
+    ) {
       suggestions.push({
         type: "suggestion",
         message: "Add semicolon at end of statement",
         action: {
           type: "insert",
-          text: ";"
-        }
+          text: ";",
+        },
       });
     }
-    
+
     // Check for unmatched parentheses
     const openParens = (currentLine.match(/\(/g) || []).length;
     const closeParens = (currentLine.match(/\)/g) || []).length;
@@ -488,19 +560,25 @@ export class ErrorAnalyzer {
         message: `Missing ${openParens - closeParens} closing parenthesis`,
         action: {
           type: "insert",
-          text: ")".repeat(openParens - closeParens)
-        }
+          text: ")".repeat(openParens - closeParens),
+        },
       });
     }
-    
+
     return suggestions;
   }
 
-  private static findSimilarNames(target: string, candidates: string[]): string[] {
+  private static findSimilarNames(
+    target: string,
+    candidates: string[],
+  ): string[] {
     return candidates
-      .map(candidate => ({
+      .map((candidate) => ({
         name: candidate,
-        distance: this.levenshteinDistance(target.toLowerCase(), candidate.toLowerCase())
+        distance: this.levenshteinDistance(
+          target.toLowerCase(),
+          candidate.toLowerCase(),
+        ),
       }))
       .filter(({ distance }) => distance <= 2 && distance > 0)
       .sort((a, b) => a.distance - b.distance)
@@ -510,15 +588,15 @@ export class ErrorAnalyzer {
 
   private static levenshteinDistance(str1: string, str2: string): number {
     const matrix: number[][] = [];
-    
+
     for (let i = 0; i <= str2.length; i++) {
       matrix[i] = [i];
     }
-    
+
     for (let j = 0; j <= str1.length; j++) {
       matrix[0][j] = j;
     }
-    
+
     for (let i = 1; i <= str2.length; i++) {
       for (let j = 1; j <= str1.length; j++) {
         if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
@@ -527,12 +605,12 @@ export class ErrorAnalyzer {
           matrix[i][j] = Math.min(
             matrix[i - 1][j - 1] + 1,
             matrix[i][j - 1] + 1,
-            matrix[i - 1][j] + 1
+            matrix[i - 1][j] + 1,
           );
         }
       }
     }
-    
+
     return matrix[str2.length][str1.length];
   }
 }

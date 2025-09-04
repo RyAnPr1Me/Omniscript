@@ -1,7 +1,4 @@
-import { 
-  ConstantFolder, 
-  InlineCache
-} from "../../src/runtime/optimizer";
+import { ConstantFolder, InlineCache } from "../../src/runtime/optimizer";
 import { MemoryPool } from "../../src/runtime/memory-pool";
 
 describe("Performance Optimization Enhancements", () => {
@@ -16,11 +13,11 @@ describe("Performance Optimization Enhancements", () => {
       const bytecode = [
         { type: "LOAD_CONST", value: 10 },
         { type: "LOAD_CONST", value: 5 },
-        { type: "ADD" }
+        { type: "ADD" },
       ];
 
       const result = constantFolder.fold(bytecode);
-      
+
       expect(result.optimized).toHaveLength(1);
       expect(result.optimized[0]).toEqual({ type: "LOAD_CONST", value: 15 });
       expect(result.optimizations).toContain("Folded constants: 10 + 5 = 15");
@@ -30,11 +27,11 @@ describe("Performance Optimization Enhancements", () => {
       const bytecode = [
         { type: "LOAD_CONST", value: 2 },
         { type: "LOAD_CONST", value: 3 },
-        { type: "POWER" }
+        { type: "POWER" },
       ];
 
       const result = constantFolder.fold(bytecode);
-      
+
       expect(result.optimized).toHaveLength(1);
       expect(result.optimized[0]).toEqual({ type: "LOAD_CONST", value: 8 });
       expect(result.optimizations).toContain("Folded constants: 2 ** 3 = 8");
@@ -44,11 +41,11 @@ describe("Performance Optimization Enhancements", () => {
       const bytecode = [
         { type: "LOAD_CONST", value: 12 },
         { type: "LOAD_CONST", value: 7 },
-        { type: "BITWISE_AND" }
+        { type: "BITWISE_AND" },
       ];
 
       const result = constantFolder.fold(bytecode);
-      
+
       expect(result.optimized).toHaveLength(1);
       expect(result.optimized[0]).toEqual({ type: "LOAD_CONST", value: 4 });
       expect(result.optimizations).toContain("Folded constants: 12 & 7 = 4");
@@ -58,38 +55,42 @@ describe("Performance Optimization Enhancements", () => {
       const bytecode = [
         { type: "LOAD_CONST", value: "hello" },
         { type: "LOAD_CONST", value: " world" },
-        { type: "ADD" }
+        { type: "ADD" },
       ];
 
       const result = constantFolder.fold(bytecode);
-      
+
       expect(result.optimized).toHaveLength(1);
-      expect(result.optimized[0]).toEqual({ type: "LOAD_CONST", value: "hello world" });
-      expect(result.optimizations).toContain('Folded string concatenation: "hello" + " world" = "hello world"');
+      expect(result.optimized[0]).toEqual({
+        type: "LOAD_CONST",
+        value: "hello world",
+      });
+      expect(result.optimizations).toContain(
+        'Folded string concatenation: "hello" + " world" = "hello world"',
+      );
     });
 
     test("should fold unary operations", () => {
-      const bytecode = [
-        { type: "LOAD_CONST", value: -5 },
-        { type: "ABS" }
-      ];
+      const bytecode = [{ type: "LOAD_CONST", value: -5 }, { type: "ABS" }];
 
       const result = constantFolder.fold(bytecode);
-      
+
       expect(result.optimized).toHaveLength(1);
       expect(result.optimized[0]).toEqual({ type: "LOAD_CONST", value: 5 });
-      expect(result.optimizations).toContain("Folded unary operation: abs(-5) = 5");
+      expect(result.optimizations).toContain(
+        "Folded unary operation: abs(-5) = 5",
+      );
     });
 
     test("should handle division by zero safely", () => {
       const bytecode = [
         { type: "LOAD_CONST", value: 10 },
         { type: "LOAD_CONST", value: 0 },
-        { type: "DIVIDE" }
+        { type: "DIVIDE" },
       ];
 
       const result = constantFolder.fold(bytecode);
-      
+
       // Should not fold division by zero
       expect(result.optimized).toHaveLength(3);
       expect(result.optimizations).toHaveLength(0);
@@ -105,7 +106,9 @@ describe("Performance Optimization Enhancements", () => {
 
     test("should cache method lookups", () => {
       const obj = {
-        testMethod() { return "test"; }
+        testMethod() {
+          return "test";
+        },
       };
 
       // First lookup - cache miss
@@ -140,7 +143,7 @@ describe("Performance Optimization Enhancements", () => {
     test("should evict least recently used items when cache is full", () => {
       // Create many different objects to fill cache
       const objects = Array.from({ length: 1500 }, (_, i) => ({
-        [`method${i}`]: () => i
+        [`method${i}`]: () => i,
       }));
 
       // Fill cache beyond capacity
@@ -156,11 +159,11 @@ describe("Performance Optimization Enhancements", () => {
     test("should clear cache", () => {
       const obj = { method: () => "test" };
       inlineCache.lookupMethod(obj, "method");
-      
+
       expect(inlineCache.getCacheStats().cacheSize).toBe(1);
-      
+
       inlineCache.clearCache();
-      
+
       const stats = inlineCache.getCacheStats();
       expect(stats.cacheSize).toBe(0);
       expect(stats.hits).toBe(0);
@@ -174,7 +177,7 @@ describe("Performance Optimization Enhancements", () => {
         initialSize: 10,
         maxSize: 100,
         enableGCIntegration: true,
-        gcThreshold: 0.8
+        gcThreshold: 0.8,
       });
 
       // Allocate many objects to trigger GC threshold
@@ -192,7 +195,7 @@ describe("Performance Optimization Enhancements", () => {
       const pool = new MemoryPool({
         initialSize: 10,
         maxSize: 20,
-        enableDefragmentation: true
+        enableDefragmentation: true,
       });
 
       // Fill the pool
@@ -219,7 +222,7 @@ describe("Performance Optimization Enhancements", () => {
       const pool = new MemoryPool({
         initialSize: 5,
         maxSize: 50,
-        objectType: Array
+        objectType: Array,
       });
 
       // Allocate arrays of different sizes
@@ -238,25 +241,25 @@ describe("Performance Optimization Enhancements", () => {
         initialSize: 5,
         maxSize: 50,
         enableGCIntegration: true,
-        enableDefragmentation: true
+        enableDefragmentation: true,
       });
 
       const obj = pool.allocate();
       pool.release(obj);
 
       const stats = pool.getStats();
-      expect(stats).toHaveProperty('available');
-      expect(stats).toHaveProperty('allocated');
-      expect(stats).toHaveProperty('totalSize');
-      expect(stats).toHaveProperty('maxSize');
-      expect(stats).toHaveProperty('totalAllocated');
-      expect(stats).toHaveProperty('totalReleased');
-      expect(stats).toHaveProperty('utilization');
-      expect(stats).toHaveProperty('memoryUsed');
-      expect(stats).toHaveProperty('averageObjectSize');
-      expect(stats).toHaveProperty('gcEnabled');
-      expect(stats).toHaveProperty('defragmentationEnabled');
-      expect(stats).toHaveProperty('lastGC');
+      expect(stats).toHaveProperty("available");
+      expect(stats).toHaveProperty("allocated");
+      expect(stats).toHaveProperty("totalSize");
+      expect(stats).toHaveProperty("maxSize");
+      expect(stats).toHaveProperty("totalAllocated");
+      expect(stats).toHaveProperty("totalReleased");
+      expect(stats).toHaveProperty("utilization");
+      expect(stats).toHaveProperty("memoryUsed");
+      expect(stats).toHaveProperty("averageObjectSize");
+      expect(stats).toHaveProperty("gcEnabled");
+      expect(stats).toHaveProperty("defragmentationEnabled");
+      expect(stats).toHaveProperty("lastGC");
 
       expect(stats.gcEnabled).toBe(true);
       expect(stats.defragmentationEnabled).toBe(true);

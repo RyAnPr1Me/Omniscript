@@ -10,7 +10,7 @@ describe("Standard Library Extensions", () => {
 
     test("should get feature support information", () => {
       const features = WASMCompiler.getFeatureSupport();
-      
+
       expect(features).toHaveProperty("basicWASM");
       expect(features).toHaveProperty("simd");
       expect(features).toHaveProperty("threads");
@@ -30,7 +30,7 @@ describe("Standard Library Extensions", () => {
       `;
 
       const options = WASMUtils.analyzeForWASM(functionCode);
-      
+
       expect(options).toHaveProperty("optimizationLevel");
       expect(options).toHaveProperty("enableSIMD");
       expect(options).toHaveProperty("enableThreads");
@@ -44,7 +44,7 @@ describe("Standard Library Extensions", () => {
         optimizationLevel: 2,
         enableSIMD: true,
         enableThreads: false,
-        memory: { initial: 1, maximum: 10 }
+        memory: { initial: 1, maximum: 10 },
       });
 
       const stats = compiler.getStats();
@@ -56,7 +56,7 @@ describe("Standard Library Extensions", () => {
     test("should clear cache", () => {
       const compiler = new WASMCompiler();
       compiler.clearCache();
-      
+
       const stats = compiler.getStats();
       expect(stats.compiledModules).toBe(0);
     });
@@ -66,7 +66,7 @@ describe("Standard Library Extensions", () => {
     test("should buffer values by count", (done) => {
       const stream = new Stream<number>();
       const buffered = stream.buffer(3);
-      
+
       const results: number[][] = [];
       buffered.subscribe((buffer) => {
         results.push(buffer);
@@ -89,13 +89,13 @@ describe("Standard Library Extensions", () => {
 
     test("should group values by key", (done) => {
       const stream = new Stream<{ category: string; value: number }>();
-      const grouped = stream.groupBy(item => item.category);
-      
+      const grouped = stream.groupBy((item) => item.category);
+
       const groups: Array<{ key: string; values: any[] }> = [];
-      
+
       grouped.subscribe(({ key, values }) => {
         const collectedValues: any[] = [];
-        values.subscribe(value => collectedValues.push(value));
+        values.subscribe((value) => collectedValues.push(value));
         groups.push({ key, values: collectedValues });
       });
 
@@ -106,22 +106,22 @@ describe("Standard Library Extensions", () => {
 
       setTimeout(() => {
         expect(groups).toHaveLength(3);
-        expect(groups.find(g => g.key === "A")?.values).toHaveLength(2);
-        expect(groups.find(g => g.key === "B")?.values).toHaveLength(1);
-        expect(groups.find(g => g.key === "C")?.values).toHaveLength(1);
+        expect(groups.find((g) => g.key === "A")?.values).toHaveLength(2);
+        expect(groups.find((g) => g.key === "B")?.values).toHaveLength(1);
+        expect(groups.find((g) => g.key === "C")?.values).toHaveLength(1);
         done();
       }, 10);
     });
 
     test("should partition values based on predicate", (done) => {
       const stream = new Stream<number>();
-      const [evens, odds] = stream.partition(x => x % 2 === 0);
-      
+      const [evens, odds] = stream.partition((x) => x % 2 === 0);
+
       const evenResults: number[] = [];
       const oddResults: number[] = [];
-      
-      evens.subscribe(value => evenResults.push(value));
-      odds.subscribe(value => oddResults.push(value));
+
+      evens.subscribe((value) => evenResults.push(value));
+      odds.subscribe((value) => oddResults.push(value));
 
       stream.next(1);
       stream.next(2);
@@ -139,9 +139,11 @@ describe("Standard Library Extensions", () => {
     test("should reduce values to accumulator", (done) => {
       const stream = new Stream<number>();
       const reduced = stream.reduce((acc, value) => acc + value, 0);
-      
+
       let result: number | undefined;
-      reduced.subscribe(value => { result = value; });
+      reduced.subscribe((value) => {
+        result = value;
+      });
 
       stream.next(1);
       stream.next(2);
@@ -156,10 +158,10 @@ describe("Standard Library Extensions", () => {
 
     test("should skip values until condition is met", (done) => {
       const stream = new Stream<number>();
-      const skipped = stream.skipWhile(x => x < 5);
-      
+      const skipped = stream.skipWhile((x) => x < 5);
+
       const results: number[] = [];
-      skipped.subscribe(value => results.push(value));
+      skipped.subscribe((value) => results.push(value));
 
       stream.next(1);
       stream.next(2);
@@ -176,15 +178,17 @@ describe("Standard Library Extensions", () => {
 
     test("should take values while condition is true", (done) => {
       const stream = new Stream<number>();
-      const taken = stream.takeWhile(x => x < 5);
-      
+      const taken = stream.takeWhile((x) => x < 5);
+
       const results: number[] = [];
       let completed = false;
-      
+
       taken.subscribe(
-        value => results.push(value),
+        (value) => results.push(value),
         undefined,
-        () => { completed = true; }
+        () => {
+          completed = true;
+        },
       );
 
       stream.next(1);
@@ -203,9 +207,9 @@ describe("Standard Library Extensions", () => {
     test("should create pairwise emissions", (done) => {
       const stream = new Stream<number>();
       const paired = stream.pairwise();
-      
+
       const results: [number, number][] = [];
-      paired.subscribe(pair => results.push(pair));
+      paired.subscribe((pair) => results.push(pair));
 
       stream.next(1);
       stream.next(2);
@@ -213,7 +217,11 @@ describe("Standard Library Extensions", () => {
       stream.next(4);
 
       setTimeout(() => {
-        expect(results).toEqual([[1, 2], [2, 3], [3, 4]]);
+        expect(results).toEqual([
+          [1, 2],
+          [2, 3],
+          [3, 4],
+        ]);
         done();
       }, 10);
     });
@@ -221,15 +229,15 @@ describe("Standard Library Extensions", () => {
     test("should start with initial values", (done) => {
       const stream = new Stream<number>();
       const started = stream.startWith(0, -1);
-      
+
       const results: number[] = [];
-      started.subscribe(value => results.push(value));
+      started.subscribe((value) => results.push(value));
 
       // Give time for startWith to emit initial values
       setTimeout(() => {
         stream.next(1);
         stream.next(2);
-        
+
         setTimeout(() => {
           expect(results).toEqual([0, -1, 1, 2]);
           done();
@@ -240,9 +248,11 @@ describe("Standard Library Extensions", () => {
     test("should provide default value if empty", (done) => {
       const stream = new Stream<number>();
       const defaulted = stream.defaultIfEmpty(42);
-      
+
       let result: number | undefined;
-      defaulted.subscribe(value => { result = value; });
+      defaulted.subscribe((value) => {
+        result = value;
+      });
 
       stream.complete(); // Complete without emitting values
 
@@ -255,11 +265,11 @@ describe("Standard Library Extensions", () => {
     test("should delay emissions", (done) => {
       const stream = new Stream<number>();
       const delayed = stream.delay(50);
-      
+
       const results: number[] = [];
       const startTime = Date.now();
-      
-      delayed.subscribe(value => {
+
+      delayed.subscribe((value) => {
         results.push(value);
         if (results.length === 2) {
           const elapsed = Date.now() - startTime;

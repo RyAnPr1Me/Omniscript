@@ -383,17 +383,20 @@ export class ConstantFolder {
  * Inline caching for method calls to improve runtime performance
  */
 export class InlineCache {
-  private methodCache = new Map<string, {
-    method: Function;
-    type: string;
-    hitCount: number;
-    lastUsed: number;
-  }>();
+  private methodCache = new Map<
+    string,
+    {
+      method: Function;
+      type: string;
+      hitCount: number;
+      lastUsed: number;
+    }
+  >();
   private maxCacheSize = 1000;
   private stats = {
     hits: 0,
     misses: 0,
-    evictions: 0
+    evictions: 0,
   };
 
   lookupMethod(object: any, methodName: string): Function | null {
@@ -412,8 +415,8 @@ export class InlineCache {
     // Cache miss - need to resolve method
     this.stats.misses++;
     const method = object[methodName];
-    
-    if (typeof method === 'function') {
+
+    if (typeof method === "function") {
       this.cacheMethod(cacheKey, method, objectType);
       return method;
     }
@@ -421,7 +424,11 @@ export class InlineCache {
     return null;
   }
 
-  private cacheMethod(cacheKey: string, method: Function, objectType: string): void {
+  private cacheMethod(
+    cacheKey: string,
+    method: Function,
+    objectType: string,
+  ): void {
     // Evict least recently used if cache is full
     if (this.methodCache.size >= this.maxCacheSize) {
       this.evictLRU();
@@ -431,12 +438,12 @@ export class InlineCache {
       method,
       type: objectType,
       hitCount: 1,
-      lastUsed: Date.now()
+      lastUsed: Date.now(),
     });
   }
 
   private evictLRU(): void {
-    let oldestKey = '';
+    let oldestKey = "";
     let oldestTime = Date.now();
 
     for (const [key, value] of this.methodCache.entries()) {
@@ -453,14 +460,14 @@ export class InlineCache {
   }
 
   private getObjectType(object: any): string {
-    if (object === null) return 'null';
-    if (object === undefined) return 'undefined';
-    
+    if (object === null) return "null";
+    if (object === undefined) return "undefined";
+
     // Use constructor name for object type identification
     if (object.constructor && object.constructor.name) {
       return object.constructor.name;
     }
-    
+
     // Fallback to typeof for primitives
     return typeof object;
   }
@@ -473,7 +480,7 @@ export class InlineCache {
       evictions: this.stats.evictions,
       hitRate: total > 0 ? (this.stats.hits / total) * 100 : 0,
       cacheSize: this.methodCache.size,
-      maxCacheSize: this.maxCacheSize
+      maxCacheSize: this.maxCacheSize,
     };
   }
 

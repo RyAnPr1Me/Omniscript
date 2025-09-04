@@ -77,9 +77,15 @@ export class TypeInferenceEngine {
   }
 
   // Enhanced type inference with depth tracking
-  inferType(expr: any, context: Map<string, Type> = new Map(), depth = 0): Type {
+  inferType(
+    expr: any,
+    context: Map<string, Type> = new Map(),
+    depth = 0,
+  ): Type {
     if (depth > this.options.recursiveDepthLimit) {
-      throw new OmniscriptError("Type inference depth limit exceeded (recursive type?)");
+      throw new OmniscriptError(
+        "Type inference depth limit exceeded (recursive type?)",
+      );
     }
 
     if (!expr) return { kind: "primitive", name: "unknown" };
@@ -121,31 +127,35 @@ export class TypeInferenceEngine {
 
   private inferIdentifierType(expr: any, context: Map<string, Type>): Type {
     const name = expr.name;
-    
+
     // Check local context first
     if (context.has(name)) {
       return context.get(name)!;
     }
-    
+
     // Check symbol table
     if (this.symbolTable.has(name)) {
       return this.symbolTable.get(name)!;
     }
-    
+
     // Check recursive types
     if (this.recursiveTypes.has(name)) {
       return this.recursiveTypes.get(name)!;
     }
-    
+
     // Check nominal types
     if (this.nominalTypes.has(name)) {
       return this.nominalTypes.get(name)!;
     }
-    
+
     return { kind: "primitive", name: "unknown" };
   }
 
-  private inferBinaryType(expr: any, context: Map<string, Type>, depth: number): Type {
+  private inferBinaryType(
+    expr: any,
+    context: Map<string, Type>,
+    depth: number,
+  ): Type {
     const leftType = this.inferType(expr.left, context, depth + 1);
     const rightType = this.inferType(expr.right, context, depth + 1);
 
@@ -202,26 +212,40 @@ export class TypeInferenceEngine {
     }
   }
 
-  private inferCallType(expr: any, context: Map<string, Type>, depth: number): Type {
+  private inferCallType(
+    expr: any,
+    context: Map<string, Type>,
+    depth: number,
+  ): Type {
     const calleeType = this.inferType(expr.callee, context, depth + 1);
-    
+
     if (calleeType.kind === "function" && calleeType.returnType) {
       // Type substitution for generic functions
       if (calleeType.parameters && expr.arguments) {
-        return this.substituteGenericTypes(calleeType.returnType, calleeType.parameters, expr.arguments, context, depth);
+        return this.substituteGenericTypes(
+          calleeType.returnType,
+          calleeType.parameters,
+          expr.arguments,
+          context,
+          depth,
+        );
       }
       return calleeType.returnType;
     }
-    
+
     // Handle constructor calls
     if (expr.isConstructor && calleeType.kind === "function") {
       return { kind: "object", name: expr.callee.name };
     }
-    
+
     return { kind: "primitive", name: "unknown" };
   }
 
-  private inferObjectType(expr: any, context: Map<string, Type>, depth: number): Type {
+  private inferObjectType(
+    expr: any,
+    context: Map<string, Type>,
+    depth: number,
+  ): Type {
     const properties: Record<string, Type> = {};
     if (expr.properties) {
       for (const prop of expr.properties) {
@@ -229,20 +253,29 @@ export class TypeInferenceEngine {
         properties[keyName] = this.inferType(prop.value, context, depth + 1);
       }
     }
-    
+
     // Check if this matches a nominal type
     if (this.options.nominalTyping) {
       for (const [name, nominalType] of this.nominalTypes.entries()) {
-        if (this.isStructurallyCompatible({ kind: "object", properties }, nominalType.structuralType!)) {
+        if (
+          this.isStructurallyCompatible(
+            { kind: "object", properties },
+            nominalType.structuralType!,
+          )
+        ) {
           return nominalType;
         }
       }
     }
-    
+
     return { kind: "object", properties };
   }
 
-  private inferArrayType(expr: any, context: Map<string, Type>, depth: number): Type {
+  private inferArrayType(
+    expr: any,
+    context: Map<string, Type>,
+    depth: number,
+  ): Type {
     if (expr.elements && expr.elements.length > 0) {
       const elementTypes = expr.elements.map((el: any) =>
         this.inferType(el, context, depth + 1),
@@ -257,31 +290,35 @@ export class TypeInferenceEngine {
     };
   }
 
-  private inferFunctionType(expr: any, context: Map<string, Type>, depth: number): Type {
+  private inferFunctionType(
+    expr: any,
+    context: Map<string, Type>,
+    depth: number,
+  ): Type {
     const parameters: Type[] = [];
     const newContext = new Map(context);
-    
+
     // Infer parameter types
     if (expr.parameters) {
       for (const param of expr.parameters) {
         let paramType: Type = { kind: "primitive", name: "unknown" };
-        
+
         // Check for type annotations
         if (param.typeAnnotation) {
           paramType = this.parseTypeAnnotation(param.typeAnnotation);
         }
-        
+
         parameters.push(paramType);
         newContext.set(param.name, paramType);
       }
     }
-    
+
     // Infer return type from function body
     let returnType: Type = { kind: "primitive", name: "void" };
     if (expr.body) {
       returnType = this.inferType(expr.body, newContext, depth + 1);
     }
-    
+
     return {
       kind: "function",
       parameters,
@@ -289,11 +326,15 @@ export class TypeInferenceEngine {
     };
   }
 
-  private inferConditionalType(expr: any, context: Map<string, Type>, depth: number): Type {
+  private inferConditionalType(
+    expr: any,
+    context: Map<string, Type>,
+    depth: number,
+  ): Type {
     const conditionType = this.inferType(expr.condition, context, depth + 1);
     const trueType = this.inferType(expr.trueType, context, depth + 1);
     const falseType = this.inferType(expr.falseType, context, depth + 1);
-    
+
     return {
       kind: "conditional",
       condition: conditionType,
@@ -302,18 +343,27 @@ export class TypeInferenceEngine {
     };
   }
 
-  private inferMemberAccessType(expr: any, context: Map<string, Type>, depth: number): Type {
+  private inferMemberAccessType(
+    expr: any,
+    context: Map<string, Type>,
+    depth: number,
+  ): Type {
     const objectType = this.inferType(expr.object, context, depth + 1);
     const propertyName = expr.property.name || expr.property.value;
-    
+
     if (objectType.kind === "object" && objectType.properties) {
-      return objectType.properties[propertyName] || { kind: "primitive", name: "unknown" };
+      return (
+        objectType.properties[propertyName] || {
+          kind: "primitive",
+          name: "unknown",
+        }
+      );
     }
-    
+
     if (objectType.kind === "array" && propertyName === "length") {
       return { kind: "primitive", name: "number" };
     }
-    
+
     return { kind: "primitive", name: "unknown" };
   }
 
@@ -355,25 +405,40 @@ export class TypeInferenceEngine {
   }
 
   // Additional helper methods for enhanced type system
-  private inferUnionBinaryType(operator: string, leftType: Type, rightType: Type): Type {
+  private inferUnionBinaryType(
+    operator: string,
+    leftType: Type,
+    rightType: Type,
+  ): Type {
     const leftTypes = leftType.kind === "union" ? leftType.types! : [leftType];
-    const rightTypes = rightType.kind === "union" ? rightType.types! : [rightType];
-    
+    const rightTypes =
+      rightType.kind === "union" ? rightType.types! : [rightType];
+
     const resultTypes: Type[] = [];
-    
+
     for (const left of leftTypes) {
       for (const right of rightTypes) {
-        const result = this.inferBinaryType({ operator, left, right }, new Map(), 0);
+        const result = this.inferBinaryType(
+          { operator, left, right },
+          new Map(),
+          0,
+        );
         if (!this.typeExists(resultTypes, result)) {
           resultTypes.push(result);
         }
       }
     }
-    
-    return resultTypes.length === 1 ? resultTypes[0] : { kind: "union", types: resultTypes };
+
+    return resultTypes.length === 1
+      ? resultTypes[0]
+      : { kind: "union", types: resultTypes };
   }
 
-  private inferLogicalType(operator: string, leftType: Type, rightType: Type): Type {
+  private inferLogicalType(
+    operator: string,
+    leftType: Type,
+    rightType: Type,
+  ): Type {
     if (operator === "&&") {
       // In strict mode, both operands must be boolean
       if (this.options.strictMode) {
@@ -385,12 +450,12 @@ export class TypeInferenceEngine {
       // Non-strict: return right type if left is truthy
       return rightType;
     }
-    
+
     if (operator === "||") {
       // Return union of both types
       return { kind: "union", types: [leftType, rightType] };
     }
-    
+
     return { kind: "primitive", name: "boolean" };
   }
 
@@ -399,33 +464,33 @@ export class TypeInferenceEngine {
     paramTypes: Type[],
     args: any[],
     context: Map<string, Type>,
-    depth: number
+    depth: number,
   ): Type {
     // Simple generic substitution - can be enhanced for more complex scenarios
     if (type.kind === "generic" && type.name) {
-      const paramIndex = paramTypes.findIndex(p => p.name === type.name);
+      const paramIndex = paramTypes.findIndex((p) => p.name === type.name);
       if (paramIndex >= 0 && args[paramIndex]) {
         return this.inferType(args[paramIndex], context, depth + 1);
       }
     }
-    
+
     if (type.kind === "array" && type.elementType) {
       const substitutedElementType = this.substituteGenericTypes(
         type.elementType,
         paramTypes,
         args,
         context,
-        depth
+        depth,
       );
       return { ...type, elementType: substitutedElementType };
     }
-    
+
     return type;
   }
 
   private parseTypeAnnotation(annotation: any): Type {
     if (!annotation) return { kind: "primitive", name: "unknown" };
-    
+
     switch (annotation.type) {
       case "NumberKeyword":
         return { kind: "primitive", name: "number" };
@@ -450,11 +515,11 @@ export class TypeInferenceEngine {
 
   private isStructurallyCompatible(type1: Type, type2: Type): boolean {
     if (type1.kind !== type2.kind) return false;
-    
+
     if (type1.kind === "object" && type2.kind === "object") {
       const props1 = type1.properties || {};
       const props2 = type2.properties || {};
-      
+
       // Check if all properties in type2 exist in type1 with compatible types
       for (const [key, propType2] of Object.entries(props2)) {
         const propType1 = props1[key];
@@ -464,51 +529,56 @@ export class TypeInferenceEngine {
       }
       return true;
     }
-    
+
     return this.isAssignable(type1, type2);
   }
 
   private isAssignable(from: Type, to: Type): boolean {
     // Basic assignability check
     if (from.kind === to.kind && from.name === to.name) return true;
-    
+
     // Any can be assigned to anything in non-strict mode
-    if (!this.options.strictMode && (from.name === "any" || to.name === "any")) {
+    if (
+      !this.options.strictMode &&
+      (from.name === "any" || to.name === "any")
+    ) {
       return true;
     }
-    
+
     // Union type assignability
     if (to.kind === "union") {
-      return to.types?.some(t => this.isAssignable(from, t)) ?? false;
+      return to.types?.some((t) => this.isAssignable(from, t)) ?? false;
     }
-    
+
     if (from.kind === "union") {
-      return from.types?.every(t => this.isAssignable(t, to)) ?? false;
+      return from.types?.every((t) => this.isAssignable(t, to)) ?? false;
     }
-    
+
     return false;
   }
 
   private typeExists(types: Type[], target: Type): boolean {
-    return types.some(type => this.isTypeEqual(type, target));
+    return types.some((type) => this.isTypeEqual(type, target));
   }
 
   private isTypeEqual(type1: Type, type2: Type): boolean {
     if (type1.kind !== type2.kind) return false;
     if (type1.name !== type2.name) return false;
-    
+
     if (type1.kind === "array" && type2.kind === "array") {
       return this.isTypeEqual(type1.elementType!, type2.elementType!);
     }
-    
+
     if (type1.kind === "union" && type2.kind === "union") {
       const types1 = type1.types || [];
       const types2 = type2.types || [];
-      
-      return types1.length === types2.length &&
-        types1.every(t1 => types2.some(t2 => this.isTypeEqual(t1, t2)));
+
+      return (
+        types1.length === types2.length &&
+        types1.every((t1) => types2.some((t2) => this.isTypeEqual(t1, t2)))
+      );
     }
-    
+
     return true;
   }
 

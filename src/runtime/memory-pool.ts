@@ -148,15 +148,15 @@ export class MemoryPool<T = any> {
 
   private shouldTriggerGC(): boolean {
     if (!this.options.enableGCIntegration) return false;
-    
+
     const utilization = this.allocated.size / this.options.maxSize;
     const timeSinceLastGC = Date.now() - this.lastGC;
-    
+
     return utilization > this.options.gcThreshold && timeSinceLastGC > 1000;
   }
 
   private triggerGC(): void {
-    if (typeof global !== 'undefined' && global.gc) {
+    if (typeof global !== "undefined" && global.gc) {
       debug.debug("MemoryPool", "Triggering garbage collection");
       global.gc();
       this.lastGC = Date.now();
@@ -165,10 +165,10 @@ export class MemoryPool<T = any> {
 
   private defragment(): void {
     debug.debug("MemoryPool", "Starting defragmentation");
-    
+
     // Remove any objects from pool that might have been corrupted
     const originalPoolSize = this.pool.length;
-    this.pool = this.pool.filter(obj => {
+    this.pool = this.pool.filter((obj) => {
       try {
         // Basic validity check
         return obj !== null && obj !== undefined;
@@ -176,10 +176,13 @@ export class MemoryPool<T = any> {
         return false;
       }
     });
-    
+
     const removed = originalPoolSize - this.pool.length;
     if (removed > 0) {
-      debug.debug("MemoryPool", `Defragmentation removed ${removed} corrupted objects`);
+      debug.debug(
+        "MemoryPool",
+        `Defragmentation removed ${removed} corrupted objects`,
+      );
     }
   }
 
@@ -191,8 +194,11 @@ export class MemoryPool<T = any> {
   }
 
   getStats() {
-    const totalMemoryUsed = Array.from(this.objectSizes.values()).reduce((sum, size) => sum + size, 0);
-    
+    const totalMemoryUsed = Array.from(this.objectSizes.values()).reduce(
+      (sum, size) => sum + size,
+      0,
+    );
+
     return {
       available: this.pool.length,
       allocated: this.allocated.size,
@@ -202,7 +208,8 @@ export class MemoryPool<T = any> {
       totalReleased: this.totalReleased,
       utilization: this.allocated.size / this.options.maxSize,
       memoryUsed: totalMemoryUsed,
-      averageObjectSize: this.allocated.size > 0 ? totalMemoryUsed / this.allocated.size : 0,
+      averageObjectSize:
+        this.allocated.size > 0 ? totalMemoryUsed / this.allocated.size : 0,
       gcEnabled: this.options.enableGCIntegration,
       defragmentationEnabled: this.options.enableDefragmentation,
       lastGC: this.lastGC,

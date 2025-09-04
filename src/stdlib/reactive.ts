@@ -26,20 +26,30 @@ export interface Observable<T> {
   merge(other: Observable<T>): Observable<T>;
   switchMap<R>(fn: (value: T) => Observable<R>): Observable<R>;
   share(): Observable<T>;
-  
+
   // Advanced stream processing operators
   buffer(size: number): Observable<T[]>;
   bufferTime(timespan: number): Observable<T[]>;
   bufferCount(count: number, startBufferEvery?: number): Observable<T[]>;
   window(size: number): Observable<Observable<T>>;
-  groupBy<K>(keySelector: (value: T) => K): Observable<{ key: K; values: Observable<T> }>;
+  groupBy<K>(
+    keySelector: (value: T) => K,
+  ): Observable<{ key: K; values: Observable<T> }>;
   partition(predicate: (value: T) => boolean): [Observable<T>, Observable<T>];
-  reduce<R>(accumulator: (acc: R, value: T, index: number) => R, seed?: R): Observable<R>;
+  reduce<R>(
+    accumulator: (acc: R, value: T, index: number) => R,
+    seed?: R,
+  ): Observable<R>;
   concatMap<R>(fn: (value: T) => Observable<R>): Observable<R>;
-  mergeMap<R>(fn: (value: T) => Observable<R>, concurrent?: number): Observable<R>;
+  mergeMap<R>(
+    fn: (value: T) => Observable<R>,
+    concurrent?: number,
+  ): Observable<R>;
   exhaustMap<R>(fn: (value: T) => Observable<R>): Observable<R>;
   retry(count?: number): Observable<T>;
-  retryWhen<R>(notifier: (errors: Observable<Error>) => Observable<R>): Observable<T>;
+  retryWhen<R>(
+    notifier: (errors: Observable<Error>) => Observable<R>,
+  ): Observable<T>;
   timeout(due: number, scheduler?: any): Observable<T>;
   delay(delay: number): Observable<T>;
   sample<U>(notifier: Observable<U>): Observable<T>;
@@ -49,7 +59,10 @@ export interface Observable<T> {
   skipUntil<U>(notifier: Observable<U>): Observable<T>;
   skipWhile(predicate: (value: T) => boolean): Observable<T>;
   takeWhile(predicate: (value: T) => boolean): Observable<T>;
-  expand<R>(project: (value: T) => Observable<R>, concurrent?: number): Observable<R>;
+  expand<R>(
+    project: (value: T) => Observable<R>,
+    concurrent?: number,
+  ): Observable<R>;
   pairwise(): Observable<[T, T]>;
   startWith(...values: T[]): Observable<T>;
   endWith(...values: T[]): Observable<T>;
@@ -474,7 +487,7 @@ export class Stream<T> implements Observable<T> {
           buffered.next(buffer);
         }
         buffered.complete();
-      }
+      },
     );
 
     return buffered;
@@ -503,7 +516,7 @@ export class Stream<T> implements Observable<T> {
         clearInterval(intervalId);
         emitBuffer();
         buffered.complete();
-      }
+      },
     );
 
     return buffered;
@@ -532,17 +545,19 @@ export class Stream<T> implements Observable<T> {
       },
       (error) => buffered.error(error),
       () => {
-        buffers.forEach(buffer => {
+        buffers.forEach((buffer) => {
           if (buffer.length > 0) buffered.next(buffer);
         });
         buffered.complete();
-      }
+      },
     );
 
     return buffered;
   }
 
-  groupBy<K>(keySelector: (value: T) => K): Observable<{ key: K; values: Observable<T> }> {
+  groupBy<K>(
+    keySelector: (value: T) => K,
+  ): Observable<{ key: K; values: Observable<T> }> {
     const grouped = new Stream<{ key: K; values: Observable<T> }>();
     const groups = new Map<K, Stream<T>>();
 
@@ -560,13 +575,13 @@ export class Stream<T> implements Observable<T> {
         group.next(value);
       },
       (error) => {
-        groups.forEach(group => group.error(error));
+        groups.forEach((group) => group.error(error));
         grouped.error(error);
       },
       () => {
-        groups.forEach(group => group.complete());
+        groups.forEach((group) => group.complete());
         grouped.complete();
-      }
+      },
     );
 
     return grouped;
@@ -591,13 +606,16 @@ export class Stream<T> implements Observable<T> {
       () => {
         truthy.complete();
         falsy.complete();
-      }
+      },
     );
 
     return [truthy, falsy];
   }
 
-  reduce<R>(accumulator: (acc: R, value: T, index: number) => R, seed?: R): Observable<R> {
+  reduce<R>(
+    accumulator: (acc: R, value: T, index: number) => R,
+    seed?: R,
+  ): Observable<R> {
     const reduced = new Stream<R>();
     let hasValue = false;
     let acc: R;
@@ -624,7 +642,7 @@ export class Stream<T> implements Observable<T> {
           reduced.next(acc);
         }
         reduced.complete();
-      }
+      },
     );
 
     return reduced;
@@ -645,7 +663,7 @@ export class Stream<T> implements Observable<T> {
             retried.error(error);
           }
         },
-        () => retried.complete()
+        () => retried.complete(),
       );
     };
 
@@ -663,7 +681,7 @@ export class Stream<T> implements Observable<T> {
       (error) => delayed.error(error),
       () => {
         setTimeout(() => delayed.complete(), delayTime);
-      }
+      },
     );
 
     return delayed;
@@ -682,7 +700,7 @@ export class Stream<T> implements Observable<T> {
         }
       },
       (error) => distincted.error(error),
-      () => distincted.complete()
+      () => distincted.complete(),
     );
 
     return distincted;
@@ -701,7 +719,7 @@ export class Stream<T> implements Observable<T> {
         }
       },
       (error) => skipped.error(error),
-      () => skipped.complete()
+      () => skipped.complete(),
     );
 
     return skipped;
@@ -721,7 +739,7 @@ export class Stream<T> implements Observable<T> {
         hasPrevious = true;
       },
       (error) => paired.error(error),
-      () => paired.complete()
+      () => paired.complete(),
     );
 
     return paired;
@@ -732,13 +750,13 @@ export class Stream<T> implements Observable<T> {
 
     // Emit starting values immediately, asynchronously
     setTimeout(() => {
-      values.forEach(value => started.next(value));
-      
+      values.forEach((value) => started.next(value));
+
       // Then subscribe to source
       this.subscribe(
         (value) => started.next(value),
         (error) => started.error(error),
-        () => started.complete()
+        () => started.complete(),
       );
     }, 0);
 
@@ -760,7 +778,7 @@ export class Stream<T> implements Observable<T> {
           defaulted.next(defaultValue);
         }
         defaulted.complete();
-      }
+      },
     );
 
     return defaulted;
@@ -785,7 +803,7 @@ export class Stream<T> implements Observable<T> {
           () => {
             currentIndex++;
             processNext();
-          }
+          },
         );
       } else {
         result.complete();
@@ -795,13 +813,16 @@ export class Stream<T> implements Observable<T> {
     this.subscribe(
       (value) => values.push(value),
       (error) => result.error(error),
-      () => processNext()
+      () => processNext(),
     );
 
     return result;
   }
 
-  mergeMap<R>(fn: (value: T) => Observable<R>, concurrent = Infinity): Observable<R> {
+  mergeMap<R>(
+    fn: (value: T) => Observable<R>,
+    concurrent = Infinity,
+  ): Observable<R> {
     const result = new Stream<R>();
     let activeCount = 0;
     let completed = false;
@@ -819,7 +840,7 @@ export class Stream<T> implements Observable<T> {
               if (completed && activeCount === 0) {
                 result.complete();
               }
-            }
+            },
           );
         }
       },
@@ -829,7 +850,7 @@ export class Stream<T> implements Observable<T> {
         if (activeCount === 0) {
           result.complete();
         }
-      }
+      },
     );
 
     return result;
@@ -847,18 +868,22 @@ export class Stream<T> implements Observable<T> {
           inner.subscribe(
             (innerValue) => result.next(innerValue),
             (error) => result.error(error),
-            () => { innerActive = false; }
+            () => {
+              innerActive = false;
+            },
           );
         }
       },
       (error) => result.error(error),
-      () => result.complete()
+      () => result.complete(),
     );
 
     return result;
   }
 
-  retryWhen<R>(notifier: (errors: Observable<Error>) => Observable<R>): Observable<T> {
+  retryWhen<R>(
+    notifier: (errors: Observable<Error>) => Observable<R>,
+  ): Observable<T> {
     throw new Error("retryWhen operator not yet implemented");
   }
 
@@ -887,7 +912,7 @@ export class Stream<T> implements Observable<T> {
       () => {
         clearTimeout(timeoutId);
         result.complete();
-      }
+      },
     );
 
     return result;
@@ -903,7 +928,7 @@ export class Stream<T> implements Observable<T> {
         lastValue = value;
         hasValue = true;
       },
-      (error) => result.error(error)
+      (error) => result.error(error),
     );
 
     notifier.subscribe(
@@ -913,7 +938,7 @@ export class Stream<T> implements Observable<T> {
         }
       },
       (error) => result.error(error),
-      () => result.complete()
+      () => result.complete(),
     );
 
     return result;
@@ -941,7 +966,7 @@ export class Stream<T> implements Observable<T> {
         }
       },
       (error) => result.error(error),
-      () => result.complete()
+      () => result.complete(),
     );
 
     return result;
@@ -951,7 +976,9 @@ export class Stream<T> implements Observable<T> {
     const result = new Stream<T>();
     let shouldEmit = false;
 
-    notifier.subscribe(() => { shouldEmit = true; });
+    notifier.subscribe(() => {
+      shouldEmit = true;
+    });
 
     this.subscribe(
       (value) => {
@@ -960,7 +987,7 @@ export class Stream<T> implements Observable<T> {
         }
       },
       (error) => result.error(error),
-      () => result.complete()
+      () => result.complete(),
     );
 
     return result;
@@ -980,7 +1007,7 @@ export class Stream<T> implements Observable<T> {
         }
       },
       (error) => result.error(error),
-      () => result.complete()
+      () => result.complete(),
     );
 
     return result;
@@ -998,7 +1025,7 @@ export class Stream<T> implements Observable<T> {
         }
       },
       (error) => result.error(error),
-      () => result.complete()
+      () => result.complete(),
     );
 
     return result;
@@ -1015,9 +1042,9 @@ export class Stream<T> implements Observable<T> {
       (value) => result.next(value),
       (error) => result.error(error),
       () => {
-        values.forEach(value => result.next(value));
+        values.forEach((value) => result.next(value));
         result.complete();
-      }
+      },
     );
 
     return result;
@@ -1034,13 +1061,13 @@ export class Stream<T> implements Observable<T> {
           recovery.subscribe(
             (recoveryValue) => result.next(recoveryValue),
             (recoveryError) => result.error(recoveryError),
-            () => result.complete()
+            () => result.complete(),
           );
         } catch (e) {
           result.error(e as Error);
         }
       },
-      () => result.complete()
+      () => result.complete(),
     );
 
     return result;
