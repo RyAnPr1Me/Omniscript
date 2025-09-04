@@ -83,15 +83,20 @@ argumentList
 expression
     : primary
     | expression DOT IDENTIFIER                          // Member access
-    | expression LPAREN argumentList? RPAREN                   // Function call
-    | AWAIT expression                                // Await expression
-    | NEW IDENTIFIER LPAREN argumentList? RPAREN            // Object creation
+    | expression LBRACKET expression RBRACKET           // Array/object access
+    | expression LPAREN argumentList? RPAREN            // Function call
+    | AWAIT expression                                   // Await expression
+    | NEW IDENTIFIER LPAREN argumentList? RPAREN        // Object creation
     | expression binaryOperator expression              // Binary operation
-    | unaryOperator expression                          // Unary operation
-    | expression QUESTION expression COLON expression          // Ternary
-    | expression NULLISH_COALESCING expression                        // Nullish coalescing
-    | expression LOGICAL_OR expression                        // Logical OR
-    | expression LOGICAL_AND expression                        // Logical AND
+    | unaryOperator expression                           // Unary operation
+    | expression QUESTION expression COLON expression   // Ternary
+    | expression NULLISH_COALESCING expression          // Nullish coalescing
+    | expression LOGICAL_OR expression                   // Logical OR
+    | expression LOGICAL_AND expression                  // Logical AND
+    | expression PIPE_ARROW expression                   // Pipe operator
+    | MATCH expression LBRACE matchCase* RBRACE         // Pattern matching
+    | lambdaExpression                                   // Lambda expressions
+    | destructuringAssignment                            // Destructuring
     ;
 
 primary
@@ -233,6 +238,52 @@ throwStatement
     : THROW expression SEMICOLON
     ;
 
+// Pattern matching rules
+matchCase
+    : pattern (IF expression)? ARROW expression
+    ;
+
+pattern
+    : literal
+    | IDENTIFIER
+    | UNDERSCORE                                          // Wildcard
+    | LBRACKET (pattern (COMMA pattern)*)? RBRACKET     // Array pattern
+    | LBRACE (objectPatternProperty (COMMA objectPatternProperty)*)? RBRACE // Object pattern
+    | IDENTIFIER LPAREN (pattern (COMMA pattern)*)? RPAREN // Constructor pattern
+    | pattern PIPE pattern                               // Or pattern
+    ;
+
+objectPatternProperty
+    : IDENTIFIER (COLON pattern)?
+    ;
+
+// Lambda expressions
+lambdaExpression
+    : PIPE (IDENTIFIER (COMMA IDENTIFIER)*)? PIPE expression
+    | (IDENTIFIER | LPAREN (IDENTIFIER (COMMA IDENTIFIER)*)? RPAREN) ARROW expression
+    ;
+
+// Destructuring assignment
+destructuringAssignment
+    : (VAR | DEF) destructuringPattern ASSIGN expression
+    ;
+
+destructuringPattern
+    : LBRACKET (destructuringElement (COMMA destructuringElement)*)? RBRACKET
+    | LBRACE (destructuringProperty (COMMA destructuringProperty)*)? RBRACE
+    ;
+
+destructuringElement
+    : IDENTIFIER
+    | destructuringPattern
+    | IDENTIFIER ASSIGN expression                       // Default value
+    ;
+
+destructuringProperty
+    : IDENTIFIER (COLON (IDENTIFIER | destructuringPattern))?
+    | IDENTIFIER ASSIGN expression                       // Default value
+    ;
+
 // Keywords (need to be defined before IDENTIFIER)
 VAR: 'var';
 DEF: 'def';
@@ -312,6 +363,10 @@ LBRACKET: '[';
 RBRACKET: ']';
 BACKTICK: '`';
 DOLLAR_LBRACE: '${';
+UNDERSCORE: '_';
+PIPE: '|';
+
+// Tokens
 
 // Tokens
 IDENTIFIER: [a-zA-Z_][a-zA-Z0-9_]*;

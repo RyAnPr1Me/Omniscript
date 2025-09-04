@@ -1,4 +1,4 @@
-import { OmniscriptError } from '../errors';
+import { OmniscriptError, TypeMismatchError } from '../errors';
 
 // Advanced type system for Omniscript
 export interface Type {
@@ -347,7 +347,8 @@ export class TypeChecker {
 
   validateType(expected: string, actual: string, line: number = 0, column: number = 0) {
     if (expected !== actual) {
-      throw new OmniscriptError(`Expected type ${expected} but got ${actual}`, line, column);
+      const location = { filename: '<unknown>', line, column };
+      throw new TypeMismatchError(`Expected type ${expected} but got ${actual}`, location, expected, actual);
     }
   }
 }

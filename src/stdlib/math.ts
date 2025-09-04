@@ -428,4 +428,214 @@ export class MathUtils {
     if (rate === 0) return principal / periods;
     return principal * (rate * Math.pow(1 + rate, periods)) / (Math.pow(1 + rate, periods) - 1);
   }
+
+  // Enhanced mathematical functions
+  static gamma(z: number): number {
+    // Stirling's approximation for gamma function
+    if (z < 0) return NaN;
+    if (z === 0) return Infinity;
+    if (z === 1 || z === 2) return 1;
+    
+    // Use Stirling's approximation for large values
+    if (z > 171.624) return Infinity; // Overflow protection
+    
+    return Math.sqrt(2 * Math.PI / z) * Math.pow(z / Math.E, z);
+  }
+
+  static nextPrime(n: number): number {
+    let candidate = Math.floor(n) + 1;
+    while (!this.isPrime(candidate)) {
+      candidate++;
+    }
+    return candidate;
+  }
+
+  static primeFactors(n: number): number[] {
+    if (n < 2 || !Number.isInteger(n)) return [];
+    
+    const factors: number[] = [];
+    let divisor = 2;
+    
+    while (divisor * divisor <= n) {
+      while (n % divisor === 0) {
+        factors.push(divisor);
+        n /= divisor;
+      }
+      divisor++;
+    }
+    
+    if (n > 1) {
+      factors.push(n);
+    }
+    
+    return factors;
+  }
+
+  static gcdMultiple(...numbers: number[]): number {
+    return numbers.reduce((acc, curr) => this.gcd(acc, curr));
+  }
+
+  static lcmMultiple(...numbers: number[]): number {
+    return numbers.reduce((acc, curr) => this.lcm(acc, curr));
+  }
+
+  // Hyperbolic functions
+  static sinh(x: number): number {
+    return (Math.exp(x) - Math.exp(-x)) / 2;
+  }
+
+  static cosh(x: number): number {
+    return (Math.exp(x) + Math.exp(-x)) / 2;
+  }
+
+  static tanh(x: number): number {
+    return this.sinh(x) / this.cosh(x);
+  }
+
+  static asinh(x: number): number {
+    return Math.log(x + Math.sqrt(x * x + 1));
+  }
+
+  static acosh(x: number): number {
+    return Math.log(x + Math.sqrt(x * x - 1));
+  }
+
+  static atanh(x: number): number {
+    return 0.5 * Math.log((1 + x) / (1 - x));
+  }
+
+  // Number theory
+  static modPow(base: number, exponent: number, modulus: number): number {
+    if (modulus === 1) return 0;
+    
+    let result = 1;
+    base = base % modulus;
+    
+    while (exponent > 0) {
+      if (exponent % 2 === 1) {
+        result = (result * base) % modulus;
+      }
+      exponent = Math.floor(exponent / 2);
+      base = (base * base) % modulus;
+    }
+    
+    return result;
+  }
+
+  static isPerfectSquare(n: number): boolean {
+    if (n < 0) return false;
+    const sqrt = Math.sqrt(n);
+    return sqrt === Math.floor(sqrt);
+  }
+
+  // Combinatorics
+  static permutations(n: number, r: number): number {
+    if (r > n || r < 0 || n < 0) return 0;
+    return this.factorial(n) / this.factorial(n - r);
+  }
+
+  static combinations(n: number, r: number): number {
+    if (r > n || r < 0 || n < 0) return 0;
+    return this.factorial(n) / (this.factorial(r) * this.factorial(n - r));
+  }
+
+  // Advanced rounding
+  static floorTo(value: number, decimals: number): number {
+    const factor = Math.pow(10, decimals);
+    return Math.floor(value * factor) / factor;
+  }
+
+  static ceilTo(value: number, decimals: number): number {
+    const factor = Math.pow(10, decimals);
+    return Math.ceil(value * factor) / factor;
+  }
+
+  static truncateTo(value: number, decimals: number): number {
+    const factor = Math.pow(10, decimals);
+    return Math.trunc(value * factor) / factor;
+  }
+
+  // Advanced statistics
+  static percentile(numbers: number[], percentile: number): number {
+    const sorted = [...numbers].sort((a, b) => a - b);
+    const index = (percentile / 100) * (sorted.length - 1);
+    
+    if (Number.isInteger(index)) {
+      return sorted[index];
+    }
+    
+    const lower = Math.floor(index);
+    const upper = Math.ceil(index);
+    const weight = index - lower;
+    
+    return sorted[lower] * (1 - weight) + sorted[upper] * weight;
+  }
+
+  static quartiles(numbers: number[]): { q1: number; q2: number; q3: number } {
+    return {
+      q1: this.percentile(numbers, 25),
+      q2: this.percentile(numbers, 50),
+      q3: this.percentile(numbers, 75)
+    };
+  }
+
+  static iqr(numbers: number[]): number {
+    const { q1, q3 } = this.quartiles(numbers);
+    return q3 - q1;
+  }
+
+  static zScore(value: number, mean: number, standardDeviation: number): number {
+    return (value - mean) / standardDeviation;
+  }
+
+  static correlation(x: number[], y: number[]): number {
+    if (x.length !== y.length) throw new Error('Arrays must have the same length');
+    
+    const n = x.length;
+    const meanX = this.mean(x);
+    const meanY = this.mean(y);
+    
+    let numerator = 0;
+    let sumSquareX = 0;
+    let sumSquareY = 0;
+    
+    for (let i = 0; i < n; i++) {
+      const diffX = x[i] - meanX;
+      const diffY = y[i] - meanY;
+      numerator += diffX * diffY;
+      sumSquareX += diffX * diffX;
+      sumSquareY += diffY * diffY;
+    }
+    
+    const denominator = Math.sqrt(sumSquareX * sumSquareY);
+    return denominator === 0 ? 0 : numerator / denominator;
+  }
+
+  // Random number utilities with different distributions
+  static randomGaussian(mean: number = 0, standardDeviation: number = 1): number {
+    // Box-Muller transformation
+    const u1 = Math.random();
+    const u2 = Math.random();
+    const z0 = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+    return z0 * standardDeviation + mean;
+  }
+
+  static sample<T>(array: T[], count: number): T[] {
+    const shuffled = this.shuffle(array);
+    return shuffled.slice(0, Math.min(count, array.length));
+  }
+
+  // Utility functions for scaling and interpolation
+  static inverseLerp(a: number, b: number, value: number): number {
+    return (value - a) / (b - a);
+  }
+
+  static map(value: number, inMin: number, inMax: number, outMin: number, outMax: number): number {
+    return this.lerp(outMin, outMax, this.inverseLerp(inMin, inMax, value));
+  }
+
+  static smoothstep(edge0: number, edge1: number, x: number): number {
+    const t = this.clamp((x - edge0) / (edge1 - edge0), 0, 1);
+    return t * t * (3 - 2 * t);
+  }
 }

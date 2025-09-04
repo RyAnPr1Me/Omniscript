@@ -187,10 +187,12 @@ npm run test:watch -- --config jest.config.js
 
 ## Documentation
 
-- [Language Guide](docs/guide.md)
-- [API Reference](docs/api/README.md)
-- [Best Practices](docs/best-practices.md)
-- [Examples](examples/README.md)
+- **[📚 Comprehensive Language Reference](docs/comprehensive-reference.md)** - Complete reference of every function, keyword, and feature
+- **[📑 Language Index](docs/language-index.md)** - Quick alphabetical index to find any language feature
+- [Language Guide](docs/guide.md) - Getting started tutorial and overview
+- [API Reference](docs/api/README.md) - Detailed API documentation
+- [Best Practices](docs/best-practices.md) - Recommended patterns and practices
+- [Examples](examples/README.md) - Code examples and demos
 
 ## Installation
 
