@@ -27,9 +27,10 @@ export * from './path';
 export * from './string';
 export * from './url';
 export * from './random';
+export * from './tuple';
 
 // Export async utilities with explicit naming to avoid conflicts
-export { AsyncUtils as AsyncUtilities } from './async';
+export { AsyncUtils as AsyncUtilities, AsyncPatterns } from './async';
 export { sleep, timeout, retry, parallel as parallelAsync, sequence, debounce, throttle, poll, delay } from './async';
 
 export { MathUtils as Math } from './math';
@@ -48,6 +49,7 @@ export { Audio, Effects } from './audio';
 export { FileSystem as FS } from './fs';
 export { Json as JSON } from './json';
 export { Regex as RegExp } from './regex';
+export { OmniTuple, TupleUtils, tuple, pair, triple } from './tuple';
 export { Encoding } from './encoding';
 export { Path } from './path';
 export { StringUtils as String } from './string';

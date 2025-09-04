@@ -396,5 +396,291 @@ export class AsyncUtils {
   }
 }
 
+/**
+ * Advanced async patterns and utilities - Extended
+ */
+class AsyncPatterns {
+  /**
+   * Create a cancellable async operation
+   */
+  static cancellable<T>(operation: (signal: AbortSignal) => Promise<T>): {
+    promise: Promise<T>;
+    cancel: () => void;
+  } {
+    const controller = new AbortController();
+    const promise = operation(controller.signal);
+    
+    return {
+      promise,
+      cancel: () => controller.abort()
+    };
+  }
+
+  /**
+   * Create an async pipeline with transformation steps
+   */
+  static pipeline<T, U>(
+    input: T,
+    ...steps: Array<(value: any) => Promise<any> | any>
+  ): Promise<U> {
+    return steps.reduce(
+      async (acc, step) => step(await acc),
+      Promise.resolve(input)
+    );
+  }
+
+  /**
+   * Async reduce with concurrency control
+   */
+  static async reduce<T, U>(
+    items: T[],
+    reducer: (acc: U, item: T, index: number) => Promise<U>,
+    initialValue: U,
+    concurrency: number = 1
+  ): Promise<U> {
+    if (concurrency === 1) {
+      let accumulator = initialValue;
+      for (let i = 0; i < items.length; i++) {
+        accumulator = await reducer(accumulator, items[i], i);
+      }
+      return accumulator;
+    }
+
+    // For concurrent reduce, we need to batch items
+    let accumulator = initialValue;
+    for (let i = 0; i < items.length; i += concurrency) {
+      const batch = items.slice(i, i + concurrency);
+      const promises = batch.map((item, batchIndex) => 
+        reducer(accumulator, item, i + batchIndex)
+      );
+      
+      const results = await Promise.all(promises);
+      accumulator = results[results.length - 1]; // Use the last result as accumulator
+    }
+    
+    return accumulator;
+  }
+
+  /**
+   * Create an async queue with processing function
+   */
+  static createQueue<T, U>(
+    processor: (item: T) => Promise<U>,
+    options: {
+      concurrency?: number;
+      onSuccess?: (result: U, item: T) => void;
+      onError?: (error: Error, item: T) => void;
+    } = {}
+  ): {
+    add: (item: T) => Promise<U>;
+    size: () => number;
+    pending: () => number;
+    clear: () => void;
+  } {
+    const { concurrency = 1, onSuccess, onError } = options;
+    const queue: Array<{
+      item: T;
+      resolve: (value: U) => void;
+      reject: (error: Error) => void;
+    }> = [];
+    let processing = 0;
+
+    const processNext = async () => {
+      if (queue.length === 0 || processing >= concurrency) return;
+      
+      processing++;
+      const { item, resolve, reject } = queue.shift()!;
+      
+      try {
+        const result = await processor(item);
+        onSuccess?.(result, item);
+        resolve(result);
+      } catch (error) {
+        onError?.(error as Error, item);
+        reject(error as Error);
+      } finally {
+        processing--;
+        processNext(); // Process next item
+      }
+    };
+
+    return {
+      add: (item: T): Promise<U> => {
+        return new Promise((resolve, reject) => {
+          queue.push({ item, resolve, reject });
+          processNext();
+        });
+      },
+      size: () => queue.length,
+      pending: () => processing,
+      clear: () => {
+        queue.length = 0;
+      }
+    };
+  }
+
+  /**
+   * Create a semaphore for resource limiting
+   */
+  static createSemaphore(permits: number): {
+    acquire: () => Promise<() => void>;
+    available: () => number;
+  } {
+    let available = permits;
+    const waiters: Array<() => void> = [];
+
+    const tryAcquire = (): (() => void) | null => {
+      if (available > 0) {
+        available--;
+        return () => {
+          available++;
+          if (waiters.length > 0) {
+            const waiter = waiters.shift()!;
+            waiter();
+          }
+        };
+      }
+      return null;
+    };
+
+    return {
+      acquire: (): Promise<() => void> => {
+        const release = tryAcquire();
+        if (release) {
+          return Promise.resolve(release);
+        }
+
+        return new Promise<() => void>((resolve) => {
+          waiters.push(() => {
+            const release = tryAcquire();
+            if (release) {
+              resolve(release);
+            }
+          });
+        });
+      },
+      available: () => available
+    };
+  }
+
+  /**
+   * Create a circuit breaker for fault tolerance
+   */
+  static createCircuitBreaker<T extends any[], U>(
+    fn: (...args: T) => Promise<U>,
+    options: {
+      failureThreshold?: number;
+      recoveryTimeout?: number;
+      monitoringPeriod?: number;
+    } = {}
+  ): {
+    execute: (...args: T) => Promise<U>;
+    state: () => 'closed' | 'open' | 'half-open';
+    reset: () => void;
+  } {
+    const {
+      failureThreshold = 5,
+      recoveryTimeout = 10000,
+      monitoringPeriod = 60000
+    } = options;
+
+    let state: 'closed' | 'open' | 'half-open' = 'closed';
+    let failures = 0;
+    let lastFailureTime = 0;
+    let successes = 0;
+
+    const canExecute = (): boolean => {
+      if (state === 'closed') return true;
+      if (state === 'open') {
+        return Date.now() - lastFailureTime > recoveryTimeout;
+      }
+      return true; // half-open
+    };
+
+    const onSuccess = () => {
+      failures = 0;
+      successes++;
+      if (state === 'half-open') {
+        state = 'closed';
+      }
+    };
+
+    const onFailure = () => {
+      failures++;
+      lastFailureTime = Date.now();
+      if (failures >= failureThreshold) {
+        state = 'open';
+      }
+    };
+
+    return {
+      execute: async (...args: T): Promise<U> => {
+        if (!canExecute()) {
+          throw new Error('Circuit breaker is open');
+        }
+
+        if (state === 'open') {
+          state = 'half-open';
+        }
+
+        try {
+          const result = await fn(...args);
+          onSuccess();
+          return result;
+        } catch (error) {
+          onFailure();
+          throw error;
+        }
+      },
+      state: () => state,
+      reset: () => {
+        state = 'closed';
+        failures = 0;
+        successes = 0;
+      }
+    };
+  }
+
+  /**
+   * Race multiple async operations, return first N results
+   */
+  static async raceN<T>(
+    promises: Promise<T>[],
+    count: number
+  ): Promise<T[]> {
+    if (count <= 0) return [];
+    if (count >= promises.length) return Promise.all(promises);
+
+    return new Promise((resolve, reject) => {
+      const results: T[] = [];
+      let completed = 0;
+      let rejected = 0;
+
+      promises.forEach((promise, index) => {
+        promise
+          .then((result) => {
+            if (results.length < count) {
+              results.push(result);
+              completed++;
+              
+              if (completed === count) {
+                resolve(results);
+              }
+            }
+          })
+          .catch((error) => {
+            rejected++;
+            if (rejected === promises.length - count + 1) {
+              reject(new Error('Not enough promises resolved'));
+            }
+          });
+      });
+    });
+  }
+}
+
 // Convenience exports
 export const { sleep, timeout, retry, parallel, sequence, debounce, throttle, poll, delay } = AsyncUtils;
+
+export default AsyncUtils;
+export { AsyncPatterns };
