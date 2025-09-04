@@ -157,6 +157,7 @@ program
       // Create basic project structure
       await fs.mkdir(path.join(projectDir, 'src'));
       await fs.mkdir(path.join(projectDir, 'docs'));
+      await fs.mkdir(path.join(projectDir, 'tests'));
       
       // Create main.omni file
       const mainContent = `// Welcome to Omniscript!
@@ -172,8 +173,50 @@ class App {
     console.log(this.message + " - Built with Omniscript");
   }
 }
+
+// Export the App component
+export { App };
+
+// Create and render the app
+const app = new App();
+app.render();
 `;
       await fs.writeFile(path.join(projectDir, 'src', 'main.omni'), mainContent);
+      
+      // Create a simple test file
+      const testContent = `// Test file for ${name}
+import { App } from '../src/main.omni';
+
+describe('App', () => {
+  test('should create instance with message', () => {
+    const app = new App();
+    expect(app.message).toBe("Hello, Omniscript!");
+  });
+  
+  test('should render message', () => {
+    const consoleSpy = jest.spyOn(console, 'log');
+    const app = new App();
+    app.render();
+    expect(consoleSpy).toHaveBeenCalledWith("Hello, Omniscript! - Built with Omniscript");
+    consoleSpy.mockRestore();
+  });
+});
+`;
+      await fs.writeFile(path.join(projectDir, 'tests', 'main.test.omni'), testContent);
+      
+      // Create jest config
+      const jestConfig = `module.exports = {
+  testEnvironment: 'node',
+  testMatch: ['**/tests/**/*.test.(omni|js|ts)'],
+  collectCoverageFrom: [
+    'src/**/*.(omni|js|ts)',
+    '!src/**/*.d.ts'
+  ],
+  coverageDirectory: 'coverage',
+  coverageReporters: ['text', 'lcov', 'html']
+};
+`;
+      await fs.writeFile(path.join(projectDir, 'jest.config.js'), jestConfig);
       
       // Create package.json
       const packageJson = {
@@ -330,12 +373,22 @@ program
         console.log(`📄 Compiling ${mainFile}...`);
         
         const source = await fs.readFile(mainFile, 'utf-8');
-        const ast = omniscript['parser'].parse(source);
-        const bytecode = omniscript['compiler'].compile(ast);
+        const omniscriptInstance = getOmniscript();
+        
+        // Execute and capture result for build
+        const result = await omniscriptInstance.execute(source);
+        
+        // For now, create a simple JS wrapper around the executed code
+        const jsOutput = `// Compiled Omniscript
+const result = ${JSON.stringify(result, null, 2)};
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = result;
+} else {
+  console.log(result);
+}`;
         
         // Save compiled output
         const outputFile = path.join(options.output, 'main.js');
-        const jsOutput = `// Compiled Omniscript\nmodule.exports = ${JSON.stringify(bytecode, null, 2)};`;
         await fs.writeFile(outputFile, jsOutput);
         
         console.log(`✅ Build complete! Output saved to ${outputFile}`);
@@ -359,8 +412,18 @@ program
     
     try {
       const { spawn } = await import('child_process');
+      const fs = await import('fs');
       
-      const jestArgs = ['--config', 'jest.config.ts'];
+      const jestArgs = [];
+      
+      // Only add config if it exists
+      if (fs.existsSync('jest.config.ts') || fs.existsSync('jest.config.js')) {
+        if (fs.existsSync('jest.config.ts')) {
+          jestArgs.push('--config', 'jest.config.ts');
+        } else {
+          jestArgs.push('--config', 'jest.config.js');
+        }
+      }
       
       if (options.watch) {
         jestArgs.push('--watch');
@@ -490,6 +553,577 @@ program
     } catch (error) {
       console.error(`❌ Fuzzing failed: ${error}`);
       process.exit(1);
+    }
+  });
+
+program
+  .command('format')
+  .description('Format Omniscript source code')
+  .argument('[files...]', 'Files to format (defaults to src/**/*.omni)')
+  .option('--check', 'Check if files are formatted without modifying them')
+  .option('--write', 'Write formatted code back to files', true)
+  .action(async (files: string[], options: { check?: boolean, write?: boolean }) => {
+    try {
+      const fs = await import('fs/promises');
+      const path = await import('path');
+      
+      // Simple glob replacement
+      async function findOmniscriptFiles(dir: string): Promise<string[]> {
+        const result: string[] = [];
+        try {
+          const entries = await fs.readdir(dir, { withFileTypes: true });
+          for (const entry of entries) {
+            const fullPath = path.join(dir, entry.name);
+            if (entry.isDirectory()) {
+              result.push(...await findOmniscriptFiles(fullPath));
+            } else if (entry.name.endsWith('.omni') || entry.name.endsWith('.os')) {
+              result.push(fullPath);
+            }
+          }
+        } catch {
+          // Directory doesn't exist or can't be read
+        }
+        return result;
+      }
+      
+      // Determine files to format
+      let filesToFormat: string[];
+      if (files && files.length > 0) {
+        filesToFormat = files;
+      } else {
+        // Default to all .omni and .os files in src/
+        filesToFormat = await findOmniscriptFiles('src');
+      }
+      
+      if (filesToFormat.length === 0) {
+        console.log('⚠️  No Omniscript files found to format');
+        return;
+      }
+      
+      console.log(`🎨 Formatting ${filesToFormat.length} file(s)...`);
+      
+      let changedFiles = 0;
+      let errors = 0;
+      
+      for (const file of filesToFormat) {
+        try {
+          const source = await fs.readFile(file, 'utf-8');
+          const formatted = formatOmniscriptCode(source);
+          
+          if (source !== formatted) {
+            if (options.check) {
+              console.log(`❌ ${file} is not formatted`);
+              changedFiles++;
+            } else if (options.write !== false) {
+              await fs.writeFile(file, formatted);
+              console.log(`✅ Formatted ${file}`);
+              changedFiles++;
+            }
+          } else {
+            console.log(`✓ ${file} is already formatted`);
+          }
+        } catch (error) {
+          console.error(`❌ Error formatting ${file}: ${error}`);
+          errors++;
+        }
+      }
+      
+      if (options.check && changedFiles > 0) {
+        console.log(`\n❌ ${changedFiles} file(s) need formatting`);
+        process.exit(1);
+      } else {
+        console.log(`\n✅ Formatting complete! ${changedFiles} file(s) changed, ${errors} error(s)`);
+      }
+      
+    } catch (error) {
+      console.error(`❌ Format failed: ${error}`);
+      process.exit(1);
+    }
+  });
+
+function formatOmniscriptCode(source: string): string {
+  // Basic formatting rules for Omniscript
+  let formatted = source;
+  
+  // Normalize line endings
+  formatted = formatted.replace(/\r\n?/g, '\n');
+  
+  // Fix indentation (use 2 spaces)
+  const lines = formatted.split('\n');
+  let indentLevel = 0;
+  const formattedLines = lines.map(line => {
+    const trimmed = line.trim();
+    
+    // Don't format empty lines
+    if (!trimmed) return '';
+    
+    // Decrease indent for closing braces/brackets
+    if (/^[}\])]/.test(trimmed)) {
+      indentLevel = Math.max(0, indentLevel - 1);
+    }
+    
+    const indented = '  '.repeat(indentLevel) + trimmed;
+    
+    // Increase indent for opening braces/brackets
+    if (/[{\[(]\s*$/.test(trimmed) && !trimmed.includes('//')) {
+      indentLevel++;
+    }
+    
+    return indented;
+  });
+  
+  // Join and clean up multiple blank lines
+  formatted = formattedLines.join('\n').replace(/\n{3,}/g, '\n\n');
+  
+  // Ensure file ends with single newline
+  formatted = formatted.replace(/\n*$/, '\n');
+  
+  return formatted;
+}
+
+program
+  .command('lint')
+  .description('Lint Omniscript source code')
+  .argument('[files...]', 'Files to lint (defaults to src/**/*.omni)')
+  .option('--fix', 'Automatically fix linting issues where possible')
+  .action(async (files: string[], options: { fix?: boolean }) => {
+    try {
+      const fs = await import('fs/promises');
+      const path = await import('path');
+      
+      // Simple file finder
+      async function findOmniscriptFiles(dir: string): Promise<string[]> {
+        const result: string[] = [];
+        try {
+          const entries = await fs.readdir(dir, { withFileTypes: true });
+          for (const entry of entries) {
+            const fullPath = path.join(dir, entry.name);
+            if (entry.isDirectory()) {
+              result.push(...await findOmniscriptFiles(fullPath));
+            } else if (entry.name.endsWith('.omni') || entry.name.endsWith('.os')) {
+              result.push(fullPath);
+            }
+          }
+        } catch {
+          // Directory doesn't exist
+        }
+        return result;
+      }
+      
+      let filesToLint: string[];
+      if (files && files.length > 0) {
+        filesToLint = files;
+      } else {
+        filesToLint = await findOmniscriptFiles('src');
+      }
+      
+      if (filesToLint.length === 0) {
+        console.log('⚠️  No Omniscript files found to lint');
+        return;
+      }
+      
+      console.log(`🔍 Linting ${filesToLint.length} file(s)...`);
+      
+      let totalIssues = 0;
+      let fixedIssues = 0;
+      
+      for (const file of filesToLint) {
+        try {
+          const source = await fs.readFile(file, 'utf-8');
+          const issues = lintOmniscriptCode(source, file);
+          
+          if (issues.length === 0) {
+            console.log(`✅ ${file} - No issues found`);
+          } else {
+            console.log(`⚠️  ${file} - ${issues.length} issue(s) found:`);
+            issues.forEach(issue => {
+              console.log(`  Line ${issue.line}: ${issue.message} (${issue.severity})`);
+            });
+            
+            if (options.fix) {
+              const fixed = fixLintIssues(source, issues);
+              if (fixed !== source) {
+                await fs.writeFile(file, fixed);
+                console.log(`🔧 Fixed issues in ${file}`);
+                fixedIssues += issues.length;
+              }
+            }
+            
+            totalIssues += issues.length;
+          }
+        } catch (error) {
+          console.error(`❌ Error linting ${file}: ${error}`);
+        }
+      }
+      
+      console.log(`\n📊 Linting complete: ${totalIssues} issue(s) found`);
+      if (options.fix && fixedIssues > 0) {
+        console.log(`🔧 Fixed ${fixedIssues} issue(s) automatically`);
+      }
+      
+      if (totalIssues > fixedIssues) {
+        process.exit(1);
+      }
+      
+    } catch (error) {
+      console.error(`❌ Linting failed: ${error}`);
+      process.exit(1);
+    }
+  });
+
+function lintOmniscriptCode(source: string, filename: string): Array<{ line: number, message: string, severity: 'error' | 'warning' }> {
+  const issues: Array<{ line: number, message: string, severity: 'error' | 'warning' }> = [];
+  const lines = source.split('\n');
+  
+  lines.forEach((line, index) => {
+    const lineNum = index + 1;
+    
+    // Check for common issues
+    if (line.includes('\t')) {
+      issues.push({ line: lineNum, message: 'Use spaces instead of tabs for indentation', severity: 'warning' });
+    }
+    
+    if (line.endsWith(' ')) {
+      issues.push({ line: lineNum, message: 'Trailing whitespace', severity: 'warning' });
+    }
+    
+    if (line.length > 120) {
+      issues.push({ line: lineNum, message: 'Line too long (>120 characters)', severity: 'warning' });
+    }
+    
+    // Check for missing semicolons in certain contexts
+    const trimmed = line.trim();
+    if (trimmed && !trimmed.startsWith('//') && !trimmed.startsWith('/*') && 
+        /^(let|const|var|return)\s/.test(trimmed) && !trimmed.endsWith(';') && !trimmed.endsWith('{')) {
+      issues.push({ line: lineNum, message: 'Missing semicolon', severity: 'error' });
+    }
+  });
+  
+  return issues;
+}
+
+function fixLintIssues(source: string, issues: Array<{ line: number, message: string, severity: 'error' | 'warning' }>): string {
+  let lines = source.split('\n');
+  
+  // Fix trailing whitespace
+  lines = lines.map(line => line.replace(/\s+$/, ''));
+  
+  // Fix tabs to spaces
+  lines = lines.map(line => line.replace(/\t/g, '  '));
+  
+  return lines.join('\n');
+}
+
+program
+  .command('check')
+  .description('Type check Omniscript code without running it')
+  .argument('[files...]', 'Files to check (defaults to src/**/*.omni)')
+  .action(async (files: string[]) => {
+    try {
+      const fs = await import('fs/promises');
+      const path = await import('path');
+      
+      // Simple file finder
+      async function findOmniscriptFiles(dir: string): Promise<string[]> {
+        const result: string[] = [];
+        try {
+          const entries = await fs.readdir(dir, { withFileTypes: true });
+          for (const entry of entries) {
+            const fullPath = path.join(dir, entry.name);
+            if (entry.isDirectory()) {
+              result.push(...await findOmniscriptFiles(fullPath));
+            } else if (entry.name.endsWith('.omni') || entry.name.endsWith('.os')) {
+              result.push(fullPath);
+            }
+          }
+        } catch {
+          // Directory doesn't exist
+        }
+        return result;
+      }
+      
+      let filesToCheck: string[];
+      if (files && files.length > 0) {
+        filesToCheck = files;
+      } else {
+        filesToCheck = await findOmniscriptFiles('src');
+      }
+      
+      if (filesToCheck.length === 0) {
+        console.log('⚠️  No Omniscript files found to check');
+        return;
+      }
+      
+      console.log(`🔍 Type checking ${filesToCheck.length} file(s)...`);
+      
+      let hasErrors = false;
+      
+      for (const file of filesToCheck) {
+        try {
+          const source = await fs.readFile(file, 'utf-8');
+          
+          // Use the Omniscript parser to check syntax
+          const omniscriptInstance = getOmniscript();
+          
+          // Try to parse without executing
+          try {
+            // This will throw if there are syntax errors
+            await omniscriptInstance.execute(source);
+            console.log(`✅ ${file} - Type check passed`);
+          } catch (error) {
+            console.log(`❌ ${file} - Type check failed: ${error}`);
+            hasErrors = true;
+          }
+          
+        } catch (error) {
+          console.error(`❌ Error checking ${file}: ${error}`);
+          hasErrors = true;
+        }
+      }
+      
+      if (hasErrors) {
+        console.log(`\n❌ Type checking failed`);
+        process.exit(1);
+      } else {
+        console.log(`\n✅ All files passed type checking`);
+      }
+      
+    } catch (error) {
+      console.error(`❌ Type checking failed: ${error}`);
+      process.exit(1);
+    }
+  });
+
+program
+  .command('upgrade')
+  .description('Upgrade Omniscript to the latest version')
+  .option('--check', 'Check for updates without upgrading')
+  .action(async (options: { check?: boolean }) => {
+    console.log('🔍 Checking for Omniscript updates...');
+    
+    try {
+      const https = await import('https');
+      const currentVersion = '2.0.0';
+      
+      // Check latest version from GitHub releases
+      const checkLatest = () => new Promise<string>((resolve, reject) => {
+        const req = https.request({
+          hostname: 'api.github.com',
+          path: '/repos/RyAnPr1Me/Omniscript/releases/latest',
+          headers: { 'User-Agent': 'Omniscript-CLI' }
+        }, (res) => {
+          let data = '';
+          res.on('data', chunk => data += chunk);
+          res.on('end', () => {
+            try {
+              const release = JSON.parse(data);
+              resolve(release.tag_name?.replace(/^v/, '') || currentVersion);
+            } catch {
+              resolve(currentVersion);
+            }
+          });
+        });
+        req.on('error', () => resolve(currentVersion));
+        req.setTimeout(5000, () => {
+          req.destroy();
+          resolve(currentVersion);
+        });
+        req.end();
+      });
+      
+      const latestVersion = await checkLatest();
+      
+      if (currentVersion === latestVersion) {
+        console.log(`✅ You're running the latest version (${currentVersion})`);
+      } else {
+        console.log(`📦 Update available: ${currentVersion} → ${latestVersion}`);
+        
+        if (!options.check) {
+          console.log('🚀 To upgrade, run:');
+          console.log('  npm install -g omniscript@latest');
+          console.log('  # or');
+          console.log('  yarn global add omniscript@latest');
+        }
+      }
+      
+    } catch (error) {
+      console.log(`⚠️  Could not check for updates: ${error}`);
+      console.log('📖 Visit https://github.com/RyAnPr1Me/Omniscript for the latest version');
+    }
+  });
+
+program
+  .command('info')
+  .description('Display system information and Omniscript environment')
+  .action(async () => {
+    try {
+      const os = await import('os');
+      const fs = await import('fs/promises');
+      const path = await import('path');
+      
+      console.log('🔍 Omniscript Environment Information');
+      console.log('=====================================');
+      console.log();
+      
+      // Version info
+      console.log('📦 Version Information:');
+      console.log(`  Omniscript: 2.0.0`);
+      console.log(`  Node.js: ${process.version}`);
+      console.log(`  Platform: ${os.platform()} ${os.arch()}`);
+      console.log(`  OS: ${os.type()} ${os.release()}`);
+      console.log();
+      
+      // Memory info
+      const memUsage = process.memoryUsage();
+      console.log('💾 Memory Usage:');
+      console.log(`  RSS: ${Math.round(memUsage.rss / 1024 / 1024)}MB`);
+      console.log(`  Heap Used: ${Math.round(memUsage.heapUsed / 1024 / 1024)}MB`);
+      console.log(`  Heap Total: ${Math.round(memUsage.heapTotal / 1024 / 1024)}MB`);
+      console.log();
+      
+      // Check for project files
+      const projectFiles = ['package.json', 'omni.json', 'src/main.omni', 'jest.config.js'];
+      const foundFiles = [];
+      
+      for (const file of projectFiles) {
+        try {
+          await fs.access(file);
+          foundFiles.push(file);
+        } catch {
+          // File doesn't exist
+        }
+      }
+      
+      if (foundFiles.length > 0) {
+        console.log('📁 Project Files:');
+        foundFiles.forEach(file => console.log(`  ✅ ${file}`));
+        console.log();
+      }
+      
+      // Check stdlib modules (if in project)
+      try {
+        const packageJson = await fs.readFile('package.json', 'utf-8');
+        const pkg = JSON.parse(packageJson);
+        if (pkg.omniscript?.stdlib) {
+          console.log('📚 Enabled Standard Library Modules:');
+          pkg.omniscript.stdlib.forEach((mod: string) => console.log(`  • ${mod}`));
+          console.log();
+        }
+      } catch {
+        // Not in a project or no package.json
+      }
+      
+    } catch (error) {
+      console.error(`❌ Failed to gather system information: ${error}`);
+    }
+  });
+
+program
+  .command('completion')
+  .description('Generate shell completion scripts')
+  .argument('[shell]', 'Shell type (bash, zsh, fish)', 'bash')
+  .action((shell: string) => {
+    const validShells = ['bash', 'zsh', 'fish'];
+    if (!validShells.includes(shell)) {
+      console.error(`❌ Unsupported shell: ${shell}. Supported: ${validShells.join(', ')}`);
+      return;
+    }
+    
+    console.log(`# Omniscript ${shell} completion script`);
+    
+    if (shell === 'bash') {
+      console.log(`
+_omni_completion() {
+  local cur prev opts
+  COMPREPLY=()
+  cur="\${COMP_WORDS[COMP_CWORD]}"
+  prev="\${COMP_WORDS[COMP_CWORD-1]}"
+  
+  opts="run eval repl debug new dev add build test install enable fuzz format lint check upgrade info completion site docs --version --help"
+  
+  COMPREPLY=( $(compgen -W "\${opts}" -- \${cur}) )
+  return 0
+}
+
+complete -F _omni_completion omni
+
+# To enable this completion, run:
+# source <(omni completion bash)
+# Or add to your ~/.bashrc:
+# eval "$(omni completion bash)"
+`);
+    } else if (shell === 'zsh') {
+      console.log(`
+#compdef omni
+
+_omni() {
+  local context state line
+  
+  _arguments -C \\
+    '1: :->command' \\
+    '*: :->args' && return 0
+    
+  case $state in
+    command)
+      local commands=(
+        'run:Run an Omniscript file'
+        'eval:Evaluate inline code'
+        'repl:Start interactive REPL'
+        'debug:Debug commands'
+        'new:Create new project'
+        'dev:Start development server'
+        'add:Add package or stdlib module'
+        'build:Build for production'
+        'test:Run tests'
+        'install:Install dependencies'
+        'enable:Enable stdlib module'
+        'fuzz:Run fuzzing tests'
+        'format:Format source code'
+        'lint:Lint source code'
+        'check:Type check code'
+        'upgrade:Upgrade Omniscript'
+        'info:Show system info'
+        'completion:Generate completions'
+        'site:Generate documentation site'
+        'docs:Generate API docs'
+      )
+      _describe 'commands' commands
+      ;;
+  esac
+}
+
+_omni
+
+# To enable this completion, add to your ~/.zshrc:
+# eval "$(omni completion zsh)"
+`);
+    } else if (shell === 'fish') {
+      console.log(`
+# Omniscript fish completion
+complete -c omni -f -a "run" -d "Run an Omniscript file"
+complete -c omni -f -a "eval" -d "Evaluate inline code"
+complete -c omni -f -a "repl" -d "Start interactive REPL"
+complete -c omni -f -a "debug" -d "Debug commands"
+complete -c omni -f -a "new" -d "Create new project"
+complete -c omni -f -a "dev" -d "Start development server"
+complete -c omni -f -a "add" -d "Add package or stdlib module"
+complete -c omni -f -a "build" -d "Build for production"
+complete -c omni -f -a "test" -d "Run tests"
+complete -c omni -f -a "install" -d "Install dependencies"
+complete -c omni -f -a "enable" -d "Enable stdlib module"
+complete -c omni -f -a "fuzz" -d "Run fuzzing tests"
+complete -c omni -f -a "format" -d "Format source code"
+complete -c omni -f -a "lint" -d "Lint source code"
+complete -c omni -f -a "check" -d "Type check code"
+complete -c omni -f -a "upgrade" -d "Upgrade Omniscript"
+complete -c omni -f -a "info" -d "Show system info"
+complete -c omni -f -a "completion" -d "Generate completions"
+complete -c omni -f -a "site" -d "Generate documentation site"
+complete -c omni -f -a "docs" -d "Generate API docs"
+
+# To enable this completion, run:
+# omni completion fish > ~/.config/fish/completions/omni.fish
+`);
     }
   });
 
