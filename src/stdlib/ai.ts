@@ -81,7 +81,7 @@ export interface TensorShape {
 export interface GradientInfo {
   requiresGrad: boolean;
   grad?: Tensor;
-  gradFn?: Function;
+  gradFn?: (...args: any[]) => any;
   retainGraph: boolean;
 }
 

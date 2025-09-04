@@ -89,7 +89,7 @@ export class Json {
     const result = this.clone(target);
     
     for (const key in source) {
-      if (source.hasOwnProperty(key)) {
+      if (Object.prototype.hasOwnProperty.call(source, key)) {
         if (typeof source[key] === 'object' && source[key] !== null && !Array.isArray(source[key])) {
           if (typeof result[key] === 'object' && result[key] !== null && !Array.isArray(result[key])) {
             result[key] = this.deepMerge(result[key], source[key]);
@@ -173,7 +173,7 @@ export class Json {
     const flattened: Record<string, any> = {};
     
     for (const key in obj) {
-      if (obj.hasOwnProperty(key)) {
+      if (Object.prototype.hasOwnProperty.call(obj, key)) {
         const newKey = prefix ? `${prefix}.${key}` : key;
         
         if (typeof obj[key] === 'object' && obj[key] !== null && !Array.isArray(obj[key])) {
@@ -194,7 +194,7 @@ export class Json {
     const result = {};
     
     for (const key in obj) {
-      if (obj.hasOwnProperty(key)) {
+      if (Object.prototype.hasOwnProperty.call(obj, key)) {
         this.setPath(result, key, obj[key]);
       }
     }
@@ -209,7 +209,7 @@ export class Json {
     const keys: string[] = [];
     
     for (const key in obj) {
-      if (obj.hasOwnProperty(key)) {
+      if (Object.prototype.hasOwnProperty.call(obj, key)) {
         const newKey = prefix ? `${prefix}.${key}` : key;
         keys.push(newKey);
         

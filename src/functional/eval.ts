@@ -409,6 +409,7 @@ function evalExpr(expr: Expression, env: Env): any {
 			if (i.from === 'stdlib') {
 				try {
 					// Import the actual stdlib modules
+					// eslint-disable-next-line @typescript-eslint/no-require-imports
 					const stdlib = require('../stdlib/index');
 					
 					for (const importName of i.imports) {
