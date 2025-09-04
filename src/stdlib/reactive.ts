@@ -26,6 +26,35 @@ export interface Observable<T> {
   merge(other: Observable<T>): Observable<T>;
   switchMap<R>(fn: (value: T) => Observable<R>): Observable<R>;
   share(): Observable<T>;
+  
+  // Advanced stream processing operators
+  buffer(size: number): Observable<T[]>;
+  bufferTime(timespan: number): Observable<T[]>;
+  bufferCount(count: number, startBufferEvery?: number): Observable<T[]>;
+  window(size: number): Observable<Observable<T>>;
+  groupBy<K>(keySelector: (value: T) => K): Observable<{ key: K; values: Observable<T> }>;
+  partition(predicate: (value: T) => boolean): [Observable<T>, Observable<T>];
+  reduce<R>(accumulator: (acc: R, value: T, index: number) => R, seed?: R): Observable<R>;
+  concatMap<R>(fn: (value: T) => Observable<R>): Observable<R>;
+  mergeMap<R>(fn: (value: T) => Observable<R>, concurrent?: number): Observable<R>;
+  exhaustMap<R>(fn: (value: T) => Observable<R>): Observable<R>;
+  retry(count?: number): Observable<T>;
+  retryWhen<R>(notifier: (errors: Observable<Error>) => Observable<R>): Observable<T>;
+  timeout(due: number, scheduler?: any): Observable<T>;
+  delay(delay: number): Observable<T>;
+  sample<U>(notifier: Observable<U>): Observable<T>;
+  auditTime(duration: number): Observable<T>;
+  distinct<K>(keySelector?: (value: T) => K): Observable<T>;
+  skip(count: number): Observable<T>;
+  skipUntil<U>(notifier: Observable<U>): Observable<T>;
+  skipWhile(predicate: (value: T) => boolean): Observable<T>;
+  takeWhile(predicate: (value: T) => boolean): Observable<T>;
+  expand<R>(project: (value: T) => Observable<R>, concurrent?: number): Observable<R>;
+  pairwise(): Observable<[T, T]>;
+  startWith(...values: T[]): Observable<T>;
+  endWith(...values: T[]): Observable<T>;
+  defaultIfEmpty(defaultValue: T): Observable<T>;
+  catchError<R>(selector: (error: Error) => Observable<R>): Observable<T | R>;
 }
 
 export class Stream<T> implements Observable<T> {
@@ -395,7 +424,626 @@ export class Stream<T> implements Observable<T> {
       merge: shared.merge.bind(shared),
       switchMap: shared.switchMap.bind(shared),
       share: shared.share.bind(shared),
+      // Advanced operators
+      buffer: shared.buffer?.bind(shared),
+      bufferTime: shared.bufferTime?.bind(shared),
+      bufferCount: shared.bufferCount?.bind(shared),
+      window: shared.window?.bind(shared),
+      groupBy: shared.groupBy?.bind(shared),
+      partition: shared.partition?.bind(shared),
+      reduce: shared.reduce?.bind(shared),
+      concatMap: shared.concatMap?.bind(shared),
+      mergeMap: shared.mergeMap?.bind(shared),
+      exhaustMap: shared.exhaustMap?.bind(shared),
+      retry: shared.retry?.bind(shared),
+      retryWhen: shared.retryWhen?.bind(shared),
+      timeout: shared.timeout?.bind(shared),
+      delay: shared.delay?.bind(shared),
+      sample: shared.sample?.bind(shared),
+      auditTime: shared.auditTime?.bind(shared),
+      distinct: shared.distinct?.bind(shared),
+      skip: shared.skip?.bind(shared),
+      skipUntil: shared.skipUntil?.bind(shared),
+      skipWhile: shared.skipWhile?.bind(shared),
+      takeWhile: shared.takeWhile?.bind(shared),
+      expand: shared.expand?.bind(shared),
+      pairwise: shared.pairwise?.bind(shared),
+      startWith: shared.startWith?.bind(shared),
+      endWith: shared.endWith?.bind(shared),
+      defaultIfEmpty: shared.defaultIfEmpty?.bind(shared),
+      catchError: shared.catchError?.bind(shared),
     };
+  }
+
+  // Advanced stream processing operators implementations
+  buffer(size: number): Observable<T[]> {
+    const buffered = new Stream<T[]>();
+    let buffer: T[] = [];
+
+    this.subscribe(
+      (value) => {
+        buffer.push(value);
+        if (buffer.length >= size) {
+          buffered.next([...buffer]);
+          buffer = [];
+        }
+      },
+      (error) => buffered.error(error),
+      () => {
+        if (buffer.length > 0) {
+          buffered.next(buffer);
+        }
+        buffered.complete();
+      }
+    );
+
+    return buffered;
+  }
+
+  bufferTime(timespan: number): Observable<T[]> {
+    const buffered = new Stream<T[]>();
+    let buffer: T[] = [];
+
+    const emitBuffer = () => {
+      if (buffer.length > 0) {
+        buffered.next([...buffer]);
+        buffer = [];
+      }
+    };
+
+    const intervalId = setInterval(emitBuffer, timespan);
+
+    this.subscribe(
+      (value) => buffer.push(value),
+      (error) => {
+        clearInterval(intervalId);
+        buffered.error(error);
+      },
+      () => {
+        clearInterval(intervalId);
+        emitBuffer();
+        buffered.complete();
+      }
+    );
+
+    return buffered;
+  }
+
+  bufferCount(count: number, startBufferEvery?: number): Observable<T[]> {
+    const buffered = new Stream<T[]>();
+    const buffers: T[][] = [];
+    const startEvery = startBufferEvery || count;
+    let index = 0;
+
+    this.subscribe(
+      (value) => {
+        if (index % startEvery === 0) {
+          buffers.push([]);
+        }
+
+        for (let i = buffers.length - 1; i >= 0; i--) {
+          buffers[i].push(value);
+          if (buffers[i].length === count) {
+            buffered.next(buffers.splice(i, 1)[0]);
+          }
+        }
+
+        index++;
+      },
+      (error) => buffered.error(error),
+      () => {
+        buffers.forEach(buffer => {
+          if (buffer.length > 0) buffered.next(buffer);
+        });
+        buffered.complete();
+      }
+    );
+
+    return buffered;
+  }
+
+  groupBy<K>(keySelector: (value: T) => K): Observable<{ key: K; values: Observable<T> }> {
+    const grouped = new Stream<{ key: K; values: Observable<T> }>();
+    const groups = new Map<K, Stream<T>>();
+
+    this.subscribe(
+      (value) => {
+        const key = keySelector(value);
+        let group = groups.get(key);
+
+        if (!group) {
+          group = new Stream<T>();
+          groups.set(key, group);
+          grouped.next({ key, values: group });
+        }
+
+        group.next(value);
+      },
+      (error) => {
+        groups.forEach(group => group.error(error));
+        grouped.error(error);
+      },
+      () => {
+        groups.forEach(group => group.complete());
+        grouped.complete();
+      }
+    );
+
+    return grouped;
+  }
+
+  partition(predicate: (value: T) => boolean): [Observable<T>, Observable<T>] {
+    const truthy = new Stream<T>();
+    const falsy = new Stream<T>();
+
+    this.subscribe(
+      (value) => {
+        if (predicate(value)) {
+          truthy.next(value);
+        } else {
+          falsy.next(value);
+        }
+      },
+      (error) => {
+        truthy.error(error);
+        falsy.error(error);
+      },
+      () => {
+        truthy.complete();
+        falsy.complete();
+      }
+    );
+
+    return [truthy, falsy];
+  }
+
+  reduce<R>(accumulator: (acc: R, value: T, index: number) => R, seed?: R): Observable<R> {
+    const reduced = new Stream<R>();
+    let hasValue = false;
+    let acc: R;
+    let index = 0;
+
+    if (seed !== undefined) {
+      hasValue = true;
+      acc = seed;
+    }
+
+    this.subscribe(
+      (value) => {
+        if (!hasValue) {
+          hasValue = true;
+          acc = value as any;
+        } else {
+          acc = accumulator(acc, value, index);
+        }
+        index++;
+      },
+      (error) => reduced.error(error),
+      () => {
+        if (hasValue) {
+          reduced.next(acc);
+        }
+        reduced.complete();
+      }
+    );
+
+    return reduced;
+  }
+
+  retry(count = 3): Observable<T> {
+    const retried = new Stream<T>();
+    let attempts = 0;
+
+    const attempt = () => {
+      this.subscribe(
+        (value) => retried.next(value),
+        (error) => {
+          attempts++;
+          if (attempts < count) {
+            setTimeout(attempt, 100 * attempts); // Exponential backoff
+          } else {
+            retried.error(error);
+          }
+        },
+        () => retried.complete()
+      );
+    };
+
+    attempt();
+    return retried;
+  }
+
+  delay(delayTime: number): Observable<T> {
+    const delayed = new Stream<T>();
+
+    this.subscribe(
+      (value) => {
+        setTimeout(() => delayed.next(value), delayTime);
+      },
+      (error) => delayed.error(error),
+      () => {
+        setTimeout(() => delayed.complete(), delayTime);
+      }
+    );
+
+    return delayed;
+  }
+
+  distinct<K>(keySelector?: (value: T) => K): Observable<T> {
+    const distincted = new Stream<T>();
+    const seen = new Set<K | T>();
+
+    this.subscribe(
+      (value) => {
+        const key = keySelector ? keySelector(value) : value;
+        if (!seen.has(key)) {
+          seen.add(key);
+          distincted.next(value);
+        }
+      },
+      (error) => distincted.error(error),
+      () => distincted.complete()
+    );
+
+    return distincted;
+  }
+
+  skip(count: number): Observable<T> {
+    const skipped = new Stream<T>();
+    let skippedCount = 0;
+
+    this.subscribe(
+      (value) => {
+        if (skippedCount >= count) {
+          skipped.next(value);
+        } else {
+          skippedCount++;
+        }
+      },
+      (error) => skipped.error(error),
+      () => skipped.complete()
+    );
+
+    return skipped;
+  }
+
+  pairwise(): Observable<[T, T]> {
+    const paired = new Stream<[T, T]>();
+    let hasPrevious = false;
+    let previous: T;
+
+    this.subscribe(
+      (value) => {
+        if (hasPrevious) {
+          paired.next([previous, value]);
+        }
+        previous = value;
+        hasPrevious = true;
+      },
+      (error) => paired.error(error),
+      () => paired.complete()
+    );
+
+    return paired;
+  }
+
+  startWith(...values: T[]): Observable<T> {
+    const started = new Stream<T>();
+
+    // Emit starting values immediately, asynchronously
+    setTimeout(() => {
+      values.forEach(value => started.next(value));
+      
+      // Then subscribe to source
+      this.subscribe(
+        (value) => started.next(value),
+        (error) => started.error(error),
+        () => started.complete()
+      );
+    }, 0);
+
+    return started;
+  }
+
+  defaultIfEmpty(defaultValue: T): Observable<T> {
+    const defaulted = new Stream<T>();
+    let hasEmitted = false;
+
+    this.subscribe(
+      (value) => {
+        hasEmitted = true;
+        defaulted.next(value);
+      },
+      (error) => defaulted.error(error),
+      () => {
+        if (!hasEmitted) {
+          defaulted.next(defaultValue);
+        }
+        defaulted.complete();
+      }
+    );
+
+    return defaulted;
+  }
+
+  // Stub implementations for remaining operators (can be enhanced later)
+  window(size: number): Observable<Observable<T>> {
+    throw new Error("window operator not yet implemented");
+  }
+
+  concatMap<R>(fn: (value: T) => Observable<R>): Observable<R> {
+    const result = new Stream<R>();
+    let currentIndex = 0;
+    const values: T[] = [];
+
+    const processNext = () => {
+      if (currentIndex < values.length) {
+        const inner = fn(values[currentIndex]);
+        inner.subscribe(
+          (value) => result.next(value),
+          (error) => result.error(error),
+          () => {
+            currentIndex++;
+            processNext();
+          }
+        );
+      } else {
+        result.complete();
+      }
+    };
+
+    this.subscribe(
+      (value) => values.push(value),
+      (error) => result.error(error),
+      () => processNext()
+    );
+
+    return result;
+  }
+
+  mergeMap<R>(fn: (value: T) => Observable<R>, concurrent = Infinity): Observable<R> {
+    const result = new Stream<R>();
+    let activeCount = 0;
+    let completed = false;
+
+    this.subscribe(
+      (value) => {
+        if (activeCount < concurrent) {
+          activeCount++;
+          const inner = fn(value);
+          inner.subscribe(
+            (innerValue) => result.next(innerValue),
+            (error) => result.error(error),
+            () => {
+              activeCount--;
+              if (completed && activeCount === 0) {
+                result.complete();
+              }
+            }
+          );
+        }
+      },
+      (error) => result.error(error),
+      () => {
+        completed = true;
+        if (activeCount === 0) {
+          result.complete();
+        }
+      }
+    );
+
+    return result;
+  }
+
+  exhaustMap<R>(fn: (value: T) => Observable<R>): Observable<R> {
+    const result = new Stream<R>();
+    let innerActive = false;
+
+    this.subscribe(
+      (value) => {
+        if (!innerActive) {
+          innerActive = true;
+          const inner = fn(value);
+          inner.subscribe(
+            (innerValue) => result.next(innerValue),
+            (error) => result.error(error),
+            () => { innerActive = false; }
+          );
+        }
+      },
+      (error) => result.error(error),
+      () => result.complete()
+    );
+
+    return result;
+  }
+
+  retryWhen<R>(notifier: (errors: Observable<Error>) => Observable<R>): Observable<T> {
+    throw new Error("retryWhen operator not yet implemented");
+  }
+
+  timeout(due: number): Observable<T> {
+    const result = new Stream<T>();
+    let timeoutId: NodeJS.Timeout;
+
+    const resetTimeout = () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        result.error(new Error("Timeout"));
+      }, due);
+    };
+
+    resetTimeout();
+
+    this.subscribe(
+      (value) => {
+        resetTimeout();
+        result.next(value);
+      },
+      (error) => {
+        clearTimeout(timeoutId);
+        result.error(error);
+      },
+      () => {
+        clearTimeout(timeoutId);
+        result.complete();
+      }
+    );
+
+    return result;
+  }
+
+  sample<U>(notifier: Observable<U>): Observable<T> {
+    const result = new Stream<T>();
+    let lastValue: T;
+    let hasValue = false;
+
+    this.subscribe(
+      (value) => {
+        lastValue = value;
+        hasValue = true;
+      },
+      (error) => result.error(error)
+    );
+
+    notifier.subscribe(
+      () => {
+        if (hasValue) {
+          result.next(lastValue);
+        }
+      },
+      (error) => result.error(error),
+      () => result.complete()
+    );
+
+    return result;
+  }
+
+  auditTime(duration: number): Observable<T> {
+    const result = new Stream<T>();
+    let lastValue: T;
+    let hasValue = false;
+    let timeoutId: NodeJS.Timeout | null = null;
+
+    this.subscribe(
+      (value) => {
+        lastValue = value;
+        hasValue = true;
+
+        if (!timeoutId) {
+          timeoutId = setTimeout(() => {
+            if (hasValue) {
+              result.next(lastValue);
+              hasValue = false;
+            }
+            timeoutId = null;
+          }, duration);
+        }
+      },
+      (error) => result.error(error),
+      () => result.complete()
+    );
+
+    return result;
+  }
+
+  skipUntil<U>(notifier: Observable<U>): Observable<T> {
+    const result = new Stream<T>();
+    let shouldEmit = false;
+
+    notifier.subscribe(() => { shouldEmit = true; });
+
+    this.subscribe(
+      (value) => {
+        if (shouldEmit) {
+          result.next(value);
+        }
+      },
+      (error) => result.error(error),
+      () => result.complete()
+    );
+
+    return result;
+  }
+
+  skipWhile(predicate: (value: T) => boolean): Observable<T> {
+    const result = new Stream<T>();
+    let shouldSkip = true;
+
+    this.subscribe(
+      (value) => {
+        if (shouldSkip && !predicate(value)) {
+          shouldSkip = false;
+        }
+        if (!shouldSkip) {
+          result.next(value);
+        }
+      },
+      (error) => result.error(error),
+      () => result.complete()
+    );
+
+    return result;
+  }
+
+  takeWhile(predicate: (value: T) => boolean): Observable<T> {
+    const result = new Stream<T>();
+
+    this.subscribe(
+      (value) => {
+        if (predicate(value)) {
+          result.next(value);
+        } else {
+          result.complete();
+        }
+      },
+      (error) => result.error(error),
+      () => result.complete()
+    );
+
+    return result;
+  }
+
+  expand<R>(project: (value: T) => Observable<R>): Observable<R> {
+    throw new Error("expand operator not yet implemented");
+  }
+
+  endWith(...values: T[]): Observable<T> {
+    const result = new Stream<T>();
+
+    this.subscribe(
+      (value) => result.next(value),
+      (error) => result.error(error),
+      () => {
+        values.forEach(value => result.next(value));
+        result.complete();
+      }
+    );
+
+    return result;
+  }
+
+  catchError<R>(selector: (error: Error) => Observable<R>): Observable<T | R> {
+    const result = new Stream<T | R>();
+
+    this.subscribe(
+      (value) => result.next(value),
+      (error) => {
+        try {
+          const recovery = selector(error);
+          recovery.subscribe(
+            (recoveryValue) => result.next(recoveryValue),
+            (recoveryError) => result.error(recoveryError),
+            () => result.complete()
+          );
+        } catch (e) {
+          result.error(e as Error);
+        }
+      },
+      () => result.complete()
+    );
+
+    return result;
   }
 }
 
