@@ -5,6 +5,9 @@ export interface MemoryPoolOptions {
   maxSize: number;
   objectType?: any;
   growthFactor?: number;
+  enableGCIntegration?: boolean;
+  gcThreshold?: number;
+  enableDefragmentation?: boolean;
 }
 
 export class MemoryPool<T = any> {
@@ -13,6 +16,8 @@ export class MemoryPool<T = any> {
   private options: Required<MemoryPoolOptions>;
   private totalAllocated = 0;
   private totalReleased = 0;
+  private lastGC = Date.now();
+  private objectSizes = new Map<T, number>();
 
   constructor(options: MemoryPoolOptions) {
     this.options = {
@@ -20,12 +25,15 @@ export class MemoryPool<T = any> {
       maxSize: options.maxSize,
       objectType: options.objectType || Object,
       growthFactor: options.growthFactor || 1.5,
+      enableGCIntegration: options.enableGCIntegration || true,
+      gcThreshold: options.gcThreshold || 0.8,
+      enableDefragmentation: options.enableDefragmentation || true,
     };
 
     this.initialize();
     debug.info(
       "MemoryPool",
-      `Memory pool initialized with ${this.options.initialSize} objects`,
+      `Enhanced memory pool initialized with ${this.options.initialSize} objects`,
     );
   }
 
@@ -53,13 +61,28 @@ export class MemoryPool<T = any> {
   allocate(size?: number): T {
     let object: T;
 
+    // Trigger GC if threshold is reached
+    if (this.shouldTriggerGC()) {
+      this.triggerGC();
+    }
+
     if (this.pool.length > 0) {
       object = this.pool.pop()!;
     } else if (this.getTotalSize() < this.options.maxSize) {
       object = this.createObject();
       debug.debug("MemoryPool", "Creating new object as pool is empty");
     } else {
-      throw new Error("Memory pool exhausted: maximum size reached");
+      // Try defragmentation before throwing error
+      if (this.options.enableDefragmentation) {
+        this.defragment();
+        if (this.pool.length > 0) {
+          object = this.pool.pop()!;
+        } else {
+          throw new Error("Memory pool exhausted: maximum size reached");
+        }
+      } else {
+        throw new Error("Memory pool exhausted: maximum size reached");
+      }
     }
 
     // Handle sized allocations (like arrays)
@@ -68,6 +91,7 @@ export class MemoryPool<T = any> {
       for (let i = 0; i < size; i++) {
         (object as any).push(undefined);
       }
+      this.objectSizes.set(object, size);
     } else if (
       typeof object === "object" &&
       object !== null &&
@@ -79,6 +103,9 @@ export class MemoryPool<T = any> {
           delete (object as any)[key];
         }
       }
+      this.objectSizes.set(object, 1);
+    } else {
+      this.objectSizes.set(object, 1);
     }
 
     this.allocated.add(object);
@@ -101,6 +128,7 @@ export class MemoryPool<T = any> {
     }
 
     this.allocated.delete(object);
+    this.objectSizes.delete(object);
     this.totalReleased++;
 
     // Don't grow the pool beyond a reasonable size
@@ -118,6 +146,43 @@ export class MemoryPool<T = any> {
     }
   }
 
+  private shouldTriggerGC(): boolean {
+    if (!this.options.enableGCIntegration) return false;
+    
+    const utilization = this.allocated.size / this.options.maxSize;
+    const timeSinceLastGC = Date.now() - this.lastGC;
+    
+    return utilization > this.options.gcThreshold && timeSinceLastGC > 1000;
+  }
+
+  private triggerGC(): void {
+    if (typeof global !== 'undefined' && global.gc) {
+      debug.debug("MemoryPool", "Triggering garbage collection");
+      global.gc();
+      this.lastGC = Date.now();
+    }
+  }
+
+  private defragment(): void {
+    debug.debug("MemoryPool", "Starting defragmentation");
+    
+    // Remove any objects from pool that might have been corrupted
+    const originalPoolSize = this.pool.length;
+    this.pool = this.pool.filter(obj => {
+      try {
+        // Basic validity check
+        return obj !== null && obj !== undefined;
+      } catch {
+        return false;
+      }
+    });
+    
+    const removed = originalPoolSize - this.pool.length;
+    if (removed > 0) {
+      debug.debug("MemoryPool", `Defragmentation removed ${removed} corrupted objects`);
+    }
+  }
+
   clear(): void {
     this.pool.length = 0;
     this.allocated.clear();
@@ -126,6 +191,8 @@ export class MemoryPool<T = any> {
   }
 
   getStats() {
+    const totalMemoryUsed = Array.from(this.objectSizes.values()).reduce((sum, size) => sum + size, 0);
+    
     return {
       available: this.pool.length,
       allocated: this.allocated.size,
@@ -134,6 +201,11 @@ export class MemoryPool<T = any> {
       totalAllocated: this.totalAllocated,
       totalReleased: this.totalReleased,
       utilization: this.allocated.size / this.options.maxSize,
+      memoryUsed: totalMemoryUsed,
+      averageObjectSize: this.allocated.size > 0 ? totalMemoryUsed / this.allocated.size : 0,
+      gcEnabled: this.options.enableGCIntegration,
+      defragmentationEnabled: this.options.enableDefragmentation,
+      lastGC: this.lastGC,
     };
   }
 

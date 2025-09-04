@@ -216,7 +216,7 @@ export class ConstantFolder {
     while (changed) {
       changed = false;
 
-      for (let i = 0; i < optimized.length - 2; i++) {
+      for (let i = 0; i < optimized.length - 1; i++) {
         const result = this.tryFoldAt(optimized, i);
         if (result) {
           optimized.splice(i, result.removeCount, ...result.newInstructions);
@@ -247,35 +247,239 @@ export class ConstantFolder {
     const inst2 = bytecode[index + 1];
     const inst3 = bytecode[index + 2];
 
-    // Fold: LOAD_CONST a, LOAD_CONST b, ADD -> LOAD_CONST (a+b)
+    // Enhanced constant folding for arithmetic operations
     if (
       inst1?.type === "LOAD_CONST" &&
       inst2?.type === "LOAD_CONST" &&
-      inst3?.type === "ADD"
+      typeof inst1.value === "number" &&
+      typeof inst2.value === "number"
     ) {
-      const result = inst1.value + inst2.value;
+      let result: number | null = null;
+      let operation = "";
+
+      switch (inst3?.type) {
+        case "ADD":
+          result = inst1.value + inst2.value;
+          operation = `${inst1.value} + ${inst2.value}`;
+          break;
+        case "SUBTRACT":
+          result = inst1.value - inst2.value;
+          operation = `${inst1.value} - ${inst2.value}`;
+          break;
+        case "MULTIPLY":
+          result = inst1.value * inst2.value;
+          operation = `${inst1.value} * ${inst2.value}`;
+          break;
+        case "DIVIDE":
+          if (inst2.value !== 0) {
+            result = inst1.value / inst2.value;
+            operation = `${inst1.value} / ${inst2.value}`;
+          }
+          break;
+        case "POWER":
+          result = Math.pow(inst1.value, inst2.value);
+          operation = `${inst1.value} ** ${inst2.value}`;
+          break;
+        case "MODULO":
+          if (inst2.value !== 0) {
+            result = inst1.value % inst2.value;
+            operation = `${inst1.value} % ${inst2.value}`;
+          }
+          break;
+        case "BITWISE_AND":
+          result = inst1.value & inst2.value;
+          operation = `${inst1.value} & ${inst2.value}`;
+          break;
+        case "BITWISE_OR":
+          result = inst1.value | inst2.value;
+          operation = `${inst1.value} | ${inst2.value}`;
+          break;
+        case "BITWISE_XOR":
+          result = inst1.value ^ inst2.value;
+          operation = `${inst1.value} ^ ${inst2.value}`;
+          break;
+        case "LEFT_SHIFT":
+          result = inst1.value << inst2.value;
+          operation = `${inst1.value} << ${inst2.value}`;
+          break;
+        case "RIGHT_SHIFT":
+          result = inst1.value >> inst2.value;
+          operation = `${inst1.value} >> ${inst2.value}`;
+          break;
+      }
+
+      if (result !== null && isFinite(result)) {
+        return {
+          removeCount: 3,
+          newInstructions: [{ type: "LOAD_CONST", value: result }],
+          description: `Folded constants: ${operation} = ${result}`,
+        };
+      }
+    }
+
+    // Fold string concatenation
+    if (
+      inst1?.type === "LOAD_CONST" &&
+      inst2?.type === "LOAD_CONST" &&
+      inst3?.type === "ADD" &&
+      (typeof inst1.value === "string" || typeof inst2.value === "string")
+    ) {
+      const result = String(inst1.value) + String(inst2.value);
       return {
         removeCount: 3,
         newInstructions: [{ type: "LOAD_CONST", value: result }],
-        description: `Folded constants: ${inst1.value} + ${inst2.value} = ${result}`,
+        description: `Folded string concatenation: "${inst1.value}" + "${inst2.value}" = "${result}"`,
       };
     }
 
-    // Fold: LOAD_CONST a, LOAD_CONST b, MULTIPLY -> LOAD_CONST (a*b)
-    if (
-      inst1?.type === "LOAD_CONST" &&
-      inst2?.type === "LOAD_CONST" &&
-      inst3?.type === "MULTIPLY"
-    ) {
-      const result = inst1.value * inst2.value;
-      return {
-        removeCount: 3,
-        newInstructions: [{ type: "LOAD_CONST", value: result }],
-        description: `Folded constants: ${inst1.value} * ${inst2.value} = ${result}`,
-      };
+    // Fold unary operations with single instruction lookahead
+    if (inst1?.type === "LOAD_CONST" && typeof inst1.value === "number") {
+      let result: number | null = null;
+      let operation = "";
+
+      switch (inst2?.type) {
+        case "NEGATE":
+          result = -inst1.value;
+          operation = `-${inst1.value}`;
+          break;
+        case "BITWISE_NOT":
+          result = ~inst1.value;
+          operation = `~${inst1.value}`;
+          break;
+        case "ABS":
+          result = Math.abs(inst1.value);
+          operation = `abs(${inst1.value})`;
+          break;
+        case "SQRT":
+          if (inst1.value >= 0) {
+            result = Math.sqrt(inst1.value);
+            operation = `sqrt(${inst1.value})`;
+          }
+          break;
+        case "FLOOR":
+          result = Math.floor(inst1.value);
+          operation = `floor(${inst1.value})`;
+          break;
+        case "CEIL":
+          result = Math.ceil(inst1.value);
+          operation = `ceil(${inst1.value})`;
+          break;
+      }
+
+      if (result !== null && isFinite(result)) {
+        return {
+          removeCount: 2,
+          newInstructions: [{ type: "LOAD_CONST", value: result }],
+          description: `Folded unary operation: ${operation} = ${result}`,
+        };
+      }
     }
 
     return null;
+  }
+}
+
+/**
+ * Inline caching for method calls to improve runtime performance
+ */
+export class InlineCache {
+  private methodCache = new Map<string, {
+    method: Function;
+    type: string;
+    hitCount: number;
+    lastUsed: number;
+  }>();
+  private maxCacheSize = 1000;
+  private stats = {
+    hits: 0,
+    misses: 0,
+    evictions: 0
+  };
+
+  lookupMethod(object: any, methodName: string): Function | null {
+    const objectType = this.getObjectType(object);
+    const cacheKey = `${objectType}::${methodName}`;
+    const cached = this.methodCache.get(cacheKey);
+
+    if (cached && object[methodName] === cached.method) {
+      // Cache hit
+      cached.hitCount++;
+      cached.lastUsed = Date.now();
+      this.stats.hits++;
+      return cached.method;
+    }
+
+    // Cache miss - need to resolve method
+    this.stats.misses++;
+    const method = object[methodName];
+    
+    if (typeof method === 'function') {
+      this.cacheMethod(cacheKey, method, objectType);
+      return method;
+    }
+
+    return null;
+  }
+
+  private cacheMethod(cacheKey: string, method: Function, objectType: string): void {
+    // Evict least recently used if cache is full
+    if (this.methodCache.size >= this.maxCacheSize) {
+      this.evictLRU();
+    }
+
+    this.methodCache.set(cacheKey, {
+      method,
+      type: objectType,
+      hitCount: 1,
+      lastUsed: Date.now()
+    });
+  }
+
+  private evictLRU(): void {
+    let oldestKey = '';
+    let oldestTime = Date.now();
+
+    for (const [key, value] of this.methodCache.entries()) {
+      if (value.lastUsed < oldestTime) {
+        oldestTime = value.lastUsed;
+        oldestKey = key;
+      }
+    }
+
+    if (oldestKey) {
+      this.methodCache.delete(oldestKey);
+      this.stats.evictions++;
+    }
+  }
+
+  private getObjectType(object: any): string {
+    if (object === null) return 'null';
+    if (object === undefined) return 'undefined';
+    
+    // Use constructor name for object type identification
+    if (object.constructor && object.constructor.name) {
+      return object.constructor.name;
+    }
+    
+    // Fallback to typeof for primitives
+    return typeof object;
+  }
+
+  getCacheStats() {
+    const total = this.stats.hits + this.stats.misses;
+    return {
+      hits: this.stats.hits,
+      misses: this.stats.misses,
+      evictions: this.stats.evictions,
+      hitRate: total > 0 ? (this.stats.hits / total) * 100 : 0,
+      cacheSize: this.methodCache.size,
+      maxCacheSize: this.maxCacheSize
+    };
+  }
+
+  clearCache(): void {
+    this.methodCache.clear();
+    this.stats = { hits: 0, misses: 0, evictions: 0 };
   }
 }
 
