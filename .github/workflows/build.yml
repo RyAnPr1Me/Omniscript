@@ -1,4 +1,3 @@
-
 name: Build and Package Omniscript
 
 on:
@@ -37,6 +36,12 @@ jobs:
       - name: Build project
         run: npm run build
 
+      # Ensure release folder exists across all OS
+      - name: Create release folder
+        run: |
+          mkdir -p release
+        shell: bash
+
       # Windows Packaging
       - name: Install Inno Setup
         if: matrix.os == 'windows-latest'
@@ -49,7 +54,6 @@ jobs:
       - name: Move Windows Artifact
         if: matrix.os == 'windows-latest'
         run: |
-          mkdir -p release
           cp Output/OmniscriptSetup-*.exe release/
 
       # Linux Packaging
@@ -63,7 +67,6 @@ jobs:
           mkdir -p build/linux/usr/local/bin
           cp -r dist/* build/linux/usr/local/bin/
           fpm -s dir -t deb -n omniscript -v 1.0.0 -C build/linux .
-          mkdir -p release
           cp ./*.deb release/
 
       # macOS Packaging
