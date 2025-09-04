@@ -1,4 +1,4 @@
-import { debug } from '../debug';
+import { debug } from "../debug";
 
 export interface MemoryPoolOptions {
   initialSize: number;
@@ -19,11 +19,14 @@ export class MemoryPool<T = any> {
       initialSize: options.initialSize,
       maxSize: options.maxSize,
       objectType: options.objectType || Object,
-      growthFactor: options.growthFactor || 1.5
+      growthFactor: options.growthFactor || 1.5,
     };
 
     this.initialize();
-    debug.info('MemoryPool', `Memory pool initialized with ${this.options.initialSize} objects`);
+    debug.info(
+      "MemoryPool",
+      `Memory pool initialized with ${this.options.initialSize} objects`,
+    );
   }
 
   private initialize(): void {
@@ -34,13 +37,13 @@ export class MemoryPool<T = any> {
 
   private createObject(): T {
     const ObjectType = this.options.objectType;
-    
+
     // Handle different object types
     if (ObjectType === Array) {
       return [] as any;
     } else if (ObjectType === Object) {
       return {} as any;
-    } else if (typeof ObjectType === 'function') {
+    } else if (typeof ObjectType === "function") {
       return new ObjectType();
     } else {
       return {} as any;
@@ -54,9 +57,9 @@ export class MemoryPool<T = any> {
       object = this.pool.pop()!;
     } else if (this.getTotalSize() < this.options.maxSize) {
       object = this.createObject();
-      debug.debug('MemoryPool', 'Creating new object as pool is empty');
+      debug.debug("MemoryPool", "Creating new object as pool is empty");
     } else {
-      throw new Error('Memory pool exhausted: maximum size reached');
+      throw new Error("Memory pool exhausted: maximum size reached");
     }
 
     // Handle sized allocations (like arrays)
@@ -65,7 +68,11 @@ export class MemoryPool<T = any> {
       for (let i = 0; i < size; i++) {
         (object as any).push(undefined);
       }
-    } else if (typeof object === 'object' && object !== null && object.constructor === Object) {
+    } else if (
+      typeof object === "object" &&
+      object !== null &&
+      object.constructor === Object
+    ) {
       // Only clear properties for plain objects, not instances of custom classes
       for (const key in object) {
         if (Object.prototype.hasOwnProperty.call(object, key)) {
@@ -76,14 +83,20 @@ export class MemoryPool<T = any> {
 
     this.allocated.add(object);
     this.totalAllocated++;
-    
-    debug.debug('MemoryPool', `Allocated object (${this.allocated.size} active, ${this.pool.length} available)`);
+
+    debug.debug(
+      "MemoryPool",
+      `Allocated object (${this.allocated.size} active, ${this.pool.length} available)`,
+    );
     return object;
   }
 
   release(object: T): void {
     if (!this.allocated.has(object)) {
-      debug.warn('MemoryPool', 'Attempted to release object not allocated from this pool');
+      debug.warn(
+        "MemoryPool",
+        "Attempted to release object not allocated from this pool",
+      );
       return;
     }
 
@@ -93,9 +106,15 @@ export class MemoryPool<T = any> {
     // Don't grow the pool beyond a reasonable size
     if (this.pool.length < this.options.maxSize / 2) {
       this.pool.push(object);
-      debug.debug('MemoryPool', `Released object back to pool (${this.allocated.size} active, ${this.pool.length} available)`);
+      debug.debug(
+        "MemoryPool",
+        `Released object back to pool (${this.allocated.size} active, ${this.pool.length} available)`,
+      );
     } else {
-      debug.debug('MemoryPool', 'Released object not returned to pool (pool at capacity)');
+      debug.debug(
+        "MemoryPool",
+        "Released object not returned to pool (pool at capacity)",
+      );
     }
   }
 
@@ -103,7 +122,7 @@ export class MemoryPool<T = any> {
     this.pool.length = 0;
     this.allocated.clear();
     this.initialize();
-    debug.info('MemoryPool', 'Memory pool cleared and reinitialized');
+    debug.info("MemoryPool", "Memory pool cleared and reinitialized");
   }
 
   getStats() {
@@ -114,7 +133,7 @@ export class MemoryPool<T = any> {
       maxSize: this.options.maxSize,
       totalAllocated: this.totalAllocated,
       totalReleased: this.totalReleased,
-      utilization: this.allocated.size / this.options.maxSize
+      utilization: this.allocated.size / this.options.maxSize,
     };
   }
 
@@ -127,16 +146,16 @@ export class MemoryPool<T = any> {
     const currentSize = this.getTotalSize();
     const newSize = Math.min(
       Math.floor(currentSize * this.options.growthFactor),
-      this.options.maxSize
+      this.options.maxSize,
     );
-    
+
     const objectsToAdd = newSize - currentSize;
-    
+
     for (let i = 0; i < objectsToAdd; i++) {
       this.pool.push(this.createObject());
     }
 
-    debug.info('MemoryPool', `Pool grown to ${newSize} objects`);
+    debug.info("MemoryPool", `Pool grown to ${newSize} objects`);
   }
 }
 
@@ -150,8 +169,8 @@ export class MemoryPoolManager {
 
     const pool = new MemoryPool<T>(options);
     this.pools.set(name, pool);
-    debug.info('MemoryPoolManager', `Created memory pool '${name}'`);
-    
+    debug.info("MemoryPoolManager", `Created memory pool '${name}'`);
+
     return pool;
   }
 
@@ -164,13 +183,13 @@ export class MemoryPoolManager {
     if (pool) {
       pool.clear();
       this.pools.delete(name);
-      debug.info('MemoryPoolManager', `Removed memory pool '${name}'`);
+      debug.info("MemoryPoolManager", `Removed memory pool '${name}'`);
     }
   }
 
   getAllStats() {
     const stats: Record<string, any> = {};
-    
+
     for (const [name, pool] of this.pools) {
       stats[name] = pool.getStats();
     }
@@ -182,7 +201,7 @@ export class MemoryPoolManager {
     for (const pool of this.pools.values()) {
       pool.clear();
     }
-    debug.info('MemoryPoolManager', 'Cleared all memory pools');
+    debug.info("MemoryPoolManager", "Cleared all memory pools");
   }
 }
 

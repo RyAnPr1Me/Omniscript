@@ -35,7 +35,10 @@ export class JITCompiler {
 
   shouldCompile(functionName: string): boolean {
     const callCount = this.profile.callCounts.get(functionName) || 0;
-    return callCount >= this.compilationThreshold && !this.compiledFunctions.has(functionName);
+    return (
+      callCount >= this.compilationThreshold &&
+      !this.compiledFunctions.has(functionName)
+    );
   }
 
   compile(functionName: string, bytecode: any[]): (...args: any[]) => any {
@@ -45,12 +48,14 @@ export class JITCompiler {
 
     // Generate optimized JavaScript code
     const jsCode = this.generateOptimizedCode(bytecode);
-    
+
     try {
       // Create function with optimizations
-      const compiledFn = new Function('runtime', 'args', jsCode) as (...args: any[]) => any;
+      const compiledFn = new Function("runtime", "args", jsCode) as (
+        ...args: any[]
+      ) => any;
       this.compiledFunctions.set(functionName, compiledFn);
-      
+
       console.log(`JIT compiled function: ${functionName}`);
       return compiledFn;
     } catch (error) {
@@ -62,43 +67,43 @@ export class JITCompiler {
 
   private generateOptimizedCode(bytecode: any[]): string {
     const lines: string[] = [];
-    lines.push('let result = undefined;');
-    lines.push('let stack = [];');
-    lines.push('let locals = new Map();');
-    
+    lines.push("let result = undefined;");
+    lines.push("let stack = [];");
+    lines.push("let locals = new Map();");
+
     for (let i = 0; i < bytecode.length; i++) {
       const instruction = bytecode[i];
       lines.push(this.compileInstruction(instruction, i));
     }
-    
-    lines.push('return result;');
-    return lines.join('\n');
+
+    lines.push("return result;");
+    return lines.join("\n");
   }
 
   private compileInstruction(instruction: any, index: number): string {
     switch (instruction.type) {
-      case 'LOAD_CONST':
+      case "LOAD_CONST":
         return `stack.push(${JSON.stringify(instruction.value)});`;
-      
-      case 'LOAD_VAR':
+
+      case "LOAD_VAR":
         return `stack.push(locals.get('${instruction.name}') || runtime.getVariable('${instruction.name}'));`;
-      
-      case 'STORE_VAR':
+
+      case "STORE_VAR":
         return `locals.set('${instruction.name}', stack.pop());`;
-      
-      case 'ADD':
+
+      case "ADD":
         return `{ let b = stack.pop(); let a = stack.pop(); stack.push(a + b); }`;
-      
-      case 'SUBTRACT':
+
+      case "SUBTRACT":
         return `{ let b = stack.pop(); let a = stack.pop(); stack.push(a - b); }`;
-      
-      case 'MULTIPLY':
+
+      case "MULTIPLY":
         return `{ let b = stack.pop(); let a = stack.pop(); stack.push(a * b); }`;
-      
-      case 'DIVIDE':
+
+      case "DIVIDE":
         return `{ let b = stack.pop(); let a = stack.pop(); stack.push(a / b); }`;
-      
-      case 'CALL':
+
+      case "CALL":
         return `{ 
           let args = []; 
           for(let i = 0; i < ${instruction.argCount}; i++) args.unshift(stack.pop());
@@ -106,22 +111,24 @@ export class JITCompiler {
           result = fn.apply(null, args);
           stack.push(result);
         }`;
-      
-      case 'RETURN':
+
+      case "RETURN":
         return `result = stack.pop(); return result;`;
-      
-      case 'JUMP':
+
+      case "JUMP":
         return `// Jump to ${instruction.target} - handled by control flow`;
-      
-      case 'JUMP_IF_FALSE':
+
+      case "JUMP_IF_FALSE":
         return `if (!stack.pop()) { /* jump to ${instruction.target} */ }`;
-      
+
       default:
         return `runtime.executeInstruction(${JSON.stringify(instruction)});`;
     }
   }
 
-  private createInterpreterFallback(bytecode: any[]): (runtime: any, args: any[]) => any {
+  private createInterpreterFallback(
+    bytecode: any[],
+  ): (runtime: any, args: any[]) => any {
     return (runtime: any, args: any[]) => {
       return runtime.execute(bytecode, args);
     };
@@ -144,48 +151,52 @@ export class DeadCodeEliminator {
     const original = [...bytecode];
     const reachable = new Set<number>();
     const optimizations: string[] = [];
-    
+
     // Mark reachable code
     this.markReachable(bytecode, 0, reachable);
-    
+
     // Remove unreachable instructions
     const optimized = bytecode.filter((_, index) => reachable.has(index));
-    
+
     if (optimized.length < original.length) {
       const removedCount = original.length - optimized.length;
       optimizations.push(`Removed ${removedCount} unreachable instructions`);
     }
-    
+
     return {
       original,
       optimized,
       optimizations,
-      speedup: optimized.length / original.length
+      speedup: optimized.length / original.length,
     };
   }
 
-  private markReachable(bytecode: any[], start: number, reachable: Set<number>): void {
+  private markReachable(
+    bytecode: any[],
+    start: number,
+    reachable: Set<number>,
+  ): void {
     if (reachable.has(start) || start >= bytecode.length) return;
-    
+
     reachable.add(start);
     const instruction = bytecode[start];
-    
+
     switch (instruction.type) {
-      case 'JUMP':
+      case "JUMP":
         this.markReachable(bytecode, instruction.target, reachable);
         break;
-      
-      case 'JUMP_IF_FALSE':
-      case 'JUMP_IF_TRUE':
+
+      case "JUMP_IF_FALSE":
+      case "JUMP_IF_TRUE":
         this.markReachable(bytecode, instruction.target, reachable);
         this.markReachable(bytecode, start + 1, reachable);
         break;
-      
-      case 'RETURN':
-      case 'THROW':
+
+      case "RETURN":
+      case "THROW":
         // Don't mark next instruction as reachable
         break;
-      
+
       default:
         this.markReachable(bytecode, start + 1, reachable);
     }
@@ -200,11 +211,11 @@ export class ConstantFolder {
     const original = [...bytecode];
     const optimized = [...bytecode];
     const optimizations: string[] = [];
-    
+
     let changed = true;
     while (changed) {
       changed = false;
-      
+
       for (let i = 0; i < optimized.length - 2; i++) {
         const result = this.tryFoldAt(optimized, i);
         if (result) {
@@ -215,16 +226,19 @@ export class ConstantFolder {
         }
       }
     }
-    
+
     return {
       original,
       optimized,
       optimizations,
-      speedup: original.length / optimized.length
+      speedup: original.length / optimized.length,
     };
   }
 
-  private tryFoldAt(bytecode: any[], index: number): {
+  private tryFoldAt(
+    bytecode: any[],
+    index: number,
+  ): {
     removeCount: number;
     newInstructions: any[];
     description: string;
@@ -232,31 +246,35 @@ export class ConstantFolder {
     const inst1 = bytecode[index];
     const inst2 = bytecode[index + 1];
     const inst3 = bytecode[index + 2];
-    
+
     // Fold: LOAD_CONST a, LOAD_CONST b, ADD -> LOAD_CONST (a+b)
-    if (inst1?.type === 'LOAD_CONST' && 
-        inst2?.type === 'LOAD_CONST' && 
-        inst3?.type === 'ADD') {
+    if (
+      inst1?.type === "LOAD_CONST" &&
+      inst2?.type === "LOAD_CONST" &&
+      inst3?.type === "ADD"
+    ) {
       const result = inst1.value + inst2.value;
       return {
         removeCount: 3,
-        newInstructions: [{ type: 'LOAD_CONST', value: result }],
-        description: `Folded constants: ${inst1.value} + ${inst2.value} = ${result}`
+        newInstructions: [{ type: "LOAD_CONST", value: result }],
+        description: `Folded constants: ${inst1.value} + ${inst2.value} = ${result}`,
       };
     }
-    
+
     // Fold: LOAD_CONST a, LOAD_CONST b, MULTIPLY -> LOAD_CONST (a*b)
-    if (inst1?.type === 'LOAD_CONST' && 
-        inst2?.type === 'LOAD_CONST' && 
-        inst3?.type === 'MULTIPLY') {
+    if (
+      inst1?.type === "LOAD_CONST" &&
+      inst2?.type === "LOAD_CONST" &&
+      inst3?.type === "MULTIPLY"
+    ) {
       const result = inst1.value * inst2.value;
       return {
         removeCount: 3,
-        newInstructions: [{ type: 'LOAD_CONST', value: result }],
-        description: `Folded constants: ${inst1.value} * ${inst2.value} = ${result}`
+        newInstructions: [{ type: "LOAD_CONST", value: result }],
+        description: `Folded constants: ${inst1.value} * ${inst2.value} = ${result}`,
       };
     }
-    
+
     return null;
   }
 }
@@ -269,11 +287,11 @@ export class PeepholeOptimizer {
     const original = [...bytecode];
     const optimized = [...bytecode];
     const optimizations: string[] = [];
-    
+
     let changed = true;
     while (changed) {
       changed = false;
-      
+
       for (let i = 0; i < optimized.length - 1; i++) {
         const result = this.tryOptimizeAt(optimized, i);
         if (result) {
@@ -284,51 +302,58 @@ export class PeepholeOptimizer {
         }
       }
     }
-    
+
     return {
       original,
       optimized,
       optimizations,
-      speedup: original.length / optimized.length
+      speedup: original.length / optimized.length,
     };
   }
 
-  private tryOptimizeAt(bytecode: any[], index: number): {
+  private tryOptimizeAt(
+    bytecode: any[],
+    index: number,
+  ): {
     removeCount: number;
     newInstructions: any[];
     description: string;
   } | null {
     const inst1 = bytecode[index];
     const inst2 = bytecode[index + 1];
-    
+
     // Remove redundant loads: LOAD_VAR x, LOAD_VAR x -> LOAD_VAR x, DUP
-    if (inst1?.type === 'LOAD_VAR' && 
-        inst2?.type === 'LOAD_VAR' && 
-        inst1.name === inst2.name) {
+    if (
+      inst1?.type === "LOAD_VAR" &&
+      inst2?.type === "LOAD_VAR" &&
+      inst1.name === inst2.name
+    ) {
       return {
         removeCount: 2,
         newInstructions: [
-          { type: 'LOAD_VAR', name: inst1.name },
-          { type: 'DUP' }
+          { type: "LOAD_VAR", name: inst1.name },
+          { type: "DUP" },
         ],
-        description: `Optimized duplicate variable load: ${inst1.name}`
+        description: `Optimized duplicate variable load: ${inst1.name}`,
       };
     }
-    
+
     // Remove store-load pairs: STORE_VAR x, LOAD_VAR x -> DUP, STORE_VAR x
-    if (inst1?.type === 'STORE_VAR' && 
-        inst2?.type === 'LOAD_VAR' && 
-        inst1.name === inst2.name) {
+    if (
+      inst1?.type === "STORE_VAR" &&
+      inst2?.type === "LOAD_VAR" &&
+      inst1.name === inst2.name
+    ) {
       return {
         removeCount: 2,
         newInstructions: [
-          { type: 'DUP' },
-          { type: 'STORE_VAR', name: inst1.name }
+          { type: "DUP" },
+          { type: "STORE_VAR", name: inst1.name },
         ],
-        description: `Optimized store-load pair: ${inst1.name}`
+        description: `Optimized store-load pair: ${inst1.name}`,
       };
     }
-    
+
     return null;
   }
 }
@@ -348,7 +373,7 @@ export class RuntimeOptimizer {
       callCounts: new Map(),
       hotFunctions: new Set(),
       memoryUsage: new Map(),
-      executionTimes: new Map()
+      executionTimes: new Map(),
     };
     this.jitCompiler = new JITCompiler(this.profile);
   }
@@ -358,14 +383,14 @@ export class RuntimeOptimizer {
     let result = this.deadCodeEliminator.eliminate(bytecode);
     result = this.constantFolder.fold(result.optimized);
     result = this.peepholeOptimizer.optimize(result.optimized);
-    
+
     const totalSpeedup = bytecode.length / result.optimized.length;
-    
+
     return {
       original: bytecode,
       optimized: result.optimized,
       optimizations: result.optimizations,
-      speedup: totalSpeedup
+      speedup: totalSpeedup,
     };
   }
 
@@ -373,12 +398,12 @@ export class RuntimeOptimizer {
     // Update call count
     const currentCount = this.profile.callCounts.get(name) || 0;
     this.profile.callCounts.set(name, currentCount + 1);
-    
+
     // Track execution times
     const times = this.profile.executionTimes.get(name) || [];
     times.push(executionTime);
     this.profile.executionTimes.set(name, times);
-    
+
     // Mark as hot if called frequently
     if (currentCount + 1 >= 10) {
       this.profile.hotFunctions.add(name);
@@ -412,17 +437,17 @@ export class RuntimeOptimizer {
     averageExecutionTimes: Map<string, number>;
   } {
     const averageExecutionTimes = new Map<string, number>();
-    
+
     for (const [name, times] of this.profile.executionTimes) {
       const average = times.reduce((sum, time) => sum + time, 0) / times.length;
       averageExecutionTimes.set(name, average);
     }
-    
+
     return {
       totalFunctions: this.profile.callCounts.size,
       hotFunctions: this.profile.hotFunctions.size,
       compiledFunctions: this.jitCompiler.compiledFunctionCount,
-      averageExecutionTimes
+      averageExecutionTimes,
     };
   }
 

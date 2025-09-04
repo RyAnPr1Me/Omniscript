@@ -2,11 +2,11 @@
  * Performance monitoring and metrics for OmniCodec
  */
 
-import { debug } from '../debug';
+import { debug } from "../debug";
 
 export interface PerformanceMetrics {
-  operationType: 'encode' | 'decode';
-  mediaType: 'audio' | 'video';
+  operationType: "encode" | "decode";
+  mediaType: "audio" | "video";
   inputSize: number;
   outputSize: number;
   compressionRatio: number;
@@ -44,9 +44,9 @@ export class PerformanceMonitor {
   constructor(maxMetrics: number = 1000, enabled: boolean = true) {
     this.maxMetrics = maxMetrics;
     this.monitoringEnabled = enabled;
-    
+
     if (enabled) {
-      debug.info('Media', 'Performance monitoring enabled');
+      debug.info("Media", "Performance monitoring enabled");
     }
   }
 
@@ -70,7 +70,10 @@ export class PerformanceMonitor {
       this.metrics = this.metrics.slice(-this.maxMetrics);
     }
 
-    debug.debug('Media', `Recorded performance metrics: ${metrics.operationType} ${metrics.mediaType} - ${metrics.duration}ms`);
+    debug.debug(
+      "Media",
+      `Recorded performance metrics: ${metrics.operationType} ${metrics.mediaType} - ${metrics.duration}ms`,
+    );
   }
 
   /**
@@ -91,25 +94,33 @@ export class PerformanceMonitor {
         averageCompressionRatio: 0,
         simdPerformanceGain: 0,
         memoryUsage: this.getMemoryUsage(),
-        errors: this.errors
+        errors: this.errors,
       };
     }
 
     const totalDuration = this.metrics.reduce((sum, m) => sum + m.duration, 0);
     const averageDuration = totalDuration / this.metrics.length;
 
-    const totalCompressionRatio = this.metrics.reduce((sum, m) => sum + m.compressionRatio, 0);
+    const totalCompressionRatio = this.metrics.reduce(
+      (sum, m) => sum + m.compressionRatio,
+      0,
+    );
     const averageCompressionRatio = totalCompressionRatio / this.metrics.length;
 
     // Calculate SIMD performance gain
-    const simdMetrics = this.metrics.filter(m => m.simdEnabled);
-    const nonSimdMetrics = this.metrics.filter(m => !m.simdEnabled);
-    
+    const simdMetrics = this.metrics.filter((m) => m.simdEnabled);
+    const nonSimdMetrics = this.metrics.filter((m) => !m.simdEnabled);
+
     let simdPerformanceGain = 0;
     if (simdMetrics.length > 0 && nonSimdMetrics.length > 0) {
-      const avgSimdDuration = simdMetrics.reduce((sum, m) => sum + m.duration, 0) / simdMetrics.length;
-      const avgNonSimdDuration = nonSimdMetrics.reduce((sum, m) => sum + m.duration, 0) / nonSimdMetrics.length;
-      simdPerformanceGain = ((avgNonSimdDuration - avgSimdDuration) / avgNonSimdDuration) * 100;
+      const avgSimdDuration =
+        simdMetrics.reduce((sum, m) => sum + m.duration, 0) /
+        simdMetrics.length;
+      const avgNonSimdDuration =
+        nonSimdMetrics.reduce((sum, m) => sum + m.duration, 0) /
+        nonSimdMetrics.length;
+      simdPerformanceGain =
+        ((avgNonSimdDuration - avgSimdDuration) / avgNonSimdDuration) * 100;
     }
 
     return {
@@ -118,15 +129,17 @@ export class PerformanceMonitor {
       averageCompressionRatio,
       simdPerformanceGain,
       memoryUsage: this.getMemoryUsage(),
-      errors: this.errors
+      errors: this.errors,
     };
   }
 
   /**
    * Get stats filtered by operation type
    */
-  getStatsByOperation(operationType: 'encode' | 'decode'): PerformanceStats {
-    const filtered = this.metrics.filter(m => m.operationType === operationType);
+  getStatsByOperation(operationType: "encode" | "decode"): PerformanceStats {
+    const filtered = this.metrics.filter(
+      (m) => m.operationType === operationType,
+    );
     const originalMetrics = this.metrics;
     this.metrics = filtered;
     const stats = this.getStats();
@@ -137,8 +150,8 @@ export class PerformanceMonitor {
   /**
    * Get stats filtered by media type
    */
-  getStatsByMediaType(mediaType: 'audio' | 'video'): PerformanceStats {
-    const filtered = this.metrics.filter(m => m.mediaType === mediaType);
+  getStatsByMediaType(mediaType: "audio" | "video"): PerformanceStats {
+    const filtered = this.metrics.filter((m) => m.mediaType === mediaType);
     const originalMetrics = this.metrics;
     this.metrics = filtered;
     const stats = this.getStats();
@@ -168,14 +181,21 @@ export class PerformanceMonitor {
     const recent = this.metrics.slice(-windowSize);
     const older = this.metrics.slice(-windowSize * 2, -windowSize);
 
-    const recentAvgDuration = recent.reduce((sum, m) => sum + m.duration, 0) / recent.length;
-    const olderAvgDuration = older.reduce((sum, m) => sum + m.duration, 0) / older.length;
-    
-    const recentAvgCompression = recent.reduce((sum, m) => sum + m.compressionRatio, 0) / recent.length;
-    const olderAvgCompression = older.reduce((sum, m) => sum + m.compressionRatio, 0) / older.length;
+    const recentAvgDuration =
+      recent.reduce((sum, m) => sum + m.duration, 0) / recent.length;
+    const olderAvgDuration =
+      older.reduce((sum, m) => sum + m.duration, 0) / older.length;
 
-    const durationTrend = ((recentAvgDuration - olderAvgDuration) / olderAvgDuration) * 100;
-    const compressionTrend = ((recentAvgCompression - olderAvgCompression) / olderAvgCompression) * 100;
+    const recentAvgCompression =
+      recent.reduce((sum, m) => sum + m.compressionRatio, 0) / recent.length;
+    const olderAvgCompression =
+      older.reduce((sum, m) => sum + m.compressionRatio, 0) / older.length;
+
+    const durationTrend =
+      ((recentAvgDuration - olderAvgDuration) / olderAvgDuration) * 100;
+    const compressionTrend =
+      ((recentAvgCompression - olderAvgCompression) / olderAvgCompression) *
+      100;
     const errorRate = (this.errors / this.metrics.length) * 100;
 
     return { durationTrend, compressionTrend, errorRate };
@@ -188,7 +208,7 @@ export class PerformanceMonitor {
     return {
       memoryUsage: this.getMemoryUsage(),
       availableMemory: this.getAvailableMemory(),
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
   }
 
@@ -205,7 +225,7 @@ export class PerformanceMonitor {
       summary: this.getStats(),
       recent: this.getRecentMetrics(20),
       trends: this.getPerformanceTrends(),
-      system: this.getSystemMetrics()
+      system: this.getSystemMetrics(),
     };
   }
 
@@ -215,7 +235,7 @@ export class PerformanceMonitor {
   clearMetrics(): void {
     this.metrics = [];
     this.errors = 0;
-    debug.info('Media', 'Performance metrics cleared');
+    debug.info("Media", "Performance metrics cleared");
   }
 
   /**
@@ -223,7 +243,10 @@ export class PerformanceMonitor {
    */
   setEnabled(enabled: boolean): void {
     this.monitoringEnabled = enabled;
-    debug.info('Media', `Performance monitoring ${enabled ? 'enabled' : 'disabled'}`);
+    debug.info(
+      "Media",
+      `Performance monitoring ${enabled ? "enabled" : "disabled"}`,
+    );
   }
 
   /**
@@ -231,15 +254,15 @@ export class PerformanceMonitor {
    */
   private getMemoryUsage(): number {
     // In Node.js environment
-    if (typeof process !== 'undefined' && process.memoryUsage) {
+    if (typeof process !== "undefined" && process.memoryUsage) {
       return process.memoryUsage().heapUsed;
     }
-    
+
     // In browser environment (rough estimate)
-    if (typeof performance !== 'undefined' && (performance as any).memory) {
+    if (typeof performance !== "undefined" && (performance as any).memory) {
       return (performance as any).memory.usedJSHeapSize || 0;
     }
-    
+
     return 0;
   }
 
@@ -248,17 +271,17 @@ export class PerformanceMonitor {
    */
   private getAvailableMemory(): number {
     // In Node.js environment
-    if (typeof process !== 'undefined' && process.memoryUsage) {
+    if (typeof process !== "undefined" && process.memoryUsage) {
       const mem = process.memoryUsage();
       return mem.heapTotal - mem.heapUsed;
     }
-    
+
     // In browser environment
-    if (typeof performance !== 'undefined' && (performance as any).memory) {
+    if (typeof performance !== "undefined" && (performance as any).memory) {
       const mem = (performance as any).memory;
       return (mem.totalJSHeapSize || 0) - (mem.usedJSHeapSize || 0);
     }
-    
+
     return 0;
   }
 }
@@ -279,12 +302,12 @@ export class PerformanceMeasurement {
    * Complete the measurement and record metrics
    */
   complete(
-    operationType: 'encode' | 'decode',
-    mediaType: 'audio' | 'video',
+    operationType: "encode" | "decode",
+    mediaType: "audio" | "video",
     inputSize: number,
     outputSize: number,
     simdEnabled: boolean = false,
-    quality: number = 85
+    quality: number = 85,
   ): void {
     const duration = performance.now() - this.startTime;
     const compressionRatio = outputSize / inputSize;
@@ -298,7 +321,7 @@ export class PerformanceMeasurement {
       duration,
       simdEnabled,
       quality,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
 
     this.monitor.recordMetrics(metrics);

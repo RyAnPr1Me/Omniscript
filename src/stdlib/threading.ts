@@ -1,4 +1,4 @@
-import { debug } from '../debug';
+import { debug } from "../debug";
 
 export interface ThreadPoolOptions {
   minThreads?: number;
@@ -6,7 +6,7 @@ export interface ThreadPoolOptions {
   idleTimeout?: number;
   taskTimeout?: number;
   enableLoadBalancing?: boolean;
-  priority?: 'low' | 'normal' | 'high';
+  priority?: "low" | "normal" | "high";
   retryAttempts?: number;
   enableMetrics?: boolean;
 }
@@ -54,7 +54,7 @@ export class WorkerThread {
     averageExecutionTime: 0,
     errorCount: 0,
     cpuUsage: 0,
-    memoryUsage: 0
+    memoryUsage: 0,
   };
 
   constructor(private scriptURL: string) {
@@ -64,13 +64,16 @@ export class WorkerThread {
   private initialize(): void {
     try {
       // In Node.js environment, we'll simulate worker behavior
-      if (typeof globalThis.Worker !== 'undefined') {
+      if (typeof globalThis.Worker !== "undefined") {
         this.worker = new globalThis.Worker(this.scriptURL);
         this.worker.onmessage = this.handleMessage.bind(this);
         this.worker.onerror = this.handleError.bind(this);
       }
     } catch (error) {
-      debug.warn('Threading', 'Worker not available, using synchronous execution');
+      debug.warn(
+        "Threading",
+        "Worker not available, using synchronous execution",
+      );
     }
   }
 
@@ -82,7 +85,7 @@ export class WorkerThread {
     if (this.worker) {
       return new Promise<R>((resolve, reject) => {
         const timeout = setTimeout(() => {
-          reject(new Error('Task timeout'));
+          reject(new Error("Task timeout"));
         }, 30000); // 30 second timeout
 
         this.currentTask!.resolve = (value: R) => {
@@ -123,16 +126,16 @@ export class WorkerThread {
 
   private simulateTaskExecution(data: any): any {
     // Simple simulation for testing purposes
-    if (typeof data === 'function') {
+    if (typeof data === "function") {
       return data();
     }
-    if (data && typeof data.operation === 'string') {
+    if (data && typeof data.operation === "string") {
       switch (data.operation) {
-        case 'multiply':
+        case "multiply":
           return data.a * data.b;
-        case 'add':
+        case "add":
           return data.a + data.b;
-        case 'process':
+        case "process":
           return { processed: true, data: data.input };
         default:
           return data;
@@ -180,23 +183,26 @@ export class ThreadPool {
       minThreads: options.minThreads || 2,
       maxThreads: options.maxThreads || 8,
       idleTimeout: options.idleTimeout || 60000, // 1 minute
-      taskTimeout: options.taskTimeout || 30000,  // 30 seconds
+      taskTimeout: options.taskTimeout || 30000, // 30 seconds
       enableLoadBalancing: options.enableLoadBalancing || false,
-      priority: options.priority || 'normal',
+      priority: options.priority || "normal",
       retryAttempts: options.retryAttempts || 3,
-      enableMetrics: options.enableMetrics || false
+      enableMetrics: options.enableMetrics || false,
     };
 
     this.initializeWorkers();
     this.startMaintenanceLoop();
-    
-    debug.info('ThreadPool', `Thread pool initialized with ${this.options.minThreads}-${this.options.maxThreads} threads`);
+
+    debug.info(
+      "ThreadPool",
+      `Thread pool initialized with ${this.options.minThreads}-${this.options.maxThreads} threads`,
+    );
   }
 
   private initializeWorkers(): void {
     // Create minimum number of workers
     for (let i = 0; i < this.options.minThreads; i++) {
-      this.workers.push(new WorkerThread(''));
+      this.workers.push(new WorkerThread(""));
     }
   }
 
@@ -207,47 +213,59 @@ export class ThreadPool {
         data,
         resolve,
         reject,
-        createdAt: Date.now()
+        createdAt: Date.now(),
       };
 
       const availableWorker = this.getAvailableWorker();
-      
+
       if (availableWorker) {
         availableWorker.execute(task).then(resolve).catch(reject);
       } else if (this.workers.length < this.options.maxThreads) {
         // Create new worker if under max limit
-        const newWorker = new WorkerThread('');
+        const newWorker = new WorkerThread("");
         this.workers.push(newWorker);
         newWorker.execute(task).then(resolve).catch(reject);
-        debug.debug('ThreadPool', `Created new worker, total: ${this.workers.length}`);
+        debug.debug(
+          "ThreadPool",
+          `Created new worker, total: ${this.workers.length}`,
+        );
       } else {
         // Queue the task if all workers are busy
         this.taskQueue.push(task);
-        debug.debug('ThreadPool', `Task queued, queue size: ${this.taskQueue.length}`);
+        debug.debug(
+          "ThreadPool",
+          `Task queued, queue size: ${this.taskQueue.length}`,
+        );
       }
     });
   }
 
-  async parallel<T, R>(items: T[], operation: (item: T) => R | Promise<R>): Promise<R[]> {
-    const tasks = items.map(item => {
+  async parallel<T, R>(
+    items: T[],
+    operation: (item: T) => R | Promise<R>,
+  ): Promise<R[]> {
+    const tasks = items.map((item) => {
       return this.submit({
-        operation: 'custom',
+        operation: "custom",
         item,
-        fn: operation.toString()
+        fn: operation.toString(),
       }) as Promise<R>;
     });
 
     return Promise.all(tasks);
   }
 
-  async map<T, R>(items: T[], mapper: (item: T, index: number) => R | Promise<R>): Promise<R[]> {
+  async map<T, R>(
+    items: T[],
+    mapper: (item: T, index: number) => R | Promise<R>,
+  ): Promise<R[]> {
     const chunks = this.chunkArray(items, this.workers.length);
     const chunkTasks = chunks.map((chunk, chunkIndex) => {
       return this.submit({
-        operation: 'map',
+        operation: "map",
         chunk,
         mapper: mapper.toString(),
-        startIndex: chunkIndex * Math.ceil(items.length / chunks.length)
+        startIndex: chunkIndex * Math.ceil(items.length / chunks.length),
       }) as Promise<R[]>;
     });
 
@@ -255,39 +273,46 @@ export class ThreadPool {
     return results.flat();
   }
 
-  async reduce<T, R>(items: T[], reducer: (acc: R, item: T, index: number) => R, initialValue: R): Promise<R> {
+  async reduce<T, R>(
+    items: T[],
+    reducer: (acc: R, item: T, index: number) => R,
+    initialValue: R,
+  ): Promise<R> {
     const chunks = this.chunkArray(items, this.workers.length);
-    
+
     // Parallel reduce each chunk
     const chunkTasks = chunks.map((chunk, chunkIndex) => {
       return this.submit({
-        operation: 'reduce',
+        operation: "reduce",
         chunk,
         reducer: reducer.toString(),
         initialValue: chunkIndex === 0 ? initialValue : undefined,
-        startIndex: chunkIndex * Math.ceil(items.length / chunks.length)
+        startIndex: chunkIndex * Math.ceil(items.length / chunks.length),
       }) as Promise<R>;
     });
 
     const chunkResults = await Promise.all(chunkTasks);
-    
+
     // Combine chunk results
-    return chunkResults.reduce((acc, current) => reducer(acc, current as any as T, 0), initialValue);
+    return chunkResults.reduce(
+      (acc, current) => reducer(acc, current as any as T, 0),
+      initialValue,
+    );
   }
 
   private chunkArray<T>(array: T[], chunkCount: number): T[][] {
     const chunks: T[][] = [];
     const chunkSize = Math.ceil(array.length / chunkCount);
-    
+
     for (let i = 0; i < array.length; i += chunkSize) {
       chunks.push(array.slice(i, i + chunkSize));
     }
-    
+
     return chunks;
   }
 
   private getAvailableWorker(): WorkerThread | null {
-    return this.workers.find(worker => worker.isAvailable()) || null;
+    return this.workers.find((worker) => worker.isAvailable()) || null;
   }
 
   private generateTaskId(): string {
@@ -311,10 +336,16 @@ export class ThreadPool {
 
       // Clean up idle workers (keep minimum number)
       if (this.workers.length > this.options.minThreads) {
-        this.workers = this.workers.filter(worker => {
-          if (worker.isAvailable() && worker.getIdleTime() > this.options.idleTimeout) {
+        this.workers = this.workers.filter((worker) => {
+          if (
+            worker.isAvailable() &&
+            worker.getIdleTime() > this.options.idleTimeout
+          ) {
             worker.terminate();
-            debug.debug('ThreadPool', `Terminated idle worker, remaining: ${this.workers.length - 1}`);
+            debug.debug(
+              "ThreadPool",
+              `Terminated idle worker, remaining: ${this.workers.length - 1}`,
+            );
             return false;
           }
           return true;
@@ -330,30 +361,33 @@ export class ThreadPool {
   getStats() {
     return {
       totalWorkers: this.workers.length,
-      availableWorkers: this.workers.filter(w => w.isAvailable()).length,
-      busyWorkers: this.workers.filter(w => !w.isAvailable()).length,
+      availableWorkers: this.workers.filter((w) => w.isAvailable()).length,
+      busyWorkers: this.workers.filter((w) => !w.isAvailable()).length,
       queuedTasks: this.taskQueue.length,
-      options: this.options
+      options: this.options,
     };
   }
 
   async shutdown(): Promise<void> {
     this.isRunning = false;
-    
+
     // Wait for current tasks to complete (with timeout)
     const shutdownTimeout = 10000; // 10 seconds
     const startTime = Date.now();
-    
-    while (this.workers.some(w => !w.isAvailable()) && (Date.now() - startTime) < shutdownTimeout) {
-      await new Promise(resolve => setTimeout(resolve, 100));
+
+    while (
+      this.workers.some((w) => !w.isAvailable()) &&
+      Date.now() - startTime < shutdownTimeout
+    ) {
+      await new Promise((resolve) => setTimeout(resolve, 100));
     }
 
     // Terminate all workers
-    this.workers.forEach(worker => worker.terminate());
+    this.workers.forEach((worker) => worker.terminate());
     this.workers = [];
     this.taskQueue = [];
-    
-    debug.info('ThreadPool', 'Thread pool shut down');
+
+    debug.info("ThreadPool", "Thread pool shut down");
   }
 }
 
@@ -379,7 +413,10 @@ export class Worker {
 }
 
 // Utility functions
-export async function parallel<T, R>(items: T[], operation: (item: T) => R | Promise<R>): Promise<R[]> {
+export async function parallel<T, R>(
+  items: T[],
+  operation: (item: T) => R | Promise<R>,
+): Promise<R[]> {
   const pool = new ThreadPool({ maxThreads: 4 });
   try {
     return await pool.parallel(items, operation);
@@ -388,7 +425,10 @@ export async function parallel<T, R>(items: T[], operation: (item: T) => R | Pro
   }
 }
 
-export async function parallelMap<T, R>(items: T[], mapper: (item: T, index: number) => R | Promise<R>): Promise<R[]> {
+export async function parallelMap<T, R>(
+  items: T[],
+  mapper: (item: T, index: number) => R | Promise<R>,
+): Promise<R[]> {
   const pool = new ThreadPool({ maxThreads: 4 });
   try {
     return await pool.map(items, mapper);
@@ -397,7 +437,11 @@ export async function parallelMap<T, R>(items: T[], mapper: (item: T, index: num
   }
 }
 
-export async function parallelReduce<T, R>(items: T[], reducer: (acc: R, item: T, index: number) => R, initialValue: R): Promise<R> {
+export async function parallelReduce<T, R>(
+  items: T[],
+  reducer: (acc: R, item: T, index: number) => R,
+  initialValue: R,
+): Promise<R> {
   const pool = new ThreadPool({ maxThreads: 4 });
   try {
     return await pool.reduce(items, reducer, initialValue);

@@ -1,11 +1,13 @@
 # Omniscript Language Guide
 
 ## Introduction
+
 Omniscript is a modern programming language designed for full-stack web development, combining type safety, memory management, concurrency, and reactive programming features. It supports advanced decorators, pattern matching, operator overloading, and a rich standard library.
 
 ## Runtime Features
 
 ### Memory Management
+
 ```typescript
 // Enable garbage collection
 timeout.enableGarbageCollection();
@@ -19,11 +21,15 @@ runtime.detectCircularReferences();
 ```
 
 ### Actor Model
+
 ```typescript
 const runtime = new Runtime();
 
 // Create an actor with state
-const counter = runtime.createActor((msg: number, state: number) => state + msg, 0);
+const counter = runtime.createActor(
+  (msg: number, state: number) => state + msg,
+  0,
+);
 
 // Send messages
 counter.send(1);
@@ -31,6 +37,7 @@ counter.send(2);
 ```
 
 ### Coroutines
+
 ```typescript
 runtime.scheduleCoroutine(async () => {
   console.time("Task");
@@ -42,19 +49,23 @@ runtime.scheduleCoroutine(async () => {
 ## Language Features
 
 ### Type System
+
 ```typescript
 // Type inference
-let x = 42;  // inferred as number
-let s = "hello";  // inferred as string
+let x = 42; // inferred as number
+let s = "hello"; // inferred as string
 
 // Generic types
 class Box<T> {
   constructor(private value: T) {}
-  get(): T { return this.value; }
+  get(): T {
+    return this.value;
+  }
 }
 ```
 
 ### Pattern Matching
+
 ```typescript
 match value {
   0 => "zero",
@@ -65,6 +76,7 @@ match value {
 ```
 
 ### Error Handling
+
 ```typescript
 // Using Result type
 fn divide(a: number, b: number): Result<number, Error> {
@@ -86,10 +98,11 @@ if (result.isOk()) {
 ## Standard Library
 
 ### Reactive Programming
+
 ```typescript
 // Stream for event-based programming
 const stream = new Stream<number>();
-const unsubscribe = stream.subscribe(value => {
+const unsubscribe = stream.subscribe((value) => {
   console.log(`Received: ${value}`);
 });
 stream.next(42);
@@ -97,19 +110,20 @@ unsubscribe();
 
 // Signal for reactive state
 const signal = new Signal<number>(0);
-signal.subscribe(value => {
+signal.subscribe((value) => {
   console.log(`Value updated: ${value}`);
 });
 signal.value = 42; // Logs: Value updated: 42
 ```
 
 ### Thread-Safe Collections
+
 ```typescript
 // Thread-safe List
 const list = new List<number>();
 await list.push(1);
 await list.push(2);
-const items = await list.filter(n => n > 1);
+const items = await list.filter((n) => n > 1);
 
 // Thread-safe Map
 const cache = new Map<string, number>();
@@ -118,22 +132,24 @@ const value = await cache.get("key");
 ```
 
 ### Math Utilities
+
 ```typescript
-import { MathUtils } from 'stdlib/math';
+import { MathUtils } from "stdlib/math";
 
 // Mathematical constants
-console.log(MathUtils.PI);  // 3.141592653589793
-console.log(MathUtils.E);   // 2.718281828459045
+console.log(MathUtils.PI); // 3.141592653589793
+console.log(MathUtils.E); // 2.718281828459045
 
 // Mathematical functions
-console.log(MathUtils.factorial(5));  // 120
-console.log(MathUtils.gcd(48, 18));   // 6
+console.log(MathUtils.factorial(5)); // 120
+console.log(MathUtils.gcd(48, 18)); // 6
 console.log(MathUtils.random(1, 10)); // Random number between 1 and 10
 ```
 
 ## Development Tools
 
 ### Debugging
+
 ```typescript
 // Enable debug mode
 runtime.enableDebugMode();
@@ -143,6 +159,7 @@ runtime.enableMemoryManagement();
 ```
 
 ### Package Management
+
 ```bash
 # Add a package
 omni add package-name
@@ -166,6 +183,7 @@ omni install
 8. Document public APIs and include usage examples
 
 ## See Also
+
 - [API Reference](./api/README.md)
 - [Best Practices](./best-practices.md)
 - [Examples](./examples/README.md)

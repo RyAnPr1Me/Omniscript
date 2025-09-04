@@ -1,9 +1,9 @@
-import { Compiler, CompilerOptions } from '../../src/compiler';
-import { AOTCompiler } from '../../src/compiler/aot';
-import { Parser } from '../../src/parser';
-import { describe, expect, test, beforeEach } from '@jest/globals';
+import { Compiler, CompilerOptions } from "../../src/compiler";
+import { AOTCompiler } from "../../src/compiler/aot";
+import { Parser } from "../../src/parser";
+import { describe, expect, test, beforeEach } from "@jest/globals";
 
-describe('Fast Compilation Engine', () => {
+describe("Fast Compilation Engine", () => {
   let parser: Parser;
   let standardCompiler: Compiler;
   let fastCompiler: Compiler;
@@ -12,64 +12,70 @@ describe('Fast Compilation Engine', () => {
   beforeEach(() => {
     parser = new Parser();
     standardCompiler = new Compiler();
-    fastCompiler = new Compiler({ 
-      fastMode: true, 
-      skipTypeChecking: true, 
-      enableCaching: true 
+    fastCompiler = new Compiler({
+      fastMode: true,
+      skipTypeChecking: true,
+      enableCaching: true,
     });
     aotCompiler = new AOTCompiler({ optimizationLevel: 2 });
   });
 
-  test('fast mode compilation should skip type checking', () => {
+  test("fast mode compilation should skip type checking", () => {
     const source = `
       fn add(a, b) {
         return a + b;
       }
     `;
-    
+
     const ast = parser.parse(source);
     const bytecode = fastCompiler.compile(ast);
-    
+
     expect(bytecode).toBeDefined();
-    expect(bytecode.type).toBe('Function');
+    expect(bytecode.type).toBe("Function");
   });
 
-  test('AOT compiler should generate optimized machine code', () => {
+  test("AOT compiler should generate optimized machine code", () => {
     const ast = {
-      type: 'Program',
-      body: [{
-        type: 'FunctionDeclaration',
-        name: 'test',
-        params: [],
-        body: [{
-          type: 'ReturnStatement',
-          argument: {
-            type: 'BinaryExpression',
-            operator: '+',
-            left: { type: 'Literal', value: 5 },
-            right: { type: 'Literal', value: 3 }
-          }
-        }]
-      }]
+      type: "Program",
+      body: [
+        {
+          type: "FunctionDeclaration",
+          name: "test",
+          params: [],
+          body: [
+            {
+              type: "ReturnStatement",
+              argument: {
+                type: "BinaryExpression",
+                operator: "+",
+                left: { type: "Literal", value: 5 },
+                right: { type: "Literal", value: 3 },
+              },
+            },
+          ],
+        },
+      ],
     };
 
     const machineCode = aotCompiler.compileToMachineCode(ast);
-    
+
     expect(machineCode).toBeDefined();
-    expect(machineCode.type).toBe('Block');
+    expect(machineCode.type).toBe("Block");
     expect(machineCode.body).toBeDefined();
     expect(machineCode.body[0].aot).toBe(true);
   });
 
-  test('compilation caching should work', () => {
+  test("compilation caching should work", () => {
     const ast = {
-      type: 'Program',
-      body: [{
-        type: 'FunctionDeclaration',
-        name: 'cached',
-        params: [],
-        body: []
-      }]
+      type: "Program",
+      body: [
+        {
+          type: "FunctionDeclaration",
+          name: "cached",
+          params: [],
+          body: [],
+        },
+      ],
     };
 
     // First compilation
@@ -87,30 +93,32 @@ describe('Fast Compilation Engine', () => {
     // Note: This is a simple test, actual timing may vary
   });
 
-  test('AOT compiler constant folding optimization', () => {
+  test("AOT compiler constant folding optimization", () => {
     const ast = {
-      type: 'BinaryExpression',
-      operator: '*',
-      left: { type: 'Literal', value: 4 },
-      right: { type: 'Literal', value: 6 }
+      type: "BinaryExpression",
+      operator: "*",
+      left: { type: "Literal", value: 4 },
+      right: { type: "Literal", value: 6 },
     };
 
     const optimized = aotCompiler.compileToMachineCode(ast);
-    
+
     // Should be folded to a constant value
-    expect(optimized.type).toBe('Value');
+    expect(optimized.type).toBe("Value");
     expect(optimized.value).toBe(24);
   });
 
-  test('different optimization levels should produce different results', () => {
+  test("different optimization levels should produce different results", () => {
     const ast = {
-      type: 'FunctionDeclaration',
-      name: 'test',
+      type: "FunctionDeclaration",
+      name: "test",
       params: [],
-      body: [{
-        type: 'ReturnStatement',
-        argument: { type: 'Literal', value: 42 }
-      }]
+      body: [
+        {
+          type: "ReturnStatement",
+          argument: { type: "Literal", value: 42 },
+        },
+      ],
     };
 
     const level0 = new AOTCompiler({ optimizationLevel: 0 });
@@ -124,14 +132,14 @@ describe('Fast Compilation Engine', () => {
     // Level 3 should have more optimizations applied
   });
 
-  test('fast compilation should be faster than standard compilation', () => {
+  test("fast compilation should be faster than standard compilation", () => {
     const source = `
       fn fibonacci(n) {
         if (n <= 1) return n;
         return fibonacci(n - 1) + fibonacci(n - 2);
       }
     `;
-    
+
     const ast = parser.parse(source);
 
     // Measure standard compilation time
@@ -151,39 +159,39 @@ describe('Fast Compilation Engine', () => {
     expect(fastTime).toBeLessThanOrEqual(standardTime * 2); // Allow some variance
   });
 
-  test('fast mode should produce functional bytecode', () => {
+  test("fast mode should produce functional bytecode", () => {
     const source = `
       fn multiply(x, y) {
         return x * y;
       }
     `;
-    
+
     const ast = parser.parse(source);
     const bytecode = fastCompiler.compile(ast);
-    
-    expect(bytecode.type).toBe('Function');
-    expect(bytecode.name).toBe('multiply');
-    expect(bytecode.params).toEqual(['x', 'y']);
+
+    expect(bytecode.type).toBe("Function");
+    expect(bytecode.name).toBe("multiply");
+    expect(bytecode.params).toEqual(["x", "y"]);
     expect(bytecode.body).toBeDefined();
   });
 
-  test('AOT compiler should handle complex expressions', () => {
+  test("AOT compiler should handle complex expressions", () => {
     const ast = {
-      type: 'BinaryExpression',
-      operator: '+',
+      type: "BinaryExpression",
+      operator: "+",
       left: {
-        type: 'BinaryExpression',
-        operator: '*',
-        left: { type: 'Literal', value: 2 },
-        right: { type: 'Literal', value: 3 }
+        type: "BinaryExpression",
+        operator: "*",
+        left: { type: "Literal", value: 2 },
+        right: { type: "Literal", value: 3 },
       },
-      right: { type: 'Literal', value: 4 }
+      right: { type: "Literal", value: 4 },
     };
 
     const result = aotCompiler.compileToMachineCode(ast);
-    
+
     // Should fold (2 * 3) + 4 = 10
-    expect(result.type).toBe('Value');
+    expect(result.type).toBe("Value");
     expect(result.value).toBe(10);
   });
 });

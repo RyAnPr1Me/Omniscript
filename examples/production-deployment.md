@@ -5,6 +5,7 @@ This directory contains production deployment configurations and examples for Om
 ## Docker Deployment
 
 ### Basic Application Dockerfile
+
 ```dockerfile
 FROM node:18-alpine
 
@@ -37,6 +38,7 @@ CMD ["npm", "start"]
 ```
 
 ### Multi-stage Production Dockerfile
+
 ```dockerfile
 # Build stage
 FROM node:18-alpine AS builder
@@ -83,9 +85,10 @@ CMD ["node", "dist/cli.js", "run", "dist/app.js"]
 ## Docker Compose Examples
 
 ### Single Service
+
 ```yaml
 # docker-compose.yml
-version: '3.8'
+version: "3.8"
 
 services:
   app:
@@ -130,9 +133,10 @@ volumes:
 ```
 
 ### Microservices with Load Balancer
+
 ```yaml
 # docker-compose.microservices.yml
-version: '3.8'
+version: "3.8"
 
 services:
   # Load Balancer
@@ -253,6 +257,7 @@ volumes:
 ## Kubernetes Deployment
 
 ### Basic Deployment
+
 ```yaml
 # k8s/deployment.yaml
 apiVersion: apps/v1
@@ -272,42 +277,42 @@ spec:
         app: omniscript-app
     spec:
       containers:
-      - name: omniscript-app
-        image: omniscript:latest
-        ports:
-        - containerPort: 3000
-        env:
-        - name: NODE_ENV
-          value: "production"
-        - name: DATABASE_URL
-          valueFrom:
-            secretKeyRef:
-              name: omniscript-secrets
-              key: database-url
-        - name: JWT_SECRET
-          valueFrom:
-            secretKeyRef:
-              name: omniscript-secrets
-              key: jwt-secret
-        resources:
-          requests:
-            memory: "128Mi"
-            cpu: "100m"
-          limits:
-            memory: "512Mi"
-            cpu: "500m"
-        livenessProbe:
-          httpGet:
-            path: /health
-            port: 3000
-          initialDelaySeconds: 30
-          periodSeconds: 10
-        readinessProbe:
-          httpGet:
-            path: /health
-            port: 3000
-          initialDelaySeconds: 5
-          periodSeconds: 5
+        - name: omniscript-app
+          image: omniscript:latest
+          ports:
+            - containerPort: 3000
+          env:
+            - name: NODE_ENV
+              value: "production"
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: omniscript-secrets
+                  key: database-url
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: omniscript-secrets
+                  key: jwt-secret
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 5
 
 ---
 apiVersion: v1
@@ -335,6 +340,7 @@ stringData:
 ```
 
 ### Microservices with Ingress
+
 ```yaml
 # k8s/microservices.yaml
 apiVersion: networking.k8s.io/v1
@@ -346,20 +352,20 @@ metadata:
     cert-manager.io/cluster-issuer: letsencrypt-prod
 spec:
   tls:
-  - hosts:
-    - api.yourdomain.com
-    secretName: omniscript-tls
+    - hosts:
+        - api.yourdomain.com
+      secretName: omniscript-tls
   rules:
-  - host: api.yourdomain.com
-    http:
-      paths:
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: api-gateway-service
-            port:
-              number: 80
+    - host: api.yourdomain.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: api-gateway-service
+                port:
+                  number: 80
 
 ---
 # API Gateway
@@ -378,14 +384,14 @@ spec:
         app: api-gateway
     spec:
       containers:
-      - name: api-gateway
-        image: omniscript:latest
-        command: ["omni", "run", "examples/microservices.os"]
-        ports:
-        - containerPort: 3000
-        env:
-        - name: SERVICE_NAME
-          value: "api-gateway"
+        - name: api-gateway
+          image: omniscript:latest
+          command: ["omni", "run", "examples/microservices.os"]
+          ports:
+            - containerPort: 3000
+          env:
+            - name: SERVICE_NAME
+              value: "api-gateway"
 
 ---
 apiVersion: v1
@@ -396,8 +402,8 @@ spec:
   selector:
     app: api-gateway
   ports:
-  - port: 80
-    targetPort: 3000
+    - port: 80
+      targetPort: 3000
 
 ---
 # User Service
@@ -416,11 +422,11 @@ spec:
         app: user-service
     spec:
       containers:
-      - name: user-service
-        image: omniscript:latest
-        command: ["omni", "run", "examples/user-service.os"]
-        ports:
-        - containerPort: 3001
+        - name: user-service
+          image: omniscript:latest
+          command: ["omni", "run", "examples/user-service.os"]
+          ports:
+            - containerPort: 3001
 
 ---
 apiVersion: v1
@@ -431,13 +437,14 @@ spec:
   selector:
     app: user-service
   ports:
-  - port: 80
-    targetPort: 3001
+    - port: 80
+      targetPort: 3001
 ```
 
 ## Environment Configuration
 
 ### Production Environment File
+
 ```bash
 # .env.production
 NODE_ENV=production
@@ -487,61 +494,63 @@ AWS_SECRET_ACCESS_KEY=your-secret-key
 ```
 
 ### Configuration Management
+
 ```typescript
 // config/production.ts
 export const productionConfig = {
   server: {
-    port: parseInt(process.env.PORT || '3000'),
-    host: process.env.HOST || '0.0.0.0',
+    port: parseInt(process.env.PORT || "3000"),
+    host: process.env.HOST || "0.0.0.0",
     ssl: {
-      enabled: process.env.SSL_ENABLED === 'true',
+      enabled: process.env.SSL_ENABLED === "true",
       cert: process.env.SSL_CERT_PATH,
-      key: process.env.SSL_KEY_PATH
-    }
+      key: process.env.SSL_KEY_PATH,
+    },
   },
-  
+
   database: {
     url: process.env.DATABASE_URL,
     pool: {
-      min: parseInt(process.env.DATABASE_POOL_MIN || '5'),
-      max: parseInt(process.env.DATABASE_POOL_MAX || '20')
+      min: parseInt(process.env.DATABASE_POOL_MIN || "5"),
+      max: parseInt(process.env.DATABASE_POOL_MAX || "20"),
     },
-    ssl: process.env.NODE_ENV === 'production'
+    ssl: process.env.NODE_ENV === "production",
   },
-  
+
   redis: {
     url: process.env.REDIS_URL,
     password: process.env.REDIS_PASSWORD,
     retryDelayOnFailover: 100,
-    maxRetriesPerRequest: 3
+    maxRetriesPerRequest: 3,
   },
-  
+
   security: {
     jwt: {
       secret: process.env.JWT_SECRET,
-      expiresIn: process.env.JWT_EXPIRES_IN || '24h'
+      expiresIn: process.env.JWT_EXPIRES_IN || "24h",
     },
     cors: {
-      origin: process.env.CORS_ORIGIN?.split(',') || ['http://localhost:3000'],
-      credentials: true
+      origin: process.env.CORS_ORIGIN?.split(",") || ["http://localhost:3000"],
+      credentials: true,
     },
     rateLimit: {
-      windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'),
-      max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100')
-    }
+      windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || "900000"),
+      max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || "100"),
+    },
   },
-  
+
   monitoring: {
-    enabled: process.env.METRICS_ENABLED === 'true',
-    logLevel: process.env.LOG_LEVEL || 'info',
-    apmServiceName: process.env.APM_SERVICE_NAME || 'omniscript-api'
-  }
+    enabled: process.env.METRICS_ENABLED === "true",
+    logLevel: process.env.LOG_LEVEL || "info",
+    apmServiceName: process.env.APM_SERVICE_NAME || "omniscript-api",
+  },
 };
 ```
 
 ## CI/CD Pipeline
 
 ### GitHub Actions
+
 ```yaml
 # .github/workflows/deploy.yml
 name: Deploy to Production
@@ -554,119 +563,126 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-    
-    - name: Setup Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: '18'
-        cache: 'npm'
-    
-    - name: Install dependencies
-      run: npm ci
-    
-    - name: Run tests
-      run: npm test
-    
-    - name: Run linting
-      run: npm run lint
+      - uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      - name: Run linting
+        run: npm run lint
 
   build:
     needs: test
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-    
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v2
-    
-    - name: Login to DockerHub
-      uses: docker/login-action@v2
-      with:
-        username: ${{ secrets.DOCKERHUB_USERNAME }}
-        password: ${{ secrets.DOCKERHUB_TOKEN }}
-    
-    - name: Build and push
-      uses: docker/build-push-action@v3
-      with:
-        context: .
-        push: true
-        tags: |
-          yourusername/omniscript:latest
-          yourusername/omniscript:${{ github.sha }}
+      - uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v3
+        with:
+          context: .
+          push: true
+          tags: |
+            yourusername/omniscript:latest
+            yourusername/omniscript:${{ github.sha }}
 
   deploy:
     needs: build
     runs-on: ubuntu-latest
     steps:
-    - name: Deploy to Kubernetes
-      uses: azure/k8s-deploy@v1
-      with:
-        manifests: |
-          k8s/deployment.yaml
-        images: |
-          yourusername/omniscript:${{ github.sha }}
-        kubectl-version: 'latest'
+      - name: Deploy to Kubernetes
+        uses: azure/k8s-deploy@v1
+        with:
+          manifests: |
+            k8s/deployment.yaml
+          images: |
+            yourusername/omniscript:${{ github.sha }}
+          kubectl-version: "latest"
 ```
 
 ## Monitoring and Logging
 
 ### Prometheus Configuration
+
 ```yaml
 # prometheus.yml
 global:
   scrape_interval: 15s
 
 scrape_configs:
-  - job_name: 'omniscript-api'
+  - job_name: "omniscript-api"
     static_configs:
-      - targets: ['api-gateway:3000']
-    metrics_path: '/metrics'
+      - targets: ["api-gateway:3000"]
+    metrics_path: "/metrics"
     scrape_interval: 5s
 
-  - job_name: 'omniscript-services'
+  - job_name: "omniscript-services"
     static_configs:
-      - targets: 
-        - 'user-service-1:3001'
-        - 'user-service-2:3002'
-        - 'order-service-1:3003'
-        - 'order-service-2:3004'
+      - targets:
+          - "user-service-1:3001"
+          - "user-service-2:3002"
+          - "order-service-1:3003"
+          - "order-service-2:3004"
 ```
 
 ### Logging Configuration
+
 ```typescript
 // logging.ts
 export const loggerConfig = {
-  level: process.env.LOG_LEVEL || 'info',
-  format: process.env.NODE_ENV === 'production' ? 'json' : 'dev',
+  level: process.env.LOG_LEVEL || "info",
+  format: process.env.NODE_ENV === "production" ? "json" : "dev",
   transports: [
     // Console transport
     {
-      type: 'console',
-      colorize: process.env.NODE_ENV !== 'production'
+      type: "console",
+      colorize: process.env.NODE_ENV !== "production",
     },
-    
+
     // File transport for production
-    ...(process.env.NODE_ENV === 'production' ? [{
-      type: 'file',
-      filename: '/var/log/omniscript/app.log',
-      maxsize: 100 * 1024 * 1024, // 100MB
-      maxFiles: 5
-    }] : []),
-    
+    ...(process.env.NODE_ENV === "production"
+      ? [
+          {
+            type: "file",
+            filename: "/var/log/omniscript/app.log",
+            maxsize: 100 * 1024 * 1024, // 100MB
+            maxFiles: 5,
+          },
+        ]
+      : []),
+
     // Error file transport
     {
-      type: 'file',
-      level: 'error',
-      filename: '/var/log/omniscript/error.log'
-    }
-  ]
+      type: "file",
+      level: "error",
+      filename: "/var/log/omniscript/error.log",
+    },
+  ],
 };
 ```
 
 ## Security Best Practices
 
 ### Security Checklist
+
 - [ ] Use HTTPS in production
 - [ ] Implement proper authentication and authorization
 - [ ] Validate and sanitize all inputs
@@ -681,6 +697,7 @@ export const loggerConfig = {
 - [ ] Use secrets management (Vault, K8s secrets)
 
 ### Security Configuration
+
 ```typescript
 // security.ts
 export const securityConfig = {
@@ -690,28 +707,28 @@ export const securityConfig = {
         defaultSrc: ["'self'"],
         styleSrc: ["'self'", "'unsafe-inline'"],
         scriptSrc: ["'self'"],
-        imgSrc: ["'self'", "data:", "https:"]
-      }
+        imgSrc: ["'self'", "data:", "https:"],
+      },
     },
     hsts: {
       maxAge: 31536000,
       includeSubDomains: true,
-      preload: true
-    }
+      preload: true,
+    },
   },
-  
+
   cors: {
-    origin: process.env.CORS_ORIGIN?.split(',') || false,
+    origin: process.env.CORS_ORIGIN?.split(",") || false,
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   },
-  
+
   rateLimit: {
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: 100, // limit each IP to 100 requests per windowMs
-    message: 'Too many requests from this IP'
-  }
+    message: "Too many requests from this IP",
+  },
 };
 ```
 

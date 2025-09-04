@@ -1,4 +1,4 @@
-import { OmniscriptError } from '../errors';
+import { OmniscriptError } from "../errors";
 
 // Advanced concurrency primitives for Omniscript
 export interface Channel<T> {
@@ -16,7 +16,7 @@ export interface Select<T> {
 
 export interface SelectCase<T> {
   channel: Channel<any>;
-  operation: 'send' | 'receive';
+  operation: "send" | "receive";
   value?: any;
   handler: (value?: any) => T;
 }
@@ -27,12 +27,12 @@ class CSPChannel<T> implements Channel<T> {
   private waitingSenders: Array<{ value: T; resolve: () => void }> = [];
   private waitingReceivers: Array<{ resolve: (value: T) => void }> = [];
   private closed = false;
-  
+
   constructor(private bufferSize: number = 0) {}
 
   async send(value: T): Promise<void> {
     if (this.closed) {
-      throw new OmniscriptError('Cannot send to closed channel');
+      throw new OmniscriptError("Cannot send to closed channel");
     }
 
     // If there's a waiting receiver, send directly
@@ -55,21 +55,25 @@ class CSPChannel<T> implements Channel<T> {
   }
 
   async receive(): Promise<T> {
-    if (this.closed && this.buffer.length === 0 && this.waitingSenders.length === 0) {
-      throw new OmniscriptError('Cannot receive from closed channel');
+    if (
+      this.closed &&
+      this.buffer.length === 0 &&
+      this.waitingSenders.length === 0
+    ) {
+      throw new OmniscriptError("Cannot receive from closed channel");
     }
 
     // If buffer has values, return immediately
     if (this.buffer.length > 0) {
       const value = this.buffer.shift()!;
-      
+
       // If there are waiting senders, move one to buffer
       if (this.waitingSenders.length > 0) {
         const sender = this.waitingSenders.shift()!;
         this.buffer.push(sender.value);
         sender.resolve();
       }
-      
+
       return value;
     }
 
@@ -88,9 +92,9 @@ class CSPChannel<T> implements Channel<T> {
 
   close(): void {
     this.closed = true;
-    
+
     // Reject all waiting receivers
-    this.waitingReceivers.forEach(receiver => {
+    this.waitingReceivers.forEach((receiver) => {
       receiver.resolve(null as any); // Could use special closed value
     });
     this.waitingReceivers = [];
@@ -108,13 +112,15 @@ class ChannelSelect {
 
     // Create promises for each case
     selectOp.cases.forEach((selectCase, index) => {
-      if (selectCase.operation === 'receive') {
+      if (selectCase.operation === "receive") {
         promises.push(
-          selectCase.channel.receive().then(value => ({ index, value }))
+          selectCase.channel.receive().then((value) => ({ index, value })),
         );
-      } else if (selectCase.operation === 'send') {
+      } else if (selectCase.operation === "send") {
         promises.push(
-          selectCase.channel.send(selectCase.value).then(() => ({ index, value: undefined }))
+          selectCase.channel
+            .send(selectCase.value)
+            .then(() => ({ index, value: undefined })),
         );
       }
     });
@@ -123,8 +129,11 @@ class ChannelSelect {
     if (selectOp.timeout !== undefined) {
       promises.push(
         new Promise<{ index: number; value: any }>((_, reject) => {
-          setTimeout(() => reject(new Error('Select timeout')), selectOp.timeout);
-        })
+          setTimeout(
+            () => reject(new Error("Select timeout")),
+            selectOp.timeout,
+          );
+        }),
       );
     }
 
@@ -161,7 +170,7 @@ class AsyncScheduler {
           reject(error);
         }
       });
-      
+
       this.processTasks();
     });
   }
@@ -174,11 +183,14 @@ class AsyncScheduler {
 
     while (this.taskQueue.length > 0 || runningTasks.size > 0) {
       // Start new tasks up to concurrency limit
-      while (this.taskQueue.length > 0 && runningTasks.size < this.maxConcurrency) {
+      while (
+        this.taskQueue.length > 0 &&
+        runningTasks.size < this.maxConcurrency
+      ) {
         const task = this.taskQueue.shift()!;
         const taskPromise = task().catch(() => {}); // Prevent unhandled rejection
         runningTasks.add(taskPromise);
-        
+
         taskPromise.finally(() => {
           runningTasks.delete(taskPromise);
         });
@@ -194,12 +206,12 @@ class AsyncScheduler {
   }
 
   async parallel<T>(tasks: Array<() => Promise<T>>): Promise<T[]> {
-    const promises = tasks.map(task => this.schedule(task));
+    const promises = tasks.map((task) => this.schedule(task));
     return Promise.all(promises);
   }
 
   async race<T>(tasks: Array<() => Promise<T>>): Promise<T> {
-    const promises = tasks.map(task => this.schedule(task));
+    const promises = tasks.map((task) => this.schedule(task));
     return Promise.race(promises);
   }
 }
@@ -215,7 +227,11 @@ interface CustomWorker {
 class WorkerPool {
   private workers: CustomWorker[] = [];
   private availableWorkers: CustomWorker[] = [];
-  private taskQueue: Array<{ task: any; resolve: (value: any) => void; reject: (error: any) => void }> = [];
+  private taskQueue: Array<{
+    task: any;
+    resolve: (value: any) => void;
+    reject: (error: any) => void;
+  }> = [];
 
   constructor(private workerCount: number = 4) {
     this.initializeWorkers();
@@ -227,9 +243,9 @@ class WorkerPool {
       const worker: CustomWorker = {
         id: i,
         busy: false,
-        execute: (task: any) => Promise.resolve(task()) // Simplified execution
+        execute: (task: any) => Promise.resolve(task()), // Simplified execution
       };
-      
+
       this.workers.push(worker);
       this.availableWorkers.push(worker);
     }
@@ -246,9 +262,9 @@ class WorkerPool {
     while (this.taskQueue.length > 0 && this.availableWorkers.length > 0) {
       const { task, resolve, reject } = this.taskQueue.shift()!;
       const worker = this.availableWorkers.shift()!;
-      
+
       worker.busy = true;
-      
+
       try {
         const result = await worker.execute(task);
         resolve(result);
@@ -264,7 +280,7 @@ class WorkerPool {
 
   terminate(): void {
     // In real implementation, would terminate worker threads
-    this.workers.forEach(worker => {
+    this.workers.forEach((worker) => {
       if (worker.terminate) {
         worker.terminate();
       }
@@ -295,7 +311,7 @@ class AtomicOperations {
 
   unlock(key: string): void {
     this.locks.set(key, false);
-    
+
     const waitQueue = this.waitQueues.get(key);
     if (waitQueue && waitQueue.length > 0) {
       const next = waitQueue.shift()!;
@@ -362,17 +378,17 @@ class Future<T> {
 
   async timeout(ms: number): Promise<T> {
     const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error('Future timeout')), ms);
+      setTimeout(() => reject(new Error("Future timeout")), ms);
     });
-    
+
     return Promise.race([this.promise, timeoutPromise]);
   }
 
   map<U>(fn: (value: T) => U): Future<U> {
     const mapped = new Future<U>();
     this.promise.then(
-      value => mapped.complete(fn(value)),
-      error => mapped.completeExceptionally(error)
+      (value) => mapped.complete(fn(value)),
+      (error) => mapped.completeExceptionally(error),
     );
     return mapped;
   }
@@ -380,14 +396,14 @@ class Future<T> {
   flatMap<U>(fn: (value: T) => Future<U>): Future<U> {
     const flatMapped = new Future<U>();
     this.promise.then(
-      value => {
+      (value) => {
         const inner = fn(value);
         inner.get().then(
-          innerValue => flatMapped.complete(innerValue),
-          error => flatMapped.completeExceptionally(error)
+          (innerValue) => flatMapped.complete(innerValue),
+          (error) => flatMapped.completeExceptionally(error),
         );
       },
-      error => flatMapped.completeExceptionally(error)
+      (error) => flatMapped.completeExceptionally(error),
     );
     return flatMapped;
   }
@@ -402,7 +418,7 @@ class ReactiveStream<T> {
 
   emit(value: T): void {
     if (this.completed) return;
-    this.subscribers.forEach(handler => {
+    this.subscribers.forEach((handler) => {
       try {
         handler(value);
       } catch (error) {
@@ -412,13 +428,13 @@ class ReactiveStream<T> {
   }
 
   emitError(error: any): void {
-    this.errorHandlers.forEach(handler => handler(error));
+    this.errorHandlers.forEach((handler) => handler(error));
   }
 
   complete(): void {
     if (this.completed) return;
     this.completed = true;
-    this.completeHandlers.forEach(handler => handler());
+    this.completeHandlers.forEach((handler) => handler());
   }
 
   subscribe(handler: (value: T) => void): () => void {
@@ -453,20 +469,20 @@ class ReactiveStream<T> {
 
   map<U>(fn: (value: T) => U): ReactiveStream<U> {
     const mapped = new ReactiveStream<U>();
-    this.subscribe(value => mapped.emit(fn(value)));
-    this.onError(error => mapped.emitError(error));
+    this.subscribe((value) => mapped.emit(fn(value)));
+    this.onError((error) => mapped.emitError(error));
     this.onComplete(() => mapped.complete());
     return mapped;
   }
 
   filter(predicate: (value: T) => boolean): ReactiveStream<T> {
     const filtered = new ReactiveStream<T>();
-    this.subscribe(value => {
+    this.subscribe((value) => {
       if (predicate(value)) {
         filtered.emit(value);
       }
     });
-    this.onError(error => filtered.emitError(error));
+    this.onError((error) => filtered.emitError(error));
     this.onComplete(() => filtered.complete());
     return filtered;
   }
@@ -474,8 +490,8 @@ class ReactiveStream<T> {
   take(count: number): ReactiveStream<T> {
     const taken = new ReactiveStream<T>();
     let emitted = 0;
-    
-    this.subscribe(value => {
+
+    this.subscribe((value) => {
       if (emitted < count) {
         taken.emit(value);
         emitted++;
@@ -484,8 +500,8 @@ class ReactiveStream<T> {
         }
       }
     });
-    
-    this.onError(error => taken.emitError(error));
+
+    this.onError((error) => taken.emitError(error));
     return taken;
   }
 }
@@ -497,5 +513,5 @@ export {
   WorkerPool,
   AtomicOperations,
   Future,
-  ReactiveStream
+  ReactiveStream,
 };

@@ -1,5 +1,5 @@
-import { OmniscriptError } from '../errors';
-import { debug } from '../debug';
+import { OmniscriptError } from "../errors";
+import { debug } from "../debug";
 
 export interface HTTPOptions {
   timeout?: number;
@@ -26,41 +26,48 @@ export class HTTPClient {
       retries: 3,
       retryDelay: 1000,
       validateStatus: (status) => status >= 200 && status < 300,
-      ...options
+      ...options,
     };
   }
 
   static enableDebugging(enabled: boolean = true): void {
     if (enabled) {
-      debug.enableComponent('HTTP');
+      debug.enableComponent("HTTP");
     } else {
-      debug.disableComponent('HTTP');
+      debug.disableComponent("HTTP");
     }
   }
 
-  async request<T = any>(method: string, url: string, options: HTTPOptions & { body?: any } = {}): Promise<HTTPResponse<T>> {
+  async request<T = any>(
+    method: string,
+    url: string,
+    options: HTTPOptions & { body?: any } = {},
+  ): Promise<HTTPResponse<T>> {
     const mergedOptions = { ...this.defaultOptions, ...options };
     let lastError: Error | null = null;
 
     for (let attempt = 0; attempt <= (mergedOptions.retries || 0); attempt++) {
       try {
-        debug.time('HTTP', `${method} ${url} (attempt ${attempt + 1})`);
-        
+        debug.time("HTTP", `${method} ${url} (attempt ${attempt + 1})`);
+
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), mergedOptions.timeout);
+        const timeoutId = setTimeout(
+          () => controller.abort(),
+          mergedOptions.timeout,
+        );
 
         const fetchOptions: RequestInit = {
           method,
           headers: mergedOptions.headers,
-          signal: controller.signal
+          signal: controller.signal,
         };
 
         if (options.body) {
-          if (typeof options.body === 'object') {
+          if (typeof options.body === "object") {
             fetchOptions.body = JSON.stringify(options.body);
             fetchOptions.headers = {
-              'Content-Type': 'application/json',
-              ...fetchOptions.headers
+              "Content-Type": "application/json",
+              ...fetchOptions.headers,
             };
           } else {
             fetchOptions.body = options.body;
@@ -70,8 +77,8 @@ export class HTTPClient {
         const response = await fetch(url, fetchOptions);
         clearTimeout(timeoutId);
 
-        debug.timeEnd('HTTP', `${method} ${url} (attempt ${attempt + 1})`);
-        debug.debug('HTTP', `${method} ${url} status: ${response.status}`);
+        debug.timeEnd("HTTP", `${method} ${url} (attempt ${attempt + 1})`);
+        debug.debug("HTTP", `${method} ${url} status: ${response.status}`);
 
         if (!mergedOptions.validateStatus!(response.status)) {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -79,14 +86,14 @@ export class HTTPClient {
 
         // Parse response based on content type
         let data: T;
-        const contentType = response.headers.get('content-type') || '';
-        
-        if (contentType.includes('application/json')) {
+        const contentType = response.headers.get("content-type") || "";
+
+        if (contentType.includes("application/json")) {
           data = await response.json();
-        } else if (contentType.includes('text/')) {
-          data = await response.text() as unknown as T;
+        } else if (contentType.includes("text/")) {
+          data = (await response.text()) as unknown as T;
         } else {
-          data = await response.arrayBuffer() as unknown as T;
+          data = (await response.arrayBuffer()) as unknown as T;
         }
 
         // Convert headers to object
@@ -100,90 +107,129 @@ export class HTTPClient {
           status: response.status,
           statusText: response.statusText,
           headers,
-          url: response.url
+          url: response.url,
         };
-
       } catch (error) {
         lastError = error as Error;
-        debug.warn('HTTP', `${method} ${url} failed (attempt ${attempt + 1}): ${lastError.message}`);
-        
+        debug.warn(
+          "HTTP",
+          `${method} ${url} failed (attempt ${attempt + 1}): ${lastError.message}`,
+        );
+
         if (attempt < (mergedOptions.retries || 0)) {
           await this.delay(mergedOptions.retryDelay || 1000);
         }
       }
     }
 
-    throw new OmniscriptError(`HTTP request failed after ${(mergedOptions.retries || 0) + 1} attempts: ${lastError?.message}`);
+    throw new OmniscriptError(
+      `HTTP request failed after ${(mergedOptions.retries || 0) + 1} attempts: ${lastError?.message}`,
+    );
   }
 
-  async get<T = any>(url: string, options?: HTTPOptions): Promise<HTTPResponse<T>> {
-    return this.request<T>('GET', url, options);
+  async get<T = any>(
+    url: string,
+    options?: HTTPOptions,
+  ): Promise<HTTPResponse<T>> {
+    return this.request<T>("GET", url, options);
   }
 
-  async post<T = any>(url: string, body?: any, options?: HTTPOptions): Promise<HTTPResponse<T>> {
-    return this.request<T>('POST', url, { ...options, body });
+  async post<T = any>(
+    url: string,
+    body?: any,
+    options?: HTTPOptions,
+  ): Promise<HTTPResponse<T>> {
+    return this.request<T>("POST", url, { ...options, body });
   }
 
-  async put<T = any>(url: string, body?: any, options?: HTTPOptions): Promise<HTTPResponse<T>> {
-    return this.request<T>('PUT', url, { ...options, body });
+  async put<T = any>(
+    url: string,
+    body?: any,
+    options?: HTTPOptions,
+  ): Promise<HTTPResponse<T>> {
+    return this.request<T>("PUT", url, { ...options, body });
   }
 
-  async patch<T = any>(url: string, body?: any, options?: HTTPOptions): Promise<HTTPResponse<T>> {
-    return this.request<T>('PATCH', url, { ...options, body });
+  async patch<T = any>(
+    url: string,
+    body?: any,
+    options?: HTTPOptions,
+  ): Promise<HTTPResponse<T>> {
+    return this.request<T>("PATCH", url, { ...options, body });
   }
 
-  async delete<T = any>(url: string, options?: HTTPOptions): Promise<HTTPResponse<T>> {
-    return this.request<T>('DELETE', url, options);
+  async delete<T = any>(
+    url: string,
+    options?: HTTPOptions,
+  ): Promise<HTTPResponse<T>> {
+    return this.request<T>("DELETE", url, options);
   }
 
-  async head<T = any>(url: string, options?: HTTPOptions): Promise<HTTPResponse<T>> {
-    return this.request<T>('HEAD', url, options);
+  async head<T = any>(
+    url: string,
+    options?: HTTPOptions,
+  ): Promise<HTTPResponse<T>> {
+    return this.request<T>("HEAD", url, options);
   }
 
   private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 }
 
 // Legacy HTTP class for backward compatibility
 export class HTTP extends HTTPClient {
-  static async get(url: string, headers?: Record<string, string>): Promise<Response> {
+  static async get(
+    url: string,
+    headers?: Record<string, string>,
+  ): Promise<Response> {
     const client = new HTTPClient();
     const response = await client.get(url, { headers });
     return new Response(JSON.stringify(response.data), {
       status: response.status,
       statusText: response.statusText,
-      headers: response.headers
+      headers: response.headers,
     });
   }
 
-  static async post(url: string, body: any, headers?: Record<string, string>): Promise<Response> {
+  static async post(
+    url: string,
+    body: any,
+    headers?: Record<string, string>,
+  ): Promise<Response> {
     const client = new HTTPClient();
     const response = await client.post(url, body, { headers });
     return new Response(JSON.stringify(response.data), {
       status: response.status,
       statusText: response.statusText,
-      headers: response.headers
+      headers: response.headers,
     });
   }
 
-  static async put(url: string, body: any, headers?: Record<string, string>): Promise<Response> {
+  static async put(
+    url: string,
+    body: any,
+    headers?: Record<string, string>,
+  ): Promise<Response> {
     const client = new HTTPClient();
     const response = await client.put(url, body, { headers });
     return new Response(JSON.stringify(response.data), {
       status: response.status,
       statusText: response.statusText,
-      headers: response.headers
+      headers: response.headers,
     });
   }
 
-  static async delete(url: string, headers?: Record<string, string>): Promise<Response> {
+  static async delete(
+    url: string,
+    headers?: Record<string, string>,
+  ): Promise<Response> {
     const client = new HTTPClient();
     const response = await client.delete(url, { headers });
     return new Response(JSON.stringify(response.data), {
       status: response.status,
       statusText: response.statusText,
-      headers: response.headers
+      headers: response.headers,
     });
   }
 }
@@ -204,55 +250,60 @@ export class WebSocketClient {
   private messageHandlers: Map<string, ((...args: any[]) => any)[]> = new Map();
   private eventHandlers: Map<string, ((...args: any[]) => any)[]> = new Map();
 
-  constructor(private url: string, options: WebSocketOptions = {}) {
+  constructor(
+    private url: string,
+    options: WebSocketOptions = {},
+  ) {
     this.options = {
       reconnectAttempts: 5,
       reconnectDelay: 1000,
       heartbeatInterval: 30000,
-      ...options
+      ...options,
     };
     this.connect();
   }
 
   enableDebugging(enabled: boolean = true): void {
     if (enabled) {
-      debug.enableComponent('WebSocket');
+      debug.enableComponent("WebSocket");
     } else {
-      debug.disableComponent('WebSocket');
+      debug.disableComponent("WebSocket");
     }
   }
 
   private connect(): void {
     try {
       this.ws = new globalThis.WebSocket(this.url, this.options.protocols);
-      
+
       this.ws.onopen = () => {
-        debug.info('WebSocket', `Connected to ${this.url}`);
+        debug.info("WebSocket", `Connected to ${this.url}`);
         this.reconnectCount = 0;
         this.isReconnecting = false;
         this.startHeartbeat();
-        this.emit('open');
+        this.emit("open");
       };
 
       this.ws.onmessage = (event) => {
-        debug.debug('WebSocket', 'Received message:', event.data);
+        debug.debug("WebSocket", "Received message:", event.data);
         this.handleMessage(event.data);
       };
 
       this.ws.onclose = (event) => {
-        debug.info('WebSocket', `Connection closed: ${event.code} ${event.reason}`);
+        debug.info(
+          "WebSocket",
+          `Connection closed: ${event.code} ${event.reason}`,
+        );
         this.stopHeartbeat();
-        this.emit('close', { code: event.code, reason: event.reason });
+        this.emit("close", { code: event.code, reason: event.reason });
         this.handleReconnect();
       };
 
       this.ws.onerror = (error) => {
-        debug.error('WebSocket', 'Connection error:', error);
-        this.emit('error', error);
+        debug.error("WebSocket", "Connection error:", error);
+        this.emit("error", error);
       };
-
     } catch (error) {
-      debug.error('WebSocket', 'Failed to create WebSocket:', error);
+      debug.error("WebSocket", "Failed to create WebSocket:", error);
       this.handleReconnect();
     }
   }
@@ -260,33 +311,39 @@ export class WebSocketClient {
   private handleMessage(data: string): void {
     try {
       const message = JSON.parse(data);
-      
+
       // Handle structured messages with type
       if (message.type) {
         this.emit(message.type, message.payload || message);
       }
-      
+
       // Handle all messages
-      this.emit('message', message);
-      
+      this.emit("message", message);
     } catch (error) {
       // Handle plain text messages
-      this.emit('message', data);
+      this.emit("message", data);
     }
   }
 
   private handleReconnect(): void {
-    if (this.isReconnecting || this.reconnectCount >= (this.options.reconnectAttempts || 0)) {
-      debug.warn('WebSocket', 'Maximum reconnection attempts reached');
+    if (
+      this.isReconnecting ||
+      this.reconnectCount >= (this.options.reconnectAttempts || 0)
+    ) {
+      debug.warn("WebSocket", "Maximum reconnection attempts reached");
       return;
     }
 
     this.isReconnecting = true;
     this.reconnectCount++;
-    
-    const delay = this.options.reconnectDelay! * Math.pow(2, this.reconnectCount - 1);
-    debug.info('WebSocket', `Attempting to reconnect in ${delay}ms (attempt ${this.reconnectCount})`);
-    
+
+    const delay =
+      this.options.reconnectDelay! * Math.pow(2, this.reconnectCount - 1);
+    debug.info(
+      "WebSocket",
+      `Attempting to reconnect in ${delay}ms (attempt ${this.reconnectCount})`,
+    );
+
     setTimeout(() => {
       this.connect();
     }, delay);
@@ -295,8 +352,9 @@ export class WebSocketClient {
   private startHeartbeat(): void {
     if (this.options.heartbeatInterval) {
       this.heartbeatTimer = setInterval(() => {
-        if (this.ws && this.ws.readyState === 1) { // WebSocket.OPEN
-          this.send({ type: 'ping', timestamp: Date.now() });
+        if (this.ws && this.ws.readyState === 1) {
+          // WebSocket.OPEN
+          this.send({ type: "ping", timestamp: Date.now() });
         }
       }, this.options.heartbeatInterval);
     }
@@ -310,13 +368,14 @@ export class WebSocketClient {
   }
 
   send(data: any): void {
-    if (this.ws && this.ws.readyState === 1) { // WebSocket.OPEN
-      const message = typeof data === 'string' ? data : JSON.stringify(data);
-      debug.debug('WebSocket', 'Sending message:', data);
+    if (this.ws && this.ws.readyState === 1) {
+      // WebSocket.OPEN
+      const message = typeof data === "string" ? data : JSON.stringify(data);
+      debug.debug("WebSocket", "Sending message:", data);
       this.ws.send(message);
     } else {
-      debug.warn('WebSocket', 'Cannot send message: connection not open');
-      throw new Error('WebSocket connection is not open');
+      debug.warn("WebSocket", "Cannot send message: connection not open");
+      throw new Error("WebSocket connection is not open");
     }
   }
 
@@ -329,7 +388,7 @@ export class WebSocketClient {
 
   off(event: string, handler?: (...args: any[]) => any): void {
     if (!this.eventHandlers.has(event)) return;
-    
+
     if (handler) {
       const handlers = this.eventHandlers.get(event)!;
       const index = handlers.indexOf(handler);
@@ -344,11 +403,15 @@ export class WebSocketClient {
   private emit(event: string, ...args: any[]): void {
     const handlers = this.eventHandlers.get(event);
     if (handlers) {
-      handlers.forEach(handler => {
+      handlers.forEach((handler) => {
         try {
           handler(...args);
         } catch (error) {
-          debug.error('WebSocket', `Error in event handler for '${event}':`, error);
+          debug.error(
+            "WebSocket",
+            `Error in event handler for '${event}':`,
+            error,
+          );
         }
       });
     }
@@ -356,7 +419,7 @@ export class WebSocketClient {
 
   // Legacy methods for backward compatibility
   onMessage(callback: (data: any) => void): void {
-    this.on('message', callback);
+    this.on("message", callback);
   }
 
   onEvent(eventType: string, callback: (data: any) => void): void {
@@ -364,7 +427,7 @@ export class WebSocketClient {
   }
 
   close(): void {
-    debug.info('WebSocket', 'Closing connection');
+    debug.info("WebSocket", "Closing connection");
     this.stopHeartbeat();
     this.reconnectCount = this.options.reconnectAttempts || 0; // Prevent reconnection
     if (this.ws) {
@@ -386,44 +449,58 @@ export class WebSocketClient {
 export class WebSocket extends WebSocketClient {}
 
 export class AsyncUtils {
-  static async withTimeout<T>(promise: Promise<T>, timeout: number): Promise<T> {
+  static async withTimeout<T>(
+    promise: Promise<T>,
+    timeout: number,
+  ): Promise<T> {
     let timeoutHandle: NodeJS.Timeout;
     const timeoutPromise = new Promise<never>((_, reject) => {
-      timeoutHandle = setTimeout(() => reject(new OmniscriptError('Operation timed out')), timeout);
+      timeoutHandle = setTimeout(
+        () => reject(new OmniscriptError("Operation timed out")),
+        timeout,
+      );
     });
 
-    return Promise.race([promise, timeoutPromise]).finally(() => clearTimeout(timeoutHandle));
+    return Promise.race([promise, timeoutPromise]).finally(() =>
+      clearTimeout(timeoutHandle),
+    );
   }
 
   static async withRetry<T>(
-    operation: () => Promise<T>, 
-    maxAttempts: number = 3, 
-    delay: number = 1000
+    operation: () => Promise<T>,
+    maxAttempts: number = 3,
+    delay: number = 1000,
   ): Promise<T> {
     let lastError: Error;
-    
+
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
         return await operation();
       } catch (error) {
         lastError = error as Error;
-        debug.warn('AsyncUtils', `Attempt ${attempt} failed: ${lastError.message}`);
-        
+        debug.warn(
+          "AsyncUtils",
+          `Attempt ${attempt} failed: ${lastError.message}`,
+        );
+
         if (attempt < maxAttempts) {
           await this.delay(delay * attempt); // Exponential backoff
         }
       }
     }
-    
+
     throw lastError!;
   }
 
-  static async withCancellation<T>(promise: Promise<T>, cancelToken: { cancel: boolean }): Promise<T> {
+  static async withCancellation<T>(
+    promise: Promise<T>,
+    cancelToken: { cancel: boolean },
+  ): Promise<T> {
     const cancellationPromise = new Promise<never>((_, reject) => {
       const interval = setInterval(() => {
         if (cancelToken.cancel) {
           clearInterval(interval);
-          reject(new OmniscriptError('Operation cancelled'));
+          reject(new OmniscriptError("Operation cancelled"));
         }
       }, 10);
     });
@@ -435,39 +512,39 @@ export class AsyncUtils {
     try {
       return await promise;
     } catch (error) {
-      debug.error('AsyncUtils', 'Async error propagated:', error);
+      debug.error("AsyncUtils", "Async error propagated:", error);
       throw error;
     }
   }
 
   static delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   static async batch<T, R>(
-    items: T[], 
-    batchSize: number, 
-    processor: (batch: T[]) => Promise<R[]>
+    items: T[],
+    batchSize: number,
+    processor: (batch: T[]) => Promise<R[]>,
   ): Promise<R[]> {
     const results: R[] = [];
-    
+
     for (let i = 0; i < items.length; i += batchSize) {
       const batch = items.slice(i, i + batchSize);
       const batchResults = await processor(batch);
       results.push(...batchResults);
     }
-    
+
     return results;
   }
 
   static async parallel<T, R>(
-    items: T[], 
+    items: T[],
     processor: (item: T, index: number) => Promise<R>,
-    concurrency: number = 10
+    concurrency: number = 10,
   ): Promise<R[]> {
     const results: R[] = new Array(items.length);
     const semaphore = new Semaphore(concurrency);
-    
+
     const promises = items.map(async (item, index) => {
       await semaphore.acquire();
       try {
@@ -476,7 +553,7 @@ export class AsyncUtils {
         semaphore.release();
       }
     });
-    
+
     await Promise.all(promises);
     return results;
   }
@@ -491,7 +568,7 @@ class Semaphore {
   }
 
   async acquire(): Promise<void> {
-    return new Promise(resolve => {
+    return new Promise((resolve) => {
       if (this.permits > 0) {
         this.permits--;
         resolve();
@@ -519,16 +596,16 @@ export class EventSourcingServer {
 
   enableDebugging(enabled: boolean = true): void {
     if (enabled) {
-      debug.enableComponent('EventSourcingServer');
+      debug.enableComponent("EventSourcingServer");
     } else {
-      debug.disableComponent('EventSourcingServer');
+      debug.disableComponent("EventSourcingServer");
     }
   }
 
   broadcastEvent(event: { type: string; payload: any }): void {
     const msg = JSON.stringify(event);
-    debug.debug('EventSourcingServer', 'Broadcasting event:', event);
-    this.clients.forEach(client => {
+    debug.debug("EventSourcingServer", "Broadcasting event:", event);
+    this.clients.forEach((client) => {
       if (client.isConnected) {
         client.send(msg);
       }
@@ -536,7 +613,7 @@ export class EventSourcingServer {
   }
 
   addClient(client: WebSocketClient): void {
-    debug.info('EventSourcingServer', 'Adding new client');
+    debug.info("EventSourcingServer", "Adding new client");
     this.clients.push(client);
   }
 
@@ -544,7 +621,7 @@ export class EventSourcingServer {
     const index = this.clients.indexOf(client);
     if (index > -1) {
       this.clients.splice(index, 1);
-      debug.info('EventSourcingServer', 'Removed client');
+      debug.info("EventSourcingServer", "Removed client");
     }
   }
 }

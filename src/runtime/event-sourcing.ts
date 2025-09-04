@@ -1,4 +1,4 @@
-import { debug } from '../debug';
+import { debug } from "../debug";
 
 export interface DomainEvent {
   id: string;
@@ -46,30 +46,36 @@ export class InMemoryEventStore implements EventStore {
   async append(events: DomainEvent[]): Promise<void> {
     for (const event of events) {
       this.events.push(event);
-      
+
       // Index by aggregate
       if (!this.eventsByAggregate.has(event.aggregateId)) {
         this.eventsByAggregate.set(event.aggregateId, []);
       }
       this.eventsByAggregate.get(event.aggregateId)!.push(event);
-      
+
       // Index by type
       if (!this.eventsByType.has(event.type)) {
         this.eventsByType.set(event.type, []);
       }
       this.eventsByType.get(event.type)!.push(event);
-      
-      debug.debug('EventSourcing', `Event appended: ${event.type} for aggregate ${event.aggregateId}`);
+
+      debug.debug(
+        "EventSourcing",
+        `Event appended: ${event.type} for aggregate ${event.aggregateId}`,
+      );
     }
   }
 
-  async getEvents(aggregateId: string, fromVersion: number = 0): Promise<DomainEvent[]> {
+  async getEvents(
+    aggregateId: string,
+    fromVersion: number = 0,
+  ): Promise<DomainEvent[]> {
     const events = this.eventsByAggregate.get(aggregateId) || [];
-    return events.filter(event => event.version >= fromVersion);
+    return events.filter((event) => event.version >= fromVersion);
   }
 
   async getAllEvents(fromTimestamp: number = 0): Promise<DomainEvent[]> {
-    return this.events.filter(event => event.timestamp >= fromTimestamp);
+    return this.events.filter((event) => event.timestamp >= fromTimestamp);
   }
 
   async getEventsByType(eventType: string): Promise<DomainEvent[]> {
@@ -82,7 +88,10 @@ export class InMemorySnapshotStore implements SnapshotStore {
 
   async save<T>(snapshot: Snapshot<T>): Promise<void> {
     this.snapshots.set(snapshot.aggregateId, snapshot);
-    debug.debug('EventSourcing', `Snapshot saved for aggregate ${snapshot.aggregateId} at version ${snapshot.version}`);
+    debug.debug(
+      "EventSourcing",
+      `Snapshot saved for aggregate ${snapshot.aggregateId} at version ${snapshot.version}`,
+    );
   }
 
   async get<T>(aggregateId: string): Promise<Snapshot<T> | null> {
@@ -110,7 +119,11 @@ export abstract class AggregateRoot<T = any> {
     return this.version;
   }
 
-  protected addEvent(eventType: string, payload: any, metadata: Record<string, any> = {}): void {
+  protected addEvent(
+    eventType: string,
+    payload: any,
+    metadata: Record<string, any> = {},
+  ): void {
     const event: DomainEvent = {
       id: this.generateEventId(),
       type: eventType,
@@ -136,7 +149,7 @@ export abstract class AggregateRoot<T = any> {
   }
 
   loadFromHistory(events: DomainEvent[]): void {
-    events.forEach(event => {
+    events.forEach((event) => {
       this.applyEvent(event);
       this.version = event.version;
     });
@@ -148,7 +161,7 @@ export abstract class AggregateRoot<T = any> {
       aggregateType: this.getTypeName(),
       data: this.getState(),
       version: this.version,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
   }
 
@@ -167,40 +180,57 @@ export abstract class AggregateRoot<T = any> {
 
 export class EventBus {
   private handlers: Map<string, EventHandler[]> = new Map();
-  private projections: Map<string, (event: DomainEvent) => Promise<void>> = new Map();
+  private projections: Map<string, (event: DomainEvent) => Promise<void>> =
+    new Map();
 
   subscribe(eventType: string, handler: EventHandler): void {
     if (!this.handlers.has(eventType)) {
       this.handlers.set(eventType, []);
     }
     this.handlers.get(eventType)!.push(handler);
-    debug.info('EventSourcing', `Handler subscribed to event type: ${eventType}`);
+    debug.info(
+      "EventSourcing",
+      `Handler subscribed to event type: ${eventType}`,
+    );
   }
 
-  addProjection(name: string, projectionHandler: (event: DomainEvent) => Promise<void>): void {
+  addProjection(
+    name: string,
+    projectionHandler: (event: DomainEvent) => Promise<void>,
+  ): void {
     this.projections.set(name, projectionHandler);
-    debug.info('EventSourcing', `Projection added: ${name}`);
+    debug.info("EventSourcing", `Projection added: ${name}`);
   }
 
   async publish(event: DomainEvent): Promise<void> {
     const handlers = this.handlers.get(event.type) || [];
-    
+
     // Execute handlers
-    const handlerPromises = handlers.map(handler => {
-      return handler.handle(event).catch(error => {
-        debug.error('EventSourcing', `Handler error for event ${event.type}:`, error);
+    const handlerPromises = handlers.map((handler) => {
+      return handler.handle(event).catch((error) => {
+        debug.error(
+          "EventSourcing",
+          `Handler error for event ${event.type}:`,
+          error,
+        );
       });
     });
 
     // Execute projections
-    const projectionPromises = Array.from(this.projections.values()).map(projection => {
-      return projection(event).catch(error => {
-        debug.error('EventSourcing', `Projection error for event ${event.type}:`, error);
-      });
-    });
+    const projectionPromises = Array.from(this.projections.values()).map(
+      (projection) => {
+        return projection(event).catch((error) => {
+          debug.error(
+            "EventSourcing",
+            `Projection error for event ${event.type}:`,
+            error,
+          );
+        });
+      },
+    );
 
     await Promise.all([...handlerPromises, ...projectionPromises]);
-    debug.debug('EventSourcing', `Event published: ${event.type}`);
+    debug.debug("EventSourcing", `Event published: ${event.type}`);
   }
 }
 
@@ -209,18 +239,18 @@ export class Repository<T extends AggregateRoot> {
     private eventStore: EventStore,
     private snapshotStore?: SnapshotStore,
     private eventBus?: EventBus,
-    private snapshotFrequency: number = 10
+    private snapshotFrequency: number = 10,
   ) {}
 
   async save(aggregate: T): Promise<void> {
     const events = aggregate.getUncommittedEvents();
-    
+
     if (events.length === 0) {
       return;
     }
 
     await this.eventStore.append(events);
-    
+
     // Publish events to event bus
     if (this.eventBus) {
       for (const event of events) {
@@ -231,14 +261,23 @@ export class Repository<T extends AggregateRoot> {
     aggregate.markEventsAsCommitted();
 
     // Create snapshot if needed
-    if (this.snapshotStore && aggregate.getVersion() % this.snapshotFrequency === 0) {
+    if (
+      this.snapshotStore &&
+      aggregate.getVersion() % this.snapshotFrequency === 0
+    ) {
       await this.snapshotStore.save(aggregate.createSnapshot());
     }
 
-    debug.info('EventSourcing', `Aggregate ${aggregate.getId()} saved with ${events.length} events`);
+    debug.info(
+      "EventSourcing",
+      `Aggregate ${aggregate.getId()} saved with ${events.length} events`,
+    );
   }
 
-  async getById(id: string, aggregateFactory: (id: string) => T): Promise<T | null> {
+  async getById(
+    id: string,
+    aggregateFactory: (id: string) => T,
+  ): Promise<T | null> {
     const aggregate = aggregateFactory(id);
     let fromVersion = 0;
 
@@ -248,7 +287,10 @@ export class Repository<T extends AggregateRoot> {
       if (snapshot) {
         aggregate.loadFromSnapshot(snapshot);
         fromVersion = snapshot.version;
-        debug.debug('EventSourcing', `Loaded aggregate ${id} from snapshot at version ${fromVersion}`);
+        debug.debug(
+          "EventSourcing",
+          `Loaded aggregate ${id} from snapshot at version ${fromVersion}`,
+        );
       }
     }
 
@@ -259,56 +301,63 @@ export class Repository<T extends AggregateRoot> {
     }
 
     aggregate.loadFromHistory(events);
-    debug.debug('EventSourcing', `Loaded aggregate ${id} with ${events.length} events since version ${fromVersion}`);
-    
+    debug.debug(
+      "EventSourcing",
+      `Loaded aggregate ${id} with ${events.length} events since version ${fromVersion}`,
+    );
+
     return aggregate;
   }
 }
 
 // Example aggregate implementation
-export class UserAggregate extends AggregateRoot<{ name: string; email: string; isActive: boolean }> {
-  private name: string = '';
-  private email: string = '';
+export class UserAggregate extends AggregateRoot<{
+  name: string;
+  email: string;
+  isActive: boolean;
+}> {
+  private name: string = "";
+  private email: string = "";
   private isActive: boolean = false;
 
   getTypeName(): string {
-    return 'User';
+    return "User";
   }
 
   // Commands
   register(name: string, email: string): void {
     if (this.version > 0) {
-      throw new Error('User is already registered');
+      throw new Error("User is already registered");
     }
-    this.addEvent('UserRegistered', { name, email });
+    this.addEvent("UserRegistered", { name, email });
   }
 
   changeEmail(newEmail: string): void {
     if (!this.isActive) {
-      throw new Error('Cannot change email for inactive user');
+      throw new Error("Cannot change email for inactive user");
     }
-    this.addEvent('EmailChanged', { oldEmail: this.email, newEmail });
+    this.addEvent("EmailChanged", { oldEmail: this.email, newEmail });
   }
 
   deactivate(): void {
     if (!this.isActive) {
-      throw new Error('User is already deactivated');
+      throw new Error("User is already deactivated");
     }
-    this.addEvent('UserDeactivated', {});
+    this.addEvent("UserDeactivated", {});
   }
 
   // Event handlers
   applyEvent(event: DomainEvent): void {
     switch (event.type) {
-      case 'UserRegistered':
+      case "UserRegistered":
         this.name = event.payload.name;
         this.email = event.payload.email;
         this.isActive = true;
         break;
-      case 'EmailChanged':
+      case "EmailChanged":
         this.email = event.payload.newEmail;
         break;
-      case 'UserDeactivated':
+      case "UserDeactivated":
         this.isActive = false;
         break;
     }
@@ -318,20 +367,30 @@ export class UserAggregate extends AggregateRoot<{ name: string; email: string; 
     return {
       name: this.name,
       email: this.email,
-      isActive: this.isActive
+      isActive: this.isActive,
     };
   }
 
-  protected loadState(state: { name: string; email: string; isActive: boolean }): void {
+  protected loadState(state: {
+    name: string;
+    email: string;
+    isActive: boolean;
+  }): void {
     this.name = state.name;
     this.email = state.email;
     this.isActive = state.isActive;
   }
 
   // Getters
-  getName(): string { return this.name; }
-  getEmail(): string { return this.email; }
-  getIsActive(): boolean { return this.isActive; }
+  getName(): string {
+    return this.name;
+  }
+  getEmail(): string {
+    return this.email;
+  }
+  getIsActive(): boolean {
+    return this.isActive;
+  }
 }
 
 // Event sourcing system
@@ -358,14 +417,24 @@ export class EventSourcingSystem {
     return this.eventBus;
   }
 
-  createRepository<T extends AggregateRoot>(snapshotFrequency: number = 10): Repository<T> {
-    return new Repository<T>(this.eventStore, this.snapshotStore, this.eventBus, snapshotFrequency);
+  createRepository<T extends AggregateRoot>(
+    snapshotFrequency: number = 10,
+  ): Repository<T> {
+    return new Repository<T>(
+      this.eventStore,
+      this.snapshotStore,
+      this.eventBus,
+      snapshotFrequency,
+    );
   }
 
   async replay(fromTimestamp: number = 0): Promise<void> {
     const events = await this.eventStore.getAllEvents(fromTimestamp);
-    debug.info('EventSourcing', `Replaying ${events.length} events from timestamp ${fromTimestamp}`);
-    
+    debug.info(
+      "EventSourcing",
+      `Replaying ${events.length} events from timestamp ${fromTimestamp}`,
+    );
+
     for (const event of events) {
       await this.eventBus.publish(event);
     }

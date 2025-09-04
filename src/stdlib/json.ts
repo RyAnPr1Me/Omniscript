@@ -1,4 +1,4 @@
-import { debug } from '../debug';
+import { debug } from "../debug";
 
 export interface JsonOptions {
   space?: string | number;
@@ -14,7 +14,7 @@ export class Json {
     try {
       return JSON.parse(text, options?.reviver);
     } catch (error) {
-      debug.error('Json', `Failed to parse JSON: ${error}`);
+      debug.error("Json", `Failed to parse JSON: ${error}`);
       throw new Error(`Invalid JSON: ${error}`);
     }
   }
@@ -22,11 +22,15 @@ export class Json {
   /**
    * Safely parse JSON with default value on error
    */
-  static safeParse<T = any>(text: string, defaultValue: T, options?: JsonOptions): T {
+  static safeParse<T = any>(
+    text: string,
+    defaultValue: T,
+    options?: JsonOptions,
+  ): T {
     try {
       return JSON.parse(text, options?.reviver);
     } catch (error) {
-      debug.warn('Json', `Failed to parse JSON, returning default: ${error}`);
+      debug.warn("Json", `Failed to parse JSON, returning default: ${error}`);
       return defaultValue;
     }
   }
@@ -38,7 +42,7 @@ export class Json {
     try {
       return JSON.stringify(value, options?.replacer, options?.space);
     } catch (error) {
-      debug.error('Json', `Failed to stringify object: ${error}`);
+      debug.error("Json", `Failed to stringify object: ${error}`);
       throw new Error(`Serialization failed: ${error}`);
     }
   }
@@ -69,7 +73,7 @@ export class Json {
     try {
       return JSON.parse(JSON.stringify(obj));
     } catch (error) {
-      debug.error('Json', `Failed to clone object: ${error}`);
+      debug.error("Json", `Failed to clone object: ${error}`);
       throw new Error(`Clone failed: ${error}`);
     }
   }
@@ -87,11 +91,19 @@ export class Json {
    */
   static deepMerge(target: any, source: any): any {
     const result = this.clone(target);
-    
+
     for (const key in source) {
       if (Object.prototype.hasOwnProperty.call(source, key)) {
-        if (typeof source[key] === 'object' && source[key] !== null && !Array.isArray(source[key])) {
-          if (typeof result[key] === 'object' && result[key] !== null && !Array.isArray(result[key])) {
+        if (
+          typeof source[key] === "object" &&
+          source[key] !== null &&
+          !Array.isArray(source[key])
+        ) {
+          if (
+            typeof result[key] === "object" &&
+            result[key] !== null &&
+            !Array.isArray(result[key])
+          ) {
             result[key] = this.deepMerge(result[key], source[key]);
           } else {
             result[key] = this.clone(source[key]);
@@ -101,7 +113,7 @@ export class Json {
         }
       }
     }
-    
+
     return result;
   }
 
@@ -109,16 +121,16 @@ export class Json {
    * Extract value at JSON path (simple dot notation)
    */
   static getPath(obj: any, path: string): any {
-    const keys = path.split('.');
+    const keys = path.split(".");
     let current = obj;
-    
+
     for (const key of keys) {
       if (current === null || current === undefined) {
         return undefined;
       }
       current = current[key];
     }
-    
+
     return current;
   }
 
@@ -126,21 +138,21 @@ export class Json {
    * Set value at JSON path (simple dot notation)
    */
   static setPath(obj: any, path: string, value: any): any {
-    const keys = path.split('.');
+    const keys = path.split(".");
     const lastKey = keys.pop();
     let current = obj;
-    
+
     for (const key of keys) {
-      if (!(key in current) || typeof current[key] !== 'object') {
+      if (!(key in current) || typeof current[key] !== "object") {
         current[key] = {};
       }
       current = current[key];
     }
-    
+
     if (lastKey) {
       current[lastKey] = value;
     }
-    
+
     return obj;
   }
 
@@ -148,42 +160,46 @@ export class Json {
    * Remove value at JSON path
    */
   static removePath(obj: any, path: string): any {
-    const keys = path.split('.');
+    const keys = path.split(".");
     const lastKey = keys.pop();
     let current = obj;
-    
+
     for (const key of keys) {
       if (!(key in current)) {
         return obj; // Path doesn't exist
       }
       current = current[key];
     }
-    
-    if (lastKey && current && typeof current === 'object') {
+
+    if (lastKey && current && typeof current === "object") {
       delete current[lastKey];
     }
-    
+
     return obj;
   }
 
   /**
    * Flatten nested JSON object
    */
-  static flatten(obj: any, prefix: string = ''): Record<string, any> {
+  static flatten(obj: any, prefix: string = ""): Record<string, any> {
     const flattened: Record<string, any> = {};
-    
+
     for (const key in obj) {
       if (Object.prototype.hasOwnProperty.call(obj, key)) {
         const newKey = prefix ? `${prefix}.${key}` : key;
-        
-        if (typeof obj[key] === 'object' && obj[key] !== null && !Array.isArray(obj[key])) {
+
+        if (
+          typeof obj[key] === "object" &&
+          obj[key] !== null &&
+          !Array.isArray(obj[key])
+        ) {
           Object.assign(flattened, this.flatten(obj[key], newKey));
         } else {
           flattened[newKey] = obj[key];
         }
       }
     }
-    
+
     return flattened;
   }
 
@@ -192,33 +208,37 @@ export class Json {
    */
   static unflatten(obj: Record<string, any>): any {
     const result = {};
-    
+
     for (const key in obj) {
       if (Object.prototype.hasOwnProperty.call(obj, key)) {
         this.setPath(result, key, obj[key]);
       }
     }
-    
+
     return result;
   }
 
   /**
    * Get all keys from nested JSON object
    */
-  static getAllKeys(obj: any, prefix: string = ''): string[] {
+  static getAllKeys(obj: any, prefix: string = ""): string[] {
     const keys: string[] = [];
-    
+
     for (const key in obj) {
       if (Object.prototype.hasOwnProperty.call(obj, key)) {
         const newKey = prefix ? `${prefix}.${key}` : key;
         keys.push(newKey);
-        
-        if (typeof obj[key] === 'object' && obj[key] !== null && !Array.isArray(obj[key])) {
+
+        if (
+          typeof obj[key] === "object" &&
+          obj[key] !== null &&
+          !Array.isArray(obj[key])
+        ) {
           keys.push(...this.getAllKeys(obj[key], newKey));
         }
       }
     }
-    
+
     return keys;
   }
 

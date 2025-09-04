@@ -1,4 +1,4 @@
-import { debug } from '../debug';
+import { debug } from "../debug";
 
 export interface ActorMessage {
   id: string;
@@ -15,12 +15,15 @@ export interface ActorRef {
 }
 
 export interface ActorBehavior<TState = any> {
-  (message: ActorMessage, state: TState): Promise<{ newState: TState; reply?: any }>;
+  (
+    message: ActorMessage,
+    state: TState,
+  ): Promise<{ newState: TState; reply?: any }>;
 }
 
 export interface ActorOptions {
   name?: string;
-  supervisionStrategy?: 'restart' | 'stop' | 'escalate';
+  supervisionStrategy?: "restart" | "stop" | "escalate";
   maxRetries?: number;
   messageQueueSize?: number;
   enableLogging?: boolean;
@@ -39,45 +42,55 @@ export class Actor<TState = any> implements ActorRef {
     messagesProcessed: 0,
     messagesDropped: 0,
     errors: 0,
-    averageProcessingTime: 0
+    averageProcessingTime: 0,
   };
 
   constructor(
     id: string,
     behavior: ActorBehavior<TState>,
     initialState: TState,
-    options: ActorOptions = {}
+    options: ActorOptions = {},
   ) {
     this.id = id;
     this.behavior = behavior;
     this.state = initialState;
     this.options = {
       name: options.name || id,
-      supervisionStrategy: options.supervisionStrategy || 'restart',
+      supervisionStrategy: options.supervisionStrategy || "restart",
       maxRetries: options.maxRetries || 3,
       messageQueueSize: options.messageQueueSize || 1000,
-      enableLogging: options.enableLogging || false
+      enableLogging: options.enableLogging || false,
     };
 
-    debug.info('Actor', `Actor ${this.id} created with initial state`, this.state);
+    debug.info(
+      "Actor",
+      `Actor ${this.id} created with initial state`,
+      this.state,
+    );
   }
 
   async send(message: ActorMessage): Promise<void> {
     if (!this.isActive) {
-      debug.warn('Actor', `Message sent to inactive actor ${this.id}`);
+      debug.warn("Actor", `Message sent to inactive actor ${this.id}`);
       return;
     }
 
     if (this.messageQueue.length >= this.options.messageQueueSize) {
       this.metrics.messagesDropped++;
-      debug.warn('Actor', `Message queue full for actor ${this.id}, dropping message`);
+      debug.warn(
+        "Actor",
+        `Message queue full for actor ${this.id}, dropping message`,
+      );
       return;
     }
 
     this.messageQueue.push(message);
-    
+
     if (this.options.enableLogging) {
-      debug.debug('Actor', `Actor ${this.id} received message: ${message.type}`);
+      debug.debug(
+        "Actor",
+        `Actor ${this.id} received message: ${message.type}`,
+      );
     }
 
     this.processNextMessage();
@@ -122,51 +135,64 @@ export class Actor<TState = any> implements ActorRef {
       this.retryCount = 0;
 
       const processingTime = Date.now() - startTime;
-      this.metrics.averageProcessingTime = 
-        (this.metrics.averageProcessingTime * (this.metrics.messagesProcessed - 1) + processingTime) / 
+      this.metrics.averageProcessingTime =
+        (this.metrics.averageProcessingTime *
+          (this.metrics.messagesProcessed - 1) +
+          processingTime) /
         this.metrics.messagesProcessed;
 
       if (this.options.enableLogging) {
-        debug.debug('Actor', `Actor ${this.id} processed message ${message.type} in ${processingTime}ms`);
+        debug.debug(
+          "Actor",
+          `Actor ${this.id} processed message ${message.type} in ${processingTime}ms`,
+        );
       }
-
     } catch (error) {
       this.metrics.errors++;
-      debug.error('Actor', `Error in actor ${this.id}:`, error);
-      
+      debug.error("Actor", `Error in actor ${this.id}:`, error);
+
       await this.handleError(error as Error, message);
     }
 
     this.isProcessing = false;
-    
+
     // Process next message if available
     if (this.messageQueue.length > 0) {
       setImmediate(() => this.processNextMessage());
     }
   }
 
-  private async handleError(error: Error, message: ActorMessage): Promise<void> {
+  private async handleError(
+    error: Error,
+    message: ActorMessage,
+  ): Promise<void> {
     this.retryCount++;
 
     switch (this.options.supervisionStrategy) {
-      case 'restart':
+      case "restart":
         if (this.retryCount <= this.options.maxRetries) {
-          debug.info('Actor', `Restarting actor ${this.id} after error (attempt ${this.retryCount})`);
+          debug.info(
+            "Actor",
+            `Restarting actor ${this.id} after error (attempt ${this.retryCount})`,
+          );
           // Re-queue the failed message
           this.messageQueue.unshift(message);
         } else {
-          debug.error('Actor', `Actor ${this.id} exceeded max retries, stopping`);
+          debug.error(
+            "Actor",
+            `Actor ${this.id} exceeded max retries, stopping`,
+          );
           this.stop();
         }
         break;
 
-      case 'stop':
-        debug.info('Actor', `Stopping actor ${this.id} due to error`);
+      case "stop":
+        debug.info("Actor", `Stopping actor ${this.id} due to error`);
         this.stop();
         break;
 
-      case 'escalate':
-        debug.warn('Actor', `Escalating error from actor ${this.id}`);
+      case "escalate":
+        debug.warn("Actor", `Escalating error from actor ${this.id}`);
         throw error;
     }
   }
@@ -174,7 +200,7 @@ export class Actor<TState = any> implements ActorRef {
   stop(): void {
     this.isActive = false;
     this.messageQueue.length = 0;
-    debug.info('Actor', `Actor ${this.id} stopped`);
+    debug.info("Actor", `Actor ${this.id} stopped`);
   }
 
   getMetrics() {
@@ -182,7 +208,7 @@ export class Actor<TState = any> implements ActorRef {
       ...this.metrics,
       queueLength: this.messageQueue.length,
       isActive: this.isActive,
-      state: this.state
+      state: this.state,
     };
   }
 }
@@ -194,13 +220,13 @@ export class ActorSystem {
   createActor<TState>(
     behavior: ActorBehavior<TState>,
     initialState: TState,
-    options: ActorOptions = {}
+    options: ActorOptions = {},
   ): ActorRef {
     const id = `actor-${this.nextId++}`;
     const actor = new Actor(id, behavior, initialState, options);
     this.actors.set(id, actor);
-    
-    debug.info('ActorSystem', `Created actor ${id}`);
+
+    debug.info("ActorSystem", `Created actor ${id}`);
     return actor;
   }
 
@@ -209,7 +235,9 @@ export class ActorSystem {
   }
 
   async broadcastMessage(message: ActorMessage): Promise<void> {
-    const promises = Array.from(this.actors.values()).map(actor => actor.send(message));
+    const promises = Array.from(this.actors.values()).map((actor) =>
+      actor.send(message),
+    );
     await Promise.all(promises);
   }
 
@@ -218,7 +246,7 @@ export class ActorSystem {
     if (actor) {
       actor.stop();
       this.actors.delete(id);
-      debug.info('ActorSystem', `Stopped and removed actor ${id}`);
+      debug.info("ActorSystem", `Stopped and removed actor ${id}`);
     }
   }
 
@@ -227,18 +255,23 @@ export class ActorSystem {
       actor.stop();
     }
     this.actors.clear();
-    debug.info('ActorSystem', 'Stopped all actors');
+    debug.info("ActorSystem", "Stopped all actors");
   }
 
   getSystemMetrics() {
-    const actorMetrics = Array.from(this.actors.values()).map(actor => actor.getMetrics());
-    
+    const actorMetrics = Array.from(this.actors.values()).map((actor) =>
+      actor.getMetrics(),
+    );
+
     return {
       totalActors: this.actors.size,
-      activeActors: actorMetrics.filter(m => m.isActive).length,
-      totalMessages: actorMetrics.reduce((sum, m) => sum + m.messagesProcessed, 0),
+      activeActors: actorMetrics.filter((m) => m.isActive).length,
+      totalMessages: actorMetrics.reduce(
+        (sum, m) => sum + m.messagesProcessed,
+        0,
+      ),
       totalErrors: actorMetrics.reduce((sum, m) => sum + m.errors, 0),
-      actors: actorMetrics
+      actors: actorMetrics,
     };
   }
 }
@@ -251,20 +284,26 @@ export function createCounterActor(initialValue: number = 0): ActorRef {
   return actorSystem.createActor(
     async (message, state: number) => {
       switch (message.type) {
-        case 'increment':
-          return { newState: state + (message.payload || 1), reply: state + (message.payload || 1) };
-        case 'decrement':
-          return { newState: state - (message.payload || 1), reply: state - (message.payload || 1) };
-        case 'get':
+        case "increment":
+          return {
+            newState: state + (message.payload || 1),
+            reply: state + (message.payload || 1),
+          };
+        case "decrement":
+          return {
+            newState: state - (message.payload || 1),
+            reply: state - (message.payload || 1),
+          };
+        case "get":
           return { newState: state, reply: state };
-        case 'set':
+        case "set":
           return { newState: message.payload, reply: message.payload };
         default:
           return { newState: state, reply: null };
       }
     },
     initialValue,
-    { name: 'counter', enableLogging: true }
+    { name: "counter", enableLogging: true },
   );
 }
 
@@ -272,19 +311,19 @@ export function createAccumulatorActor<T>(initialValue: T[] = []): ActorRef {
   return actorSystem.createActor(
     async (message, state: T[]) => {
       switch (message.type) {
-        case 'add': {
+        case "add": {
           const newState = [...state, message.payload];
           return { newState, reply: newState.length };
         }
-        case 'get':
+        case "get":
           return { newState: state, reply: [...state] };
-        case 'clear':
+        case "clear":
           return { newState: [], reply: state.length };
         default:
           return { newState: state, reply: null };
       }
     },
     initialValue,
-    { name: 'accumulator', enableLogging: true }
+    { name: "accumulator", enableLogging: true },
   );
 }

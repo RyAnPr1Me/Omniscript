@@ -5,6 +5,7 @@ A powerful, PyTorch-competitive neural network library built natively into OmniS
 ## 🚀 Features
 
 ### Core Capabilities
+
 - **High-Performance Tensor Operations** - SIMD-accelerated vector and matrix operations
 - **Automatic Differentiation** - Full backpropagation support for gradient computation
 - **Neural Network Layers** - Linear, ReLU, Sigmoid, Tanh, Softmax, and Sequential models
@@ -14,6 +15,7 @@ A powerful, PyTorch-competitive neural network library built natively into OmniS
 - **Production Ready** - Built for real-world deployment with performance monitoring
 
 ### Performance Optimizations
+
 - **SIMD Acceleration** - Leverages native SIMD instructions for vector operations
 - **Memory Pooling** - Reduces garbage collection overhead
 - **JIT Compatibility** - Designed to work with OmniScript's AOT compiler
@@ -22,13 +24,13 @@ A powerful, PyTorch-competitive neural network library built natively into OmniS
 
 ## 📊 Performance Comparison
 
-| Operation Type | OmniScript AI | PyTorch CPU | Advantage |
-|----------------|---------------|-------------|-----------|
-| Tensor Creation | ⚡ Fast | ⚡ Fast | ~1.0x |
-| Matrix Multiplication | ⚡ Fast | ⚡ Fast | ~1.2x |
-| Element-wise Operations | 🔥 Very Fast | ⚡ Fast | ~0.8x |
-| Neural Network Forward | ⚡ Fast | ⚡ Fast | ~1.1x |
-| Memory Efficiency | ✅ Good | ✅ Good | ~1.0x |
+| Operation Type          | OmniScript AI | PyTorch CPU | Advantage |
+| ----------------------- | ------------- | ----------- | --------- |
+| Tensor Creation         | ⚡ Fast       | ⚡ Fast     | ~1.0x     |
+| Matrix Multiplication   | ⚡ Fast       | ⚡ Fast     | ~1.2x     |
+| Element-wise Operations | 🔥 Very Fast  | ⚡ Fast     | ~0.8x     |
+| Neural Network Forward  | ⚡ Fast       | ⚡ Fast     | ~1.1x     |
+| Memory Efficiency       | ✅ Good       | ✅ Good     | ~1.0x     |
 
 ## 🛠 Quick Start
 
@@ -100,18 +102,21 @@ Console.log('dz/dy:', y.gradInfo.grad.data[0]);  // Should be x = 2
 ## 🏗 Architecture
 
 ### Tensor System
+
 - **Multi-dimensional arrays** with automatic shape management
 - **Memory pooling** for efficient allocation/deallocation
 - **SIMD acceleration** for vector operations
 - **Automatic broadcasting** for compatible operations
 
 ### Neural Network Components
+
 - **Linear layers** with Xavier initialization
 - **Activation functions** (ReLU, Sigmoid, Tanh, Softmax)
 - **Sequential models** for easy layer stacking
 - **Parameter management** with automatic gradient tracking
 
 ### Training System
+
 - **Automatic differentiation** with computational graph
 - **Advanced optimizers** (SGD, Adam) with momentum
 - **Loss functions** (MSE, Cross-entropy, Binary cross-entropy)
@@ -130,8 +135,8 @@ def createAutoencoder :: (inputSize :: number, latentSize :: number) -> AI.Seque
     new AI.ReLU(),
     new AI.Linear(inputSize / 2, latentSize),
     new AI.ReLU(),
-    
-    // Decoder  
+
+    // Decoder
     new AI.Linear(latentSize, inputSize / 2),
     new AI.ReLU(),
     new AI.Linear(inputSize / 2, inputSize),
@@ -170,24 +175,28 @@ AI.ModelUtils.printModelSummary(model);
 ## 🎯 Use Cases
 
 ### 1. Computer Vision
+
 - Image classification with CNNs
 - Object detection and segmentation
 - Style transfer and GANs
 - Medical image analysis
 
 ### 2. Natural Language Processing
+
 - Sentiment analysis
 - Text classification
 - Language models
 - Machine translation
 
 ### 3. Reinforcement Learning
+
 - Q-learning and policy gradients
 - Game AI and robotics
 - Autonomous systems
 - Resource optimization
 
 ### 4. Scientific Computing
+
 - Numerical simulations
 - Data analysis and visualization
 - Mathematical modeling
@@ -196,6 +205,7 @@ AI.ModelUtils.printModelSummary(model);
 ## 🔬 Examples
 
 Check out the comprehensive examples:
+
 - `examples/ai-showcase.os` - Complete AI capabilities demonstration
 - `examples/ai-benchmark.os` - Performance benchmarking suite
 - `examples/ml-inference.os` - Production ML inference service
@@ -203,11 +213,13 @@ Check out the comprehensive examples:
 ## 🚀 Getting Started
 
 1. **Import the AI module**:
+
    ```omniscript
    use { AI } from 'stdlib';
    ```
 
 2. **Create your first neural network**:
+
    ```omniscript
    def model :: AI.Sequential = new AI.Sequential([
      new AI.Linear(10, 5),
@@ -226,12 +238,14 @@ Check out the comprehensive examples:
 ## 📈 Roadmap
 
 ### Near Term
+
 - ✅ Core tensor operations
 - ✅ Neural network layers
 - ✅ Training system
 - ✅ Memory optimization
 
 ### Future Enhancements
+
 - 🚧 GPU acceleration via WebGPU
 - 🚧 Convolutional layers
 - 🚧 Recurrent networks (LSTM/GRU)
@@ -242,6 +256,7 @@ Check out the comprehensive examples:
 ## 🤝 Contributing
 
 The OmniScript AI module is designed to be:
+
 - **Extensible** - Easy to add new layers and operations
 - **Performant** - Optimized for production use
 - **Compatible** - Works seamlessly with OmniScript ecosystem
@@ -250,6 +265,7 @@ The OmniScript AI module is designed to be:
 ## 📚 API Reference
 
 ### Core Classes
+
 - `AI.Tensor` - Multi-dimensional arrays with automatic differentiation
 - `AI.Linear` - Fully connected neural network layer
 - `AI.Sequential` - Sequential model container
@@ -257,6 +273,7 @@ The OmniScript AI module is designed to be:
 - `AI.Trainer` - High-level training interface
 
 ### Utilities
+
 - `AI.Activations` - Activation functions (ReLU, Sigmoid, etc.)
 - `AI.LossFunctions` - Loss functions (MSE, CrossEntropy, etc.)
 - `AI.ModelUtils` - Model serialization and utilities
@@ -265,6 +282,7 @@ The OmniScript AI module is designed to be:
 ## 🏆 Why OmniScript AI?
 
 ### Advantages over PyTorch
+
 1. **Native Integration** - Built into the language, no external dependencies
 2. **Type Safety** - Full compile-time type checking
 3. **Performance** - SIMD acceleration and memory optimization
@@ -272,6 +290,7 @@ The OmniScript AI module is designed to be:
 5. **Production Ready** - Built for real-world deployment
 
 ### Competitive Features
+
 - ✅ **Automatic differentiation** - Full backpropagation support
 - ✅ **Neural network layers** - Comprehensive layer library
 - ✅ **Advanced optimizers** - SGD, Adam, and more

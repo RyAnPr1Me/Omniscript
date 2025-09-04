@@ -1,31 +1,97 @@
-# Node.js dependencies
+# Dependencies
 node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
 
 # Build output
 dist/
+build/
+out/
+*.tsbuildinfo
 
 # Logs
 logs/
 *.log
+lerna-debug.log*
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+.nyc_output/
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 
 # OS generated files
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
 
 # IDE specific files
 .vscode/
 .idea/
-
-# Test coverage
-coverage/
+*.swp
+*.swo
+*~
 
 # Temporary files
 *.tmp
 *.temp
 /tmp/
+.cache/
 
-# Environment variables
-.env
+# Package manager lock files (keep package-lock.json but ignore others)
+yarn.lock
+pnpm-lock.yaml
 
-# Omniscript cache
-.omni/cache/
+# Test artifacts
+.nyc_output/
+coverage/
+*.coverage
+junit.xml
+
+# Omniscript specific
+.omni/
+*.omni.cache
+.omniscript/
+
+# Binaries and executables
+*.exe
+*.dmg
+*.pkg
+*.deb
+*.rpm
+
+# Archive files
+*.zip
+*.tar.gz
+*.rar
+*.7z
+
+# Editor backups
+*~
+.#*
+\#*#
+*.bak
+
+# System files
+*.out
+*.class
+*.pyc
+__pycache__/

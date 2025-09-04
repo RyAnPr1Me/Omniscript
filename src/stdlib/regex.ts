@@ -1,4 +1,4 @@
-import { debug } from '../debug';
+import { debug } from "../debug";
 
 export interface RegexMatch {
   match: string;
@@ -27,7 +27,7 @@ export class Regex {
         this.pattern = new RegExp(pattern, flags);
       }
     } catch (error) {
-      debug.error('Regex', `Invalid regex pattern: ${error}`);
+      debug.error("Regex", `Invalid regex pattern: ${error}`);
       throw new Error(`Invalid regex: ${error}`);
     }
   }
@@ -50,7 +50,7 @@ export class Regex {
       match: match[0],
       index: match.index!,
       groups: match.slice(1),
-      namedGroups: match.groups
+      namedGroups: match.groups,
     };
   }
 
@@ -60,32 +60,38 @@ export class Regex {
   matchAll(input: string): RegexMatch[] {
     const matches: RegexMatch[] = [];
     let match: RegExpExecArray | null;
-    
+
     // Create a global version of the regex
-    const globalPattern = new RegExp(this.pattern.source, this.pattern.flags + (this.pattern.global ? '' : 'g'));
-    
+    const globalPattern = new RegExp(
+      this.pattern.source,
+      this.pattern.flags + (this.pattern.global ? "" : "g"),
+    );
+
     while ((match = globalPattern.exec(input)) !== null) {
       matches.push({
         match: match[0],
         index: match.index!,
         groups: match.slice(1),
-        namedGroups: match.groups
+        namedGroups: match.groups,
       });
-      
+
       // Prevent infinite loop on zero-length matches
       if (match.index === globalPattern.lastIndex) {
         globalPattern.lastIndex++;
       }
     }
-    
+
     return matches;
   }
 
   /**
    * Replace matches in string
    */
-  replace(input: string, replacement: string | ((match: RegexMatch) => string)): string {
-    if (typeof replacement === 'string') {
+  replace(
+    input: string,
+    replacement: string | ((match: RegexMatch) => string),
+  ): string {
+    if (typeof replacement === "string") {
       return input.replace(this.pattern, replacement);
     }
 
@@ -93,12 +99,12 @@ export class Regex {
       const index = args[args.length - 2];
       const groups = args.slice(0, -2);
       const namedGroups = args[args.length - 1];
-      
+
       return replacement({
         match,
         index,
         groups,
-        namedGroups: typeof namedGroups === 'object' ? namedGroups : undefined
+        namedGroups: typeof namedGroups === "object" ? namedGroups : undefined,
       });
     });
   }
@@ -137,21 +143,21 @@ export class Regex {
    * Escape special regex characters in string
    */
   static escape(input: string): string {
-    return input.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return input.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   }
 
   /**
    * Create regex from string with flags
    */
   static create(pattern: string, options?: RegexReplaceOptions): Regex {
-    let flags = '';
-    if (options?.global) flags += 'g';
-    if (options?.ignoreCase) flags += 'i';
-    if (options?.multiline) flags += 'm';
-    if (options?.dotAll) flags += 's';
-    if (options?.unicode) flags += 'u';
-    if (options?.sticky) flags += 'y';
-    
+    let flags = "";
+    if (options?.global) flags += "g";
+    if (options?.ignoreCase) flags += "i";
+    if (options?.multiline) flags += "m";
+    if (options?.dotAll) flags += "s";
+    if (options?.unicode) flags += "u";
+    if (options?.sticky) flags += "y";
+
     return new Regex(pattern, flags);
   }
 
@@ -163,7 +169,7 @@ export class Regex {
       const regex = new RegExp(pattern, flags);
       return regex.test(input);
     } catch (error) {
-      debug.error('Regex', `Test failed: ${error}`);
+      debug.error("Regex", `Test failed: ${error}`);
       return false;
     }
   }
@@ -171,12 +177,16 @@ export class Regex {
   /**
    * Find first match
    */
-  static match(pattern: string, input: string, flags?: string): RegexMatch | null {
+  static match(
+    pattern: string,
+    input: string,
+    flags?: string,
+  ): RegexMatch | null {
     try {
       const regex = new Regex(pattern, flags);
       return regex.match(input);
     } catch (error) {
-      debug.error('Regex', `Match failed: ${error}`);
+      debug.error("Regex", `Match failed: ${error}`);
       return null;
     }
   }
@@ -184,12 +194,16 @@ export class Regex {
   /**
    * Find all matches
    */
-  static matchAll(pattern: string, input: string, flags?: string): RegexMatch[] {
+  static matchAll(
+    pattern: string,
+    input: string,
+    flags?: string,
+  ): RegexMatch[] {
     try {
       const regex = new Regex(pattern, flags);
       return regex.matchAll(input);
     } catch (error) {
-      debug.error('Regex', `MatchAll failed: ${error}`);
+      debug.error("Regex", `MatchAll failed: ${error}`);
       return [];
     }
   }
@@ -197,12 +211,17 @@ export class Regex {
   /**
    * Replace matches
    */
-  static replace(pattern: string, input: string, replacement: string | ((match: RegexMatch) => string), flags?: string): string {
+  static replace(
+    pattern: string,
+    input: string,
+    replacement: string | ((match: RegexMatch) => string),
+    flags?: string,
+  ): string {
     try {
       const regex = new Regex(pattern, flags);
       return regex.replace(input, replacement);
     } catch (error) {
-      debug.error('Regex', `Replace failed: ${error}`);
+      debug.error("Regex", `Replace failed: ${error}`);
       return input;
     }
   }
@@ -210,12 +229,17 @@ export class Regex {
   /**
    * Split string
    */
-  static split(pattern: string, input: string, limit?: number, flags?: string): string[] {
+  static split(
+    pattern: string,
+    input: string,
+    limit?: number,
+    flags?: string,
+  ): string[] {
     try {
       const regex = new Regex(pattern, flags);
       return regex.split(input, limit);
     } catch (error) {
-      debug.error('Regex', `Split failed: ${error}`);
+      debug.error("Regex", `Split failed: ${error}`);
       return [input];
     }
   }
@@ -225,7 +249,8 @@ export class Regex {
     email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
     url: /^https?:\/\/(www\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_+.~#?&//=]*)$/,
     phone: /^[+]?[1-9][\d]{7,15}$/,
-    creditCard: /^(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|3[47][0-9]{13}|3[0-9]{13}|6(?:011|5[0-9]{2})[0-9]{12})$/,
+    creditCard:
+      /^(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|3[47][0-9]{13}|3[0-9]{13}|6(?:011|5[0-9]{2})[0-9]{12})$/,
     ipv4: /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/,
     ipv6: /^(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$/,
     uuid: /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
@@ -233,7 +258,7 @@ export class Regex {
     base64: /^[A-Za-z0-9+/]*={0,2}$/,
     alphanumeric: /^[a-zA-Z0-9]+$/,
     numeric: /^[0-9]+$/,
-    alpha: /^[a-zA-Z]+$/
+    alpha: /^[a-zA-Z]+$/,
   };
 
   /**
@@ -297,7 +322,9 @@ export class Regex {
    * Extract all URLs from text
    */
   static extractUrls(text: string): string[] {
-    const matches = text.match(/https?:\/\/(www\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_+.~#?&//=]*)/g);
+    const matches = text.match(
+      /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_+.~#?&//=]*)/g,
+    );
     return matches || [];
   }
 }
