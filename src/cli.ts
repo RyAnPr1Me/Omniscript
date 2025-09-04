@@ -65,7 +65,7 @@ program
       
       const source = await readFile(file, 'utf-8');
       const result = await omniscriptInstance.execute(source);
-      if (result !== undefined) {
+      if (result !== undefined && !(typeof result === 'number' && isNaN(result))) {
         console.log(result);
       }
       

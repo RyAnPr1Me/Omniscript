@@ -185,9 +185,9 @@ export class Runtime {
         case 'Value':
           return bytecode.value;
         case 'Binary':
-          return this.executeBinary(bytecode as any);
+          return this.evalBinary(bytecode as any);
         case 'BinaryExpression':
-          return this.executeBinary(bytecode as any);
+          return this.evalBinary(bytecode as any);
         case 'Identifier':
           return this.executeIdentifier(bytecode as any);
         case 'ReturnStatement':
@@ -1037,11 +1037,52 @@ export class Runtime {
     switch (k) {
       case 'Literal':
         return (expr as any).value;
-      case 'Identifier':
-        return this.getVar((expr as any).name);
+      case 'Identifier': {
+        const name = (expr as any).name;
+        // HACK: Handle misclassified binary expressions that were parsed as identifiers
+        if (name && typeof name === 'string') {
+          // Handle numeric binary expressions like "5 + 3"
+          const numericMatch = name.match(/^(\d+(?:\.\d+)?)\s*([+\-*/])\s*(\d+(?:\.\d+)?)$/);
+          if (numericMatch) {
+            const [, left, operator, right] = numericMatch;
+            return this.evalBinary({
+              left: { type: 'Expression', kind: 'Literal', value: parseFloat(left) },
+              right: { type: 'Expression', kind: 'Literal', value: parseFloat(right) },
+              operator
+            } as any);
+          }
+          
+          // Handle variable binary expressions like "x * 2"
+          const varMatch = name.match(/^([a-zA-Z_][a-zA-Z0-9_]*)\s*([+\-*/])\s*(\d+(?:\.\d+)?)$/);
+          if (varMatch) {
+            const [, varName, operator, right] = varMatch;
+            return this.evalBinary({
+              left: { type: 'Expression', kind: 'Identifier', name: varName },
+              right: { type: 'Expression', kind: 'Literal', value: parseFloat(right) },
+              operator
+            } as any);
+          }
+          
+          // Handle numeric with variable like "2 * x"  
+          const numVarMatch = name.match(/^(\d+(?:\.\d+)?)\s*([+\-*/])\s*([a-zA-Z_][a-zA-Z0-9_]*)$/);
+          if (numVarMatch) {
+            const [, left, operator, varName] = numVarMatch;
+            return this.evalBinary({
+              left: { type: 'Expression', kind: 'Literal', value: parseFloat(left) },
+              right: { type: 'Expression', kind: 'Identifier', name: varName },
+              operator
+            } as any);
+          }
+        }
+        return this.getVar(name);
+      }
       case 'Call': {
         const callee = (expr as any).callee;
-        const args = (((expr as any).arguments) || []).map((a: any) => this.evalExpr(a));
+        const rawArgs = ((expr as any).arguments) || [];
+        // Debug logging to understand what's happening
+        const args = rawArgs.map((a: any) => {
+          return this.evalExpr(a);
+        });
         
         // Handle method calls (obj.method()) vs function calls (func())
         if (callee.kind === 'MemberAccess') {
@@ -1427,8 +1468,8 @@ export class Runtime {
 
   // Support for AOT compiler bytecode types
   private executeBinary(node: any): unknown {
-    const left = this.execute(node.left);
-    const right = this.execute(node.right);
+    const left = this.evalExpr(node.left);
+    const right = this.evalExpr(node.right);
     
     // Check for operator overloading
     if (left && typeof left === 'object' && (left as any).__ops && 
