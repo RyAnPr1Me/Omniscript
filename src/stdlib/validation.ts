@@ -3,7 +3,7 @@
  * Provides schema validation, data sanitization, and constraint checking
  */
 
-import { debug } from '../debug';
+import { debug } from "../debug";
 
 export interface ValidationError {
   field: string;
@@ -18,31 +18,36 @@ export interface ValidationResult {
   sanitizedValue?: any;
 }
 
-export type ValidatorFunction<T = any> = (value: T, field?: string) => ValidationResult;
+export type ValidatorFunction<T = any> = (
+  value: T,
+  field?: string,
+) => ValidationResult;
 
 export class Validator {
   private rules: Map<string, ValidatorFunction[]> = new Map();
   private transforms: Map<string, ((value: any) => any)[]> = new Map();
 
   // Basic type validators
-  static string(options: { 
-    minLength?: number; 
-    maxLength?: number; 
-    pattern?: RegExp; 
-    trim?: boolean;
-    allowEmpty?: boolean;
-  } = {}): ValidatorFunction<string> {
-    return (value: any, field = 'field'): ValidationResult => {
+  static string(
+    options: {
+      minLength?: number;
+      maxLength?: number;
+      pattern?: RegExp;
+      trim?: boolean;
+      allowEmpty?: boolean;
+    } = {},
+  ): ValidatorFunction<string> {
+    return (value: any, field = "field"): ValidationResult => {
       const errors: ValidationError[] = [];
       let sanitizedValue = value;
 
       // Type check
-      if (typeof value !== 'string') {
+      if (typeof value !== "string") {
         errors.push({
           field,
-          message: 'Must be a string',
-          code: 'INVALID_TYPE',
-          value
+          message: "Must be a string",
+          code: "INVALID_TYPE",
+          value,
         });
         return { isValid: false, errors };
       }
@@ -53,31 +58,37 @@ export class Validator {
       }
 
       // Check if empty string is allowed
-      if (!options.allowEmpty && sanitizedValue === '') {
+      if (!options.allowEmpty && sanitizedValue === "") {
         errors.push({
           field,
-          message: 'Cannot be empty',
-          code: 'EMPTY_STRING',
-          value
+          message: "Cannot be empty",
+          code: "EMPTY_STRING",
+          value,
         });
       }
 
       // Length validation
-      if (options.minLength !== undefined && sanitizedValue.length < options.minLength) {
+      if (
+        options.minLength !== undefined &&
+        sanitizedValue.length < options.minLength
+      ) {
         errors.push({
           field,
           message: `Must be at least ${options.minLength} characters`,
-          code: 'MIN_LENGTH',
-          value
+          code: "MIN_LENGTH",
+          value,
         });
       }
 
-      if (options.maxLength !== undefined && sanitizedValue.length > options.maxLength) {
+      if (
+        options.maxLength !== undefined &&
+        sanitizedValue.length > options.maxLength
+      ) {
         errors.push({
           field,
           message: `Must be at most ${options.maxLength} characters`,
-          code: 'MAX_LENGTH',
-          value
+          code: "MAX_LENGTH",
+          value,
         });
       }
 
@@ -85,43 +96,45 @@ export class Validator {
       if (options.pattern && !options.pattern.test(sanitizedValue)) {
         errors.push({
           field,
-          message: 'Invalid format',
-          code: 'INVALID_PATTERN',
-          value
+          message: "Invalid format",
+          code: "INVALID_PATTERN",
+          value,
         });
       }
 
       return {
         isValid: errors.length === 0,
         errors,
-        sanitizedValue
+        sanitizedValue,
       };
     };
   }
 
-  static number(options: {
-    min?: number;
-    max?: number;
-    integer?: boolean;
-    positive?: boolean;
-    finite?: boolean;
-  } = {}): ValidatorFunction<number> {
-    return (value: any, field = 'field'): ValidationResult => {
+  static number(
+    options: {
+      min?: number;
+      max?: number;
+      integer?: boolean;
+      positive?: boolean;
+      finite?: boolean;
+    } = {},
+  ): ValidatorFunction<number> {
+    return (value: any, field = "field"): ValidationResult => {
       const errors: ValidationError[] = [];
       let sanitizedValue = value;
 
       // Convert string numbers
-      if (typeof value === 'string' && !isNaN(Number(value))) {
+      if (typeof value === "string" && !isNaN(Number(value))) {
         sanitizedValue = Number(value);
       }
 
       // Type check
-      if (typeof sanitizedValue !== 'number') {
+      if (typeof sanitizedValue !== "number") {
         errors.push({
           field,
-          message: 'Must be a number',
-          code: 'INVALID_TYPE',
-          value
+          message: "Must be a number",
+          code: "INVALID_TYPE",
+          value,
         });
         return { isValid: false, errors };
       }
@@ -130,9 +143,9 @@ export class Validator {
       if (options.finite && !isFinite(sanitizedValue)) {
         errors.push({
           field,
-          message: 'Must be a finite number',
-          code: 'NOT_FINITE',
-          value
+          message: "Must be a finite number",
+          code: "NOT_FINITE",
+          value,
         });
       }
 
@@ -140,9 +153,9 @@ export class Validator {
       if (options.integer && !Number.isInteger(sanitizedValue)) {
         errors.push({
           field,
-          message: 'Must be an integer',
-          code: 'NOT_INTEGER',
-          value
+          message: "Must be an integer",
+          code: "NOT_INTEGER",
+          value,
         });
       }
 
@@ -150,9 +163,9 @@ export class Validator {
       if (options.positive && sanitizedValue <= 0) {
         errors.push({
           field,
-          message: 'Must be positive',
-          code: 'NOT_POSITIVE',
-          value
+          message: "Must be positive",
+          code: "NOT_POSITIVE",
+          value,
         });
       }
 
@@ -161,8 +174,8 @@ export class Validator {
         errors.push({
           field,
           message: `Must be at least ${options.min}`,
-          code: 'MIN_VALUE',
-          value
+          code: "MIN_VALUE",
+          value,
         });
       }
 
@@ -170,45 +183,53 @@ export class Validator {
         errors.push({
           field,
           message: `Must be at most ${options.max}`,
-          code: 'MAX_VALUE',
-          value
+          code: "MAX_VALUE",
+          value,
         });
       }
 
       return {
         isValid: errors.length === 0,
         errors,
-        sanitizedValue
+        sanitizedValue,
       };
     };
   }
 
   static boolean(): ValidatorFunction<boolean> {
-    return (value: any, field = 'field'): ValidationResult => {
+    return (value: any, field = "field"): ValidationResult => {
       const errors: ValidationError[] = [];
       let sanitizedValue = value;
 
       // Convert common string representations
-      if (typeof value === 'string') {
+      if (typeof value === "string") {
         const lowerValue = value.toLowerCase();
-        if (lowerValue === 'true' || lowerValue === '1' || lowerValue === 'yes') {
+        if (
+          lowerValue === "true" ||
+          lowerValue === "1" ||
+          lowerValue === "yes"
+        ) {
           sanitizedValue = true;
-        } else if (lowerValue === 'false' || lowerValue === '0' || lowerValue === 'no') {
+        } else if (
+          lowerValue === "false" ||
+          lowerValue === "0" ||
+          lowerValue === "no"
+        ) {
           sanitizedValue = false;
         }
       }
 
       // Convert numbers
-      if (typeof value === 'number') {
+      if (typeof value === "number") {
         sanitizedValue = Boolean(value);
       }
 
-      if (typeof sanitizedValue !== 'boolean') {
+      if (typeof sanitizedValue !== "boolean") {
         errors.push({
           field,
-          message: 'Must be a boolean',
-          code: 'INVALID_TYPE',
-          value
+          message: "Must be a boolean",
+          code: "INVALID_TYPE",
+          value,
         });
         return { isValid: false, errors };
       }
@@ -216,26 +237,29 @@ export class Validator {
       return {
         isValid: true,
         errors: [],
-        sanitizedValue
+        sanitizedValue,
       };
     };
   }
 
-  static array<T>(itemValidator?: ValidatorFunction<T>, options: {
-    minLength?: number;
-    maxLength?: number;
-    unique?: boolean;
-  } = {}): ValidatorFunction<T[]> {
-    return (value: any, field = 'field'): ValidationResult => {
+  static array<T>(
+    itemValidator?: ValidatorFunction<T>,
+    options: {
+      minLength?: number;
+      maxLength?: number;
+      unique?: boolean;
+    } = {},
+  ): ValidatorFunction<T[]> {
+    return (value: any, field = "field"): ValidationResult => {
       const errors: ValidationError[] = [];
       let sanitizedValue = value;
 
       if (!Array.isArray(value)) {
         errors.push({
           field,
-          message: 'Must be an array',
-          code: 'INVALID_TYPE',
-          value
+          message: "Must be an array",
+          code: "INVALID_TYPE",
+          value,
         });
         return { isValid: false, errors };
       }
@@ -245,8 +269,8 @@ export class Validator {
         errors.push({
           field,
           message: `Must have at least ${options.minLength} items`,
-          code: 'MIN_LENGTH',
-          value
+          code: "MIN_LENGTH",
+          value,
         });
       }
 
@@ -254,15 +278,15 @@ export class Validator {
         errors.push({
           field,
           message: `Must have at most ${options.maxLength} items`,
-          code: 'MAX_LENGTH',
-          value
+          code: "MAX_LENGTH",
+          value,
         });
       }
 
       // Unique validation
       if (options.unique) {
         const seen = new Set();
-        const duplicates = value.filter(item => {
+        const duplicates = value.filter((item) => {
           if (seen.has(item)) return true;
           seen.add(item);
           return false;
@@ -271,9 +295,9 @@ export class Validator {
         if (duplicates.length > 0) {
           errors.push({
             field,
-            message: 'Array items must be unique',
-            code: 'DUPLICATE_ITEMS',
-            value: duplicates
+            message: "Array items must be unique",
+            code: "DUPLICATE_ITEMS",
+            value: duplicates,
           });
         }
       }
@@ -295,22 +319,24 @@ export class Validator {
       return {
         isValid: errors.length === 0,
         errors,
-        sanitizedValue
+        sanitizedValue,
       };
     };
   }
 
-  static object(schema: Record<string, ValidatorFunction>): ValidatorFunction<Record<string, any>> {
-    return (value: any, field = 'field'): ValidationResult => {
+  static object(
+    schema: Record<string, ValidatorFunction>,
+  ): ValidatorFunction<Record<string, any>> {
+    return (value: any, field = "field"): ValidationResult => {
       const errors: ValidationError[] = [];
       const sanitizedValue: Record<string, any> = {};
 
-      if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+      if (typeof value !== "object" || value === null || Array.isArray(value)) {
         errors.push({
           field,
-          message: 'Must be an object',
-          code: 'INVALID_TYPE',
-          value
+          message: "Must be an object",
+          code: "INVALID_TYPE",
+          value,
         });
         return { isValid: false, errors };
       }
@@ -318,20 +344,23 @@ export class Validator {
       // Validate each property in the schema
       for (const [key, validator] of Object.entries(schema)) {
         const propertyValue = value[key];
-        const propertyField = field === 'field' ? key : `${field}.${key}`;
+        const propertyField = field === "field" ? key : `${field}.${key}`;
         const result = validator(propertyValue, propertyField);
 
         if (!result.isValid) {
           errors.push(...result.errors);
         } else {
-          sanitizedValue[key] = result.sanitizedValue !== undefined ? result.sanitizedValue : propertyValue;
+          sanitizedValue[key] =
+            result.sanitizedValue !== undefined
+              ? result.sanitizedValue
+              : propertyValue;
         }
       }
 
       return {
         isValid: errors.length === 0,
         errors,
-        sanitizedValue
+        sanitizedValue,
       };
     };
   }
@@ -342,7 +371,7 @@ export class Validator {
   }
 
   static url(): ValidatorFunction<string> {
-    return (value: any, field = 'field'): ValidationResult => {
+    return (value: any, field = "field"): ValidationResult => {
       const stringResult = Validator.string({ trim: true })(value, field);
       if (!stringResult.isValid) return stringResult;
 
@@ -352,33 +381,38 @@ export class Validator {
       } catch {
         return {
           isValid: false,
-          errors: [{
-            field,
-            message: 'Must be a valid URL',
-            code: 'INVALID_URL',
-            value
-          }]
+          errors: [
+            {
+              field,
+              message: "Must be a valid URL",
+              code: "INVALID_URL",
+              value,
+            },
+          ],
         };
       }
     };
   }
 
   static date(): ValidatorFunction<Date> {
-    return (value: any, field = 'field'): ValidationResult => {
+    return (value: any, field = "field"): ValidationResult => {
       const errors: ValidationError[] = [];
       let sanitizedValue = value;
 
       // Try to parse date from string or number
-      if (typeof value === 'string' || typeof value === 'number') {
+      if (typeof value === "string" || typeof value === "number") {
         sanitizedValue = new Date(value);
       }
 
-      if (!(sanitizedValue instanceof Date) || isNaN(sanitizedValue.getTime())) {
+      if (
+        !(sanitizedValue instanceof Date) ||
+        isNaN(sanitizedValue.getTime())
+      ) {
         errors.push({
           field,
-          message: 'Must be a valid date',
-          code: 'INVALID_DATE',
-          value
+          message: "Must be a valid date",
+          code: "INVALID_DATE",
+          value,
         });
         return { isValid: false, errors };
       }
@@ -386,40 +420,46 @@ export class Validator {
       return {
         isValid: true,
         errors: [],
-        sanitizedValue
+        sanitizedValue,
       };
     };
   }
 
-  static enum<T extends string | number>(allowedValues: T[]): ValidatorFunction<T> {
-    return (value: any, field = 'field'): ValidationResult => {
+  static enum<T extends string | number>(
+    allowedValues: T[],
+  ): ValidatorFunction<T> {
+    return (value: any, field = "field"): ValidationResult => {
       if (!allowedValues.includes(value)) {
         return {
           isValid: false,
-          errors: [{
-            field,
-            message: `Must be one of: ${allowedValues.join(', ')}`,
-            code: 'INVALID_ENUM',
-            value
-          }]
+          errors: [
+            {
+              field,
+              message: `Must be one of: ${allowedValues.join(", ")}`,
+              code: "INVALID_ENUM",
+              value,
+            },
+          ],
         };
       }
 
       return {
         isValid: true,
         errors: [],
-        sanitizedValue: value
+        sanitizedValue: value,
       };
     };
   }
 
-  static optional<T>(validator: ValidatorFunction<T>): ValidatorFunction<T | undefined> {
-    return (value: any, field = 'field'): ValidationResult => {
+  static optional<T>(
+    validator: ValidatorFunction<T>,
+  ): ValidatorFunction<T | undefined> {
+    return (value: any, field = "field"): ValidationResult => {
       if (value === undefined || value === null) {
         return {
           isValid: true,
           errors: [],
-          sanitizedValue: undefined
+          sanitizedValue: undefined,
         };
       }
 
@@ -428,16 +468,18 @@ export class Validator {
   }
 
   static required<T>(validator: ValidatorFunction<T>): ValidatorFunction<T> {
-    return (value: any, field = 'field'): ValidationResult => {
+    return (value: any, field = "field"): ValidationResult => {
       if (value === undefined || value === null) {
         return {
           isValid: false,
-          errors: [{
-            field,
-            message: 'Required field',
-            code: 'REQUIRED',
-            value
-          }]
+          errors: [
+            {
+              field,
+              message: "Required field",
+              code: "REQUIRED",
+              value,
+            },
+          ],
         };
       }
 
@@ -446,7 +488,7 @@ export class Validator {
   }
 
   static oneOf<T>(...validators: ValidatorFunction<T>[]): ValidatorFunction<T> {
-    return (value: any, field = 'field'): ValidationResult => {
+    return (value: any, field = "field"): ValidationResult => {
       let lastErrors: ValidationError[] = [];
 
       for (const validator of validators) {
@@ -459,18 +501,20 @@ export class Validator {
 
       return {
         isValid: false,
-        errors: [{
-          field,
-          message: 'Does not match any of the allowed formats',
-          code: 'NO_MATCH',
-          value
-        }]
+        errors: [
+          {
+            field,
+            message: "Does not match any of the allowed formats",
+            code: "NO_MATCH",
+            value,
+          },
+        ],
       };
     };
   }
 
   static allOf<T>(...validators: ValidatorFunction<T>[]): ValidatorFunction<T> {
-    return (value: any, field = 'field'): ValidationResult => {
+    return (value: any, field = "field"): ValidationResult => {
       const allErrors: ValidationError[] = [];
       let sanitizedValue = value;
 
@@ -486,7 +530,7 @@ export class Validator {
       return {
         isValid: allErrors.length === 0,
         errors: allErrors,
-        sanitizedValue
+        sanitizedValue,
       };
     };
   }
@@ -541,13 +585,16 @@ export class Validator {
     return {
       isValid: errors.length === 0,
       errors,
-      sanitizedValue
+      sanitizedValue,
     };
   }
 }
 
 export class FieldValidator {
-  constructor(private validator: Validator, private field: string) {}
+  constructor(
+    private validator: Validator,
+    private field: string,
+  ) {}
 
   string(options?: Parameters<typeof Validator.string>[0]): this {
     this.validator.addRule(this.field, Validator.string(options));
@@ -585,7 +632,7 @@ export class FieldValidator {
   }
 
   required(): this {
-    const existingRules = this.validator['rules'].get(this.field) || [];
+    const existingRules = this.validator["rules"].get(this.field) || [];
     if (existingRules.length > 0) {
       const lastRule = existingRules[existingRules.length - 1];
       existingRules[existingRules.length - 1] = Validator.required(lastRule);
@@ -594,7 +641,7 @@ export class FieldValidator {
   }
 
   optional(): this {
-    const existingRules = this.validator['rules'].get(this.field) || [];
+    const existingRules = this.validator["rules"].get(this.field) || [];
     if (existingRules.length > 0) {
       const lastRule = existingRules[existingRules.length - 1];
       existingRules[existingRules.length - 1] = Validator.optional(lastRule);
@@ -617,12 +664,12 @@ export class FieldValidator {
 export class Sanitizer {
   static escapeHtml(input: string): string {
     const htmlEscapes: Record<string, string> = {
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-      '"': '&quot;',
-      "'": '&#x27;',
-      '/': '&#x2F;'
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#x27;",
+      "/": "&#x2F;",
     };
 
     return input.replace(/[&<>"'/]/g, (match) => htmlEscapes[match]);
@@ -632,21 +679,28 @@ export class Sanitizer {
     let previous;
     do {
       previous = input;
-      input = input.replace(/<[^>]*>/g, '');
+      input = input.replace(/<[^>]*>/g, "");
     } while (input !== previous);
     return input;
   }
 
   static normalizeWhitespace(input: string): string {
-    return input.replace(/\s+/g, ' ').trim();
+    return input.replace(/\s+/g, " ").trim();
   }
 
-  static removeSpecialChars(input: string, allowed: string = ''): string {
-    const pattern = new RegExp(`[^a-zA-Z0-9${allowed.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}]`, 'g');
-    return input.replace(pattern, '');
+  static removeSpecialChars(input: string, allowed: string = ""): string {
+    const pattern = new RegExp(
+      `[^a-zA-Z0-9${allowed.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}]`,
+      "g",
+    );
+    return input.replace(pattern, "");
   }
 
-  static truncate(input: string, maxLength: number, suffix: string = '...'): string {
+  static truncate(
+    input: string,
+    maxLength: number,
+    suffix: string = "...",
+  ): string {
     if (input.length <= maxLength) return input;
     return input.substring(0, maxLength - suffix.length) + suffix;
   }
@@ -654,30 +708,38 @@ export class Sanitizer {
   static slug(input: string): string {
     return input
       .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '');
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "");
   }
 }
 
 // Pre-built validation schemas for common use cases
 export const CommonSchemas = {
   user: Validator.object({
-    name: Validator.required(Validator.string({ minLength: 1, maxLength: 100, trim: true })),
+    name: Validator.required(
+      Validator.string({ minLength: 1, maxLength: 100, trim: true }),
+    ),
     email: Validator.required(Validator.email()),
-    age: Validator.optional(Validator.number({ min: 0, max: 150, integer: true })),
-    isActive: Validator.optional(Validator.boolean())
+    age: Validator.optional(
+      Validator.number({ min: 0, max: 150, integer: true }),
+    ),
+    isActive: Validator.optional(Validator.boolean()),
   }),
 
   credentials: Validator.object({
-    username: Validator.required(Validator.string({ minLength: 3, maxLength: 50, trim: true })),
-    password: Validator.required(Validator.string({ minLength: 8, maxLength: 128 }))
+    username: Validator.required(
+      Validator.string({ minLength: 3, maxLength: 50, trim: true }),
+    ),
+    password: Validator.required(
+      Validator.string({ minLength: 8, maxLength: 128 }),
+    ),
   }),
 
   apiResponse: Validator.object({
     success: Validator.required(Validator.boolean()),
     data: Validator.optional(Validator.object({})),
-    error: Validator.optional(Validator.string())
-  })
+    error: Validator.optional(Validator.string()),
+  }),
 };
 
-debug.info('Validation', 'Validation library initialized');
+debug.info("Validation", "Validation library initialized");

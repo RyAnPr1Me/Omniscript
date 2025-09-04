@@ -1,7 +1,7 @@
-import { debug } from '../debug';
+import { debug } from "../debug";
 
 export interface AOTCompilerOptions {
-  target?: 'bytecode' | 'native';
+  target?: "bytecode" | "native";
   optimizationLevel?: 0 | 1 | 2 | 3;
   enableInlining?: boolean;
 }
@@ -15,10 +15,10 @@ export class AOTCompiler {
 
   constructor(options: AOTCompilerOptions = {}) {
     this.options = {
-      target: 'bytecode',
+      target: "bytecode",
       optimizationLevel: 2,
       enableInlining: true,
-      ...options
+      ...options,
     };
   }
 
@@ -27,8 +27,11 @@ export class AOTCompiler {
    * This skips all intermediate representations for maximum speed
    */
   compileToMachineCode(ast: any): any {
-    debug.debug('AOTCompiler', `Compiling to ${this.options.target} with optimization level ${this.options.optimizationLevel}`);
-    
+    debug.debug(
+      "AOTCompiler",
+      `Compiling to ${this.options.target} with optimization level ${this.options.optimizationLevel}`,
+    );
+
     switch (this.options.optimizationLevel) {
       case 0:
         return this.compileUnoptimized(ast);
@@ -76,17 +79,17 @@ export class AOTCompiler {
     if (!node) return node;
 
     // Handle Expression types with kind field
-    if (node.type === 'Expression') {
+    if (node.type === "Expression") {
       switch (node.kind) {
-        case 'Identifier':
+        case "Identifier":
           return {
-            type: 'Identifier',
-            name: node.name
+            type: "Identifier",
+            name: node.name,
           };
-        case 'Literal':
+        case "Literal":
           return {
-            type: 'Value',
-            value: node.value
+            type: "Value",
+            value: node.value,
           };
         default:
           return node;
@@ -95,59 +98,67 @@ export class AOTCompiler {
 
     // Direct AST to bytecode translation without intermediate steps
     switch (node.type) {
-      case 'Program':
+      case "Program":
         return {
-          type: 'Block',
-          body: (node.body || []).map((stmt: any) => this.directTranslate(stmt))
+          type: "Block",
+          body: (node.body || []).map((stmt: any) =>
+            this.directTranslate(stmt),
+          ),
         };
 
-      case 'FunctionDeclaration':
+      case "FunctionDeclaration":
         return {
-          type: 'Function',
+          type: "Function",
           name: node.name,
           params: (node.params || []).map((p: any) => p.name),
-          body: (node.body || []).map((stmt: any) => this.directTranslate(stmt)),
+          body: (node.body || []).map((stmt: any) =>
+            this.directTranslate(stmt),
+          ),
           compiled: true,
-          aot: true
+          aot: true,
         };
 
-      case 'ReturnStatement':
+      case "ReturnStatement":
         return {
-          type: 'Return',
-          argument: node.argument ? this.directTranslate(node.argument) : undefined
+          type: "Return",
+          argument: node.argument
+            ? this.directTranslate(node.argument)
+            : undefined,
         };
 
-      case 'ExpressionStatement':
+      case "ExpressionStatement":
         return {
-          type: 'Expr',
-          expr: this.directTranslate(node.expression)
+          type: "Expr",
+          expr: this.directTranslate(node.expression),
         };
 
-      case 'VariableDeclaration':
+      case "VariableDeclaration":
         return {
-          type: 'VarDecl',
+          type: "VarDecl",
           name: node.name,
-          initializer: node.initializer ? this.directTranslate(node.initializer) : null
+          initializer: node.initializer
+            ? this.directTranslate(node.initializer)
+            : null,
         };
 
-      case 'BinaryExpression':
+      case "BinaryExpression":
         return {
-          type: 'Binary',
+          type: "Binary",
           operator: node.operator,
           left: this.directTranslate(node.left),
-          right: this.directTranslate(node.right)
+          right: this.directTranslate(node.right),
         };
 
-      case 'Literal':
+      case "Literal":
         return {
-          type: 'Value',
-          value: node.value
+          type: "Value",
+          value: node.value,
         };
 
-      case 'Identifier':
+      case "Identifier":
         return {
-          type: 'Identifier',
-          name: node.name
+          type: "Identifier",
+          name: node.name,
         };
 
       default:
@@ -160,39 +171,40 @@ export class AOTCompiler {
 
     // Recursively apply constant folding to child nodes first
     if (Array.isArray(bytecode)) {
-      return bytecode.map(child => this.applyConstantFolding(child));
+      return bytecode.map((child) => this.applyConstantFolding(child));
     }
 
-    if (typeof bytecode === 'object') {
+    if (typeof bytecode === "object") {
       const result: any = { ...bytecode };
       for (const key in bytecode) {
         if (Object.prototype.hasOwnProperty.call(bytecode, key)) {
           result[key] = this.applyConstantFolding(bytecode[key]);
         }
       }
-      
+
       // Check if this node can be folded after processing children
-      if (result.type === 'Binary' && 
-          result.left?.type === 'Value' && 
-          result.right?.type === 'Value') {
-        
+      if (
+        result.type === "Binary" &&
+        result.left?.type === "Value" &&
+        result.right?.type === "Value"
+      ) {
         const left = result.left.value;
         const right = result.right.value;
-        
+
         switch (result.operator) {
-          case '+':
-            return { type: 'Value', value: left + right };
-          case '-':
-            return { type: 'Value', value: left - right };
-          case '*':
-            return { type: 'Value', value: left * right };
-          case '/':
-            return { type: 'Value', value: left / right };
-          case '%':
-            return { type: 'Value', value: left % right };
+          case "+":
+            return { type: "Value", value: left + right };
+          case "-":
+            return { type: "Value", value: left - right };
+          case "*":
+            return { type: "Value", value: left * right };
+          case "/":
+            return { type: "Value", value: left / right };
+          case "%":
+            return { type: "Value", value: left % right };
         }
       }
-      
+
       return result;
     }
 
@@ -201,16 +213,17 @@ export class AOTCompiler {
 
   private applyBasicInlining(bytecode: any): any {
     if (!this.options.enableInlining) return bytecode;
-    
+
     // Only inline very simple functions (single return statement)
-    if (bytecode.type === 'Function' && 
-        bytecode.body?.length === 1 && 
-        bytecode.body[0]?.type === 'Return') {
-      
+    if (
+      bytecode.type === "Function" &&
+      bytecode.body?.length === 1 &&
+      bytecode.body[0]?.type === "Return"
+    ) {
       return {
         ...bytecode,
         inlined: true,
-        inlineValue: bytecode.body[0].argument
+        inlineValue: bytecode.body[0].argument,
       };
     }
 
@@ -219,15 +232,13 @@ export class AOTCompiler {
 
   private applyAdvancedInlining(bytecode: any): any {
     if (!this.options.enableInlining) return bytecode;
-    
+
     // More aggressive inlining for functions with up to 5 statements
-    if (bytecode.type === 'Function' && 
-        bytecode.body?.length <= 5) {
-      
+    if (bytecode.type === "Function" && bytecode.body?.length <= 5) {
       return {
         ...bytecode,
         inlined: true,
-        inlineBody: bytecode.body
+        inlineBody: bytecode.body,
       };
     }
 
@@ -235,15 +246,15 @@ export class AOTCompiler {
   }
 
   private applyDeadCodeElimination(bytecode: any): any {
-    if (bytecode.type === 'Block' && Array.isArray(bytecode.body)) {
+    if (bytecode.type === "Block" && Array.isArray(bytecode.body)) {
       const optimizedBody: any[] = [];
       let foundReturn = false;
 
       for (const stmt of bytecode.body) {
         if (foundReturn) break;
-        
+
         optimizedBody.push(stmt);
-        if (stmt.type === 'Return') {
+        if (stmt.type === "Return") {
           foundReturn = true;
         }
       }

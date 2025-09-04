@@ -1,14 +1,17 @@
-import { debug } from '../../debug';
-import { getMetadata } from './decorators';
+import { debug } from "../../debug";
+import { getMetadata } from "./decorators";
 
 export type WhereCondition<T> = (entity: T) => boolean;
 export type OrderByField<T> = keyof T | ((entity: T) => any);
-export type OrderDirection = 'asc' | 'desc';
+export type OrderDirection = "asc" | "desc";
 
 export class QueryBuilder<T> {
   private entityClass: new () => T;
   private whereConditions: WhereCondition<T>[] = [];
-  private orderByFields: Array<{ field: OrderByField<T>; direction: OrderDirection }> = [];
+  private orderByFields: Array<{
+    field: OrderByField<T>;
+    direction: OrderDirection;
+  }> = [];
   private limitCount?: number;
   private skipCount?: number;
   private database: Database;
@@ -16,30 +19,36 @@ export class QueryBuilder<T> {
   constructor(entityClass: new () => T, database: Database) {
     this.entityClass = entityClass;
     this.database = database;
-    debug.debug('Database', `QueryBuilder created for ${entityClass.name}`);
+    debug.debug("Database", `QueryBuilder created for ${entityClass.name}`);
   }
 
   where(condition: WhereCondition<T>): QueryBuilder<T> {
     this.whereConditions.push(condition);
-    debug.debug('Database', 'WHERE condition added to query');
+    debug.debug("Database", "WHERE condition added to query");
     return this;
   }
 
-  orderBy(field: OrderByField<T>, direction: OrderDirection = 'asc'): QueryBuilder<T> {
+  orderBy(
+    field: OrderByField<T>,
+    direction: OrderDirection = "asc",
+  ): QueryBuilder<T> {
     this.orderByFields.push({ field, direction });
-    debug.debug('Database', `ORDER BY ${String(field)} ${direction} added to query`);
+    debug.debug(
+      "Database",
+      `ORDER BY ${String(field)} ${direction} added to query`,
+    );
     return this;
   }
 
   take(count: number): QueryBuilder<T> {
     this.limitCount = count;
-    debug.debug('Database', `LIMIT ${count} added to query`);
+    debug.debug("Database", `LIMIT ${count} added to query`);
     return this;
   }
 
   skip(count: number): QueryBuilder<T> {
     this.skipCount = count;
-    debug.debug('Database', `OFFSET ${count} added to query`);
+    debug.debug("Database", `OFFSET ${count} added to query`);
     return this;
   }
 
@@ -47,23 +56,23 @@ export class QueryBuilder<T> {
   toSQL(): { query: string; params: any[] } {
     const metadata = getMetadata(this.entityClass);
     const tableName = this.entityClass.name.toLowerCase();
-    
+
     let query = `SELECT * FROM ${tableName}`;
     const params: any[] = [];
 
     // Add WHERE clauses (simplified - in real implementation would need SQL generation)
     if (this.whereConditions.length > 0) {
-      query += ' WHERE 1=1'; // Placeholder for now
-      debug.debug('Database', 'WHERE conditions would be processed here');
+      query += " WHERE 1=1"; // Placeholder for now
+      debug.debug("Database", "WHERE conditions would be processed here");
     }
 
     // Add ORDER BY
     if (this.orderByFields.length > 0) {
       const orderClauses = this.orderByFields.map(({ field, direction }) => {
-        const fieldName = typeof field === 'string' ? field : 'id'; // Simplified
+        const fieldName = typeof field === "string" ? field : "id"; // Simplified
         return `${fieldName} ${direction.toUpperCase()}`;
       });
-      query += ` ORDER BY ${orderClauses.join(', ')}`;
+      query += ` ORDER BY ${orderClauses.join(", ")}`;
     }
 
     // Add LIMIT
@@ -76,15 +85,15 @@ export class QueryBuilder<T> {
       query += ` OFFSET ${this.skipCount}`;
     }
 
-    debug.debug('Database', `Generated SQL: ${query}`);
+    debug.debug("Database", `Generated SQL: ${query}`);
     return { query, params };
   }
 
   // Execute query with actual filtering and sorting
   async execute(): Promise<T[]> {
     const { query } = this.toSQL();
-    debug.info('Database', `Executing query: ${query}`);
-    
+    debug.info("Database", `Executing query: ${query}`);
+
     const tableName = this.entityClass.name.toLowerCase();
     let data = [...this.database.getMockData(tableName)] as T[];
 
@@ -97,11 +106,11 @@ export class QueryBuilder<T> {
     for (const { field, direction } of this.orderByFields) {
       data.sort((a, b) => {
         let aVal, bVal;
-        
-        if (typeof field === 'string') {
+
+        if (typeof field === "string") {
           aVal = (a as any)[field];
           bVal = (b as any)[field];
-        } else if (typeof field === 'function') {
+        } else if (typeof field === "function") {
           aVal = field(a);
           bVal = field(b);
         } else {
@@ -109,8 +118,8 @@ export class QueryBuilder<T> {
           bVal = (b as any).id;
         }
 
-        if (aVal < bVal) return direction === 'asc' ? -1 : 1;
-        if (aVal > bVal) return direction === 'asc' ? 1 : -1;
+        if (aVal < bVal) return direction === "asc" ? -1 : 1;
+        if (aVal > bVal) return direction === "asc" ? 1 : -1;
         return 0;
       });
     }
@@ -175,12 +184,16 @@ export class QueryBuilder<T> {
 
   async max(field: keyof T): Promise<any> {
     const data = await this.execute();
-    return data.length > 0 ? Math.max(...data.map(item => (item as any)[field])) : null;
+    return data.length > 0
+      ? Math.max(...data.map((item) => (item as any)[field]))
+      : null;
   }
 
   async min(field: keyof T): Promise<any> {
     const data = await this.execute();
-    return data.length > 0 ? Math.min(...data.map(item => (item as any)[field])) : null;
+    return data.length > 0
+      ? Math.min(...data.map((item) => (item as any)[field]))
+      : null;
   }
 }
 
@@ -202,13 +215,35 @@ export class Database {
 
   private initializeMockData(): void {
     // Initialize with some mock data for testing
-    this.mockData.set('user', [
-      { id: 1, name: 'John Doe', email: 'john@example.com', createdAt: new Date().toISOString() },
-      { id: 2, name: 'Jane Smith', email: 'jane@example.com', createdAt: new Date().toISOString() },
+    this.mockData.set("user", [
+      {
+        id: 1,
+        name: "John Doe",
+        email: "john@example.com",
+        createdAt: new Date().toISOString(),
+      },
+      {
+        id: 2,
+        name: "Jane Smith",
+        email: "jane@example.com",
+        createdAt: new Date().toISOString(),
+      },
     ]);
-    this.mockData.set('post', [
-      { id: 1, title: 'Hello World', content: 'First post', userId: 1, createdAt: new Date().toISOString() },
-      { id: 2, title: 'TypeScript Tips', content: 'Some TypeScript tips', userId: 1, createdAt: new Date().toISOString() },
+    this.mockData.set("post", [
+      {
+        id: 1,
+        title: "Hello World",
+        content: "First post",
+        userId: 1,
+        createdAt: new Date().toISOString(),
+      },
+      {
+        id: 2,
+        title: "TypeScript Tips",
+        content: "Some TypeScript tips",
+        userId: 1,
+        createdAt: new Date().toISOString(),
+      },
     ]);
   }
 
@@ -218,47 +253,51 @@ export class Database {
   }
 
   static async save<T>(entity: T): Promise<T> {
-    debug.info('Database', `Saving entity of type ${entity?.constructor.name}`);
-    
+    debug.info("Database", `Saving entity of type ${entity?.constructor.name}`);
+
     const instance = Database.getInstance();
     const tableName = entity?.constructor.name.toLowerCase();
-    if (!tableName) throw new Error('Invalid entity: no constructor name');
-    
+    if (!tableName) throw new Error("Invalid entity: no constructor name");
+
     const data = instance.mockData.get(tableName) || [];
-    
+
     // Modify entity in place to maintain reference equality
     const entityData = entity as any;
-    
+
     if (entityData.id) {
       // Update existing entity
-      const index = data.findIndex(item => item.id === entityData.id);
+      const index = data.findIndex((item) => item.id === entityData.id);
       if (index >= 0) {
         Object.assign(data[index], entityData);
       }
     } else {
       // Create new entity - assign ID and timestamps to original object
-      entityData.id = data.length > 0 ? Math.max(...data.map(item => item.id)) + 1 : 1;
+      entityData.id =
+        data.length > 0 ? Math.max(...data.map((item) => item.id)) + 1 : 1;
       if (!entityData.createdAt) {
         entityData.createdAt = new Date().toISOString();
       }
       data.push({ ...entityData });
       instance.mockData.set(tableName, data);
     }
-    
+
     return entity;
   }
 
   static async delete<T>(entity: T): Promise<void> {
-    debug.info('Database', `Deleting entity of type ${entity?.constructor.name}`);
-    
+    debug.info(
+      "Database",
+      `Deleting entity of type ${entity?.constructor.name}`,
+    );
+
     const instance = Database.getInstance();
     const tableName = entity?.constructor.name.toLowerCase();
-    if (!tableName) throw new Error('Invalid entity: no constructor name');
-    
+    if (!tableName) throw new Error("Invalid entity: no constructor name");
+
     const data = instance.mockData.get(tableName) || [];
     const entityData = entity as any;
-    
-    const index = data.findIndex(item => item.id === entityData.id);
+
+    const index = data.findIndex((item) => item.id === entityData.id);
     if (index >= 0) {
       data.splice(index, 1);
       instance.mockData.set(tableName, data);
@@ -266,27 +305,27 @@ export class Database {
   }
 
   static async find<T>(entityClass: new () => T, id: any): Promise<T | null> {
-    debug.info('Database', `Finding ${entityClass.name} with id ${id}`);
-    
+    debug.info("Database", `Finding ${entityClass.name} with id ${id}`);
+
     const instance = Database.getInstance();
     const tableName = entityClass.name.toLowerCase();
-    if (!tableName) throw new Error('Invalid entity class: no name');
-    
+    if (!tableName) throw new Error("Invalid entity class: no name");
+
     const data = instance.mockData.get(tableName) || [];
-    
-    const found = data.find(item => item.id === id);
+
+    const found = data.find((item) => item.id === id);
     return found ? (found as T) : null;
   }
 
   static async findAll<T>(entityClass: new () => T): Promise<T[]> {
-    debug.info('Database', `Finding all ${entityClass.name} entities`);
-    
+    debug.info("Database", `Finding all ${entityClass.name} entities`);
+
     const instance = Database.getInstance();
     const tableName = entityClass.name.toLowerCase();
-    if (!tableName) throw new Error('Invalid entity class: no name');
-    
+    if (!tableName) throw new Error("Invalid entity class: no name");
+
     const data = instance.mockData.get(tableName) || [];
-    
+
     return data as T[];
   }
 

@@ -1,6 +1,7 @@
 # Omniscript Best Practices
 
 ## Project Structure
+
 ```
 myapp/
 ├── src/
@@ -16,12 +17,15 @@ myapp/
 ## Performance Best Practices
 
 ### Memory Management
+
 - Enable garbage collection in long-running applications:
+
 ```typescript
 runtime.enableGarbageCollection();
 ```
 
 - Monitor memory usage regularly:
+
 ```typescript
 const usage = runtime.getMemoryUsage();
 if (usage.allocated > THRESHOLD) {
@@ -30,25 +34,31 @@ if (usage.allocated > THRESHOLD) {
 ```
 
 - Check for circular references in development:
+
 ```typescript
 runtime.detectCircularReferences();
 ```
 
 ### Reactive Programming
+
 - Use `Signal` for simple state management:
+
 ```typescript
 const counter = new Signal<number>(0);
-counter.subscribe(value => updateUI(value));
+counter.subscribe((value) => updateUI(value));
 ```
 
 - Use `Stream` for event-driven programming:
+
 ```typescript
 const events = new Stream<Event>();
-events.subscribe(event => handleEvent(event));
+events.subscribe((event) => handleEvent(event));
 ```
 
 ### Thread Safety
+
 - Use thread-safe collections for concurrent access:
+
 ```typescript
 // Do
 const list = new List<number>();
@@ -60,6 +70,7 @@ array.push(1); // Not thread-safe
 ```
 
 - Use the Actor model for complex state management:
+
 ```typescript
 const actor = runtime.createActor((msg, state) => {
   // State updates are automatically thread-safe
@@ -70,6 +81,7 @@ const actor = runtime.createActor((msg, state) => {
 ## Error Handling
 
 ### Use Result Type
+
 ```typescript
 function divide(a: number, b: number): Result<number, Error> {
   if (b === 0) {
@@ -80,6 +92,7 @@ function divide(a: number, b: number): Result<number, Error> {
 ```
 
 ### Pattern Matching for Error Cases
+
 ```typescript
 match result {
   Ok(value) => handleSuccess(value),
@@ -88,6 +101,7 @@ match result {
 ```
 
 ### Async Error Handling
+
 ```typescript
 try {
   const result = await asyncOperation();
@@ -99,30 +113,32 @@ try {
 ## Testing
 
 ### Unit Testing
+
 - Test each component in isolation
 - Use descriptive test names
 - Test edge cases
 
 ```typescript
-describe('MathUtils', () => {
-  test('factorial computes correct value', () => {
+describe("MathUtils", () => {
+  test("factorial computes correct value", () => {
     expect(MathUtils.factorial(5)).toBe(120);
   });
 
-  test('gcd finds greatest common divisor', () => {
+  test("gcd finds greatest common divisor", () => {
     expect(MathUtils.gcd(48, 18)).toBe(6);
   });
 });
 ```
 
 ### Integration Testing
+
 - Test component interactions
 - Test real-world scenarios
 - Use realistic test data
 
 ```typescript
-describe('Database Integration', () => {
-  test('saves and retrieves user', async () => {
+describe("Database Integration", () => {
+  test("saves and retrieves user", async () => {
     const user = new User("test");
     await db.save(user);
     const retrieved = await db.find(user.id);
@@ -134,7 +150,9 @@ describe('Database Integration', () => {
 ## Performance Optimization
 
 ### JIT Compilation
+
 - Enable JIT for hot code paths:
+
 ```typescript
 {
   "compiler": {
@@ -148,7 +166,9 @@ describe('Database Integration', () => {
 ```
 
 ### SIMD Operations
+
 - Use SIMD-optimized operations for numerical computations:
+
 ```typescript
 class Vector {
   @simd
@@ -160,7 +180,9 @@ class Vector {
 ```
 
 ### Parallel Execution
+
 - Use parallel execution for CPU-intensive tasks:
+
 ```typescript
 runtime.enableParallelExecution();
 ```
@@ -168,6 +190,7 @@ runtime.enableParallelExecution();
 ## Security
 
 ### Input Validation
+
 - Validate all user input
 - Use type constraints
 - Sanitize data before processing
@@ -182,7 +205,9 @@ function processUserInput(input: string): Result<Output, Error> {
 ```
 
 ### Resource Management
+
 - Use automatic resource cleanup:
+
 ```typescript
 using resource = open("file.txt") {
   // Resource automatically cleaned up after block
@@ -190,6 +215,7 @@ using resource = open("file.txt") {
 ```
 
 ### Error Messages
+
 - Don't expose internal details in error messages
 - Log detailed errors internally
 - Return safe error messages to users
@@ -197,6 +223,7 @@ using resource = open("file.txt") {
 ## Documentation
 
 ### Code Documentation
+
 - Document public APIs
 - Include examples
 - Explain complex algorithms
@@ -207,7 +234,7 @@ using resource = open("file.txt") {
  * @param n The number to compute factorial for
  * @returns The factorial of n
  * @throws Error if n is negative
- * 
+ *
  * @example
  * MathUtils.factorial(5) // Returns 120
  */
@@ -218,6 +245,7 @@ static factorial(n: number): number {
 ```
 
 ### Generated Documentation
+
 - Keep documentation up to date
 - Include usage examples
 - Document error cases
@@ -225,11 +253,13 @@ static factorial(n: number): number {
 ## Version Control
 
 ### Commit Messages
+
 - Use clear commit messages
 - Reference issue numbers
 - Describe breaking changes
 
 ### Branch Strategy
+
 - Use feature branches
 - Protect main branch
 - Regular integration
@@ -237,11 +267,13 @@ static factorial(n: number): number {
 ## Deployment
 
 ### Configuration
+
 - Use environment variables
 - Separate dev/prod configs
 - Version control safe defaults
 
 ### Monitoring
+
 - Enable performance monitoring
 - Track memory usage
 - Log important events
@@ -252,6 +284,7 @@ runtime.enableMemoryManagement();
 ```
 
 ## See Also
+
 - [Language Guide](guide.md)
 - [API Reference](api/README.md)
 - [Examples](examples/README.md)

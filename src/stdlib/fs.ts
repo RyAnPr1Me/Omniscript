@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
-import { debug } from '../debug';
+import { debug } from "../debug";
 
 export interface FileStats {
   size: number;
@@ -13,7 +13,7 @@ export interface FileStats {
 
 export interface DirectoryEntry {
   name: string;
-  type: 'file' | 'directory' | 'symlink';
+  type: "file" | "directory" | "symlink";
   size?: number;
 }
 
@@ -21,16 +21,21 @@ export class FileSystem {
   /**
    * Read file contents as string
    */
-  static async readFile(path: string, encoding: string = 'utf8'): Promise<string> {
+  static async readFile(
+    path: string,
+    encoding: string = "utf8",
+  ): Promise<string> {
     try {
-      if (typeof require !== 'undefined') {
+      if (typeof require !== "undefined") {
         // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const fs = require('fs').promises;
+        const fs = require("fs").promises;
         return await fs.readFile(path, encoding);
       }
-      throw new Error('File system operations not available in this environment');
+      throw new Error(
+        "File system operations not available in this environment",
+      );
     } catch (error) {
-      debug.error('FileSystem', `Failed to read file ${path}: ${error}`);
+      debug.error("FileSystem", `Failed to read file ${path}: ${error}`);
       throw new Error(`Failed to read file: ${error}`);
     }
   }
@@ -38,17 +43,23 @@ export class FileSystem {
   /**
    * Write string content to file
    */
-  static async writeFile(path: string, data: string, encoding: string = 'utf8'): Promise<void> {
+  static async writeFile(
+    path: string,
+    data: string,
+    encoding: string = "utf8",
+  ): Promise<void> {
     try {
-      if (typeof require !== 'undefined') {
+      if (typeof require !== "undefined") {
         // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const fs = require('fs').promises;
+        const fs = require("fs").promises;
         await fs.writeFile(path, data, encoding);
       } else {
-        throw new Error('File system operations not available in this environment');
+        throw new Error(
+          "File system operations not available in this environment",
+        );
       }
     } catch (error) {
-      debug.error('FileSystem', `Failed to write file ${path}: ${error}`);
+      debug.error("FileSystem", `Failed to write file ${path}: ${error}`);
       throw new Error(`Failed to write file: ${error}`);
     }
   }
@@ -56,16 +67,22 @@ export class FileSystem {
   /**
    * Append string content to file
    */
-  static async appendFile(path: string, data: string, encoding: string = 'utf8'): Promise<void> {
+  static async appendFile(
+    path: string,
+    data: string,
+    encoding: string = "utf8",
+  ): Promise<void> {
     try {
-      if (typeof require !== 'undefined') {
-        const fs = require('fs').promises;
+      if (typeof require !== "undefined") {
+        const fs = require("fs").promises;
         await fs.appendFile(path, data, encoding);
       } else {
-        throw new Error('File system operations not available in this environment');
+        throw new Error(
+          "File system operations not available in this environment",
+        );
       }
     } catch (error) {
-      debug.error('FileSystem', `Failed to append to file ${path}: ${error}`);
+      debug.error("FileSystem", `Failed to append to file ${path}: ${error}`);
       throw new Error(`Failed to append to file: ${error}`);
     }
   }
@@ -75,8 +92,8 @@ export class FileSystem {
    */
   static async exists(path: string): Promise<boolean> {
     try {
-      if (typeof require !== 'undefined') {
-        const fs = require('fs').promises;
+      if (typeof require !== "undefined") {
+        const fs = require("fs").promises;
         await fs.access(path);
         return true;
       }
@@ -91,8 +108,8 @@ export class FileSystem {
    */
   static async stat(path: string): Promise<FileStats> {
     try {
-      if (typeof require !== 'undefined') {
-        const fs = require('fs').promises;
+      if (typeof require !== "undefined") {
+        const fs = require("fs").promises;
         const stats = await fs.stat(path);
         return {
           size: stats.size,
@@ -101,12 +118,14 @@ export class FileSystem {
           isSymbolicLink: stats.isSymbolicLink(),
           created: stats.birthtime,
           modified: stats.mtime,
-          accessed: stats.atime
+          accessed: stats.atime,
         };
       }
-      throw new Error('File system operations not available in this environment');
+      throw new Error(
+        "File system operations not available in this environment",
+      );
     } catch (error) {
-      debug.error('FileSystem', `Failed to get stats for ${path}: ${error}`);
+      debug.error("FileSystem", `Failed to get stats for ${path}: ${error}`);
       throw new Error(`Failed to get file stats: ${error}`);
     }
   }
@@ -116,14 +135,16 @@ export class FileSystem {
    */
   static async mkdir(path: string, recursive: boolean = false): Promise<void> {
     try {
-      if (typeof require !== 'undefined') {
-        const fs = require('fs').promises;
+      if (typeof require !== "undefined") {
+        const fs = require("fs").promises;
         await fs.mkdir(path, { recursive });
       } else {
-        throw new Error('File system operations not available in this environment');
+        throw new Error(
+          "File system operations not available in this environment",
+        );
       }
     } catch (error) {
-      debug.error('FileSystem', `Failed to create directory ${path}: ${error}`);
+      debug.error("FileSystem", `Failed to create directory ${path}: ${error}`);
       throw new Error(`Failed to create directory: ${error}`);
     }
   }
@@ -133,8 +154,8 @@ export class FileSystem {
    */
   static async remove(path: string, recursive: boolean = false): Promise<void> {
     try {
-      if (typeof require !== 'undefined') {
-        const fs = require('fs').promises;
+      if (typeof require !== "undefined") {
+        const fs = require("fs").promises;
         const stats = await this.stat(path);
         if (stats.isDirectory) {
           await fs.rmdir(path, { recursive });
@@ -142,10 +163,12 @@ export class FileSystem {
           await fs.unlink(path);
         }
       } else {
-        throw new Error('File system operations not available in this environment');
+        throw new Error(
+          "File system operations not available in this environment",
+        );
       }
     } catch (error) {
-      debug.error('FileSystem', `Failed to remove ${path}: ${error}`);
+      debug.error("FileSystem", `Failed to remove ${path}: ${error}`);
       throw new Error(`Failed to remove: ${error}`);
     }
   }
@@ -155,17 +178,23 @@ export class FileSystem {
    */
   static async readDir(path: string): Promise<DirectoryEntry[]> {
     try {
-      if (typeof require !== 'undefined') {
-        const fs = require('fs').promises;
+      if (typeof require !== "undefined") {
+        const fs = require("fs").promises;
         const entries = await fs.readdir(path, { withFileTypes: true });
         return entries.map((entry: any) => ({
           name: entry.name,
-          type: entry.isFile() ? 'file' : entry.isDirectory() ? 'directory' : 'symlink'
+          type: entry.isFile()
+            ? "file"
+            : entry.isDirectory()
+              ? "directory"
+              : "symlink",
         }));
       }
-      throw new Error('File system operations not available in this environment');
+      throw new Error(
+        "File system operations not available in this environment",
+      );
     } catch (error) {
-      debug.error('FileSystem', `Failed to read directory ${path}: ${error}`);
+      debug.error("FileSystem", `Failed to read directory ${path}: ${error}`);
       throw new Error(`Failed to read directory: ${error}`);
     }
   }
@@ -175,14 +204,19 @@ export class FileSystem {
    */
   static async copy(source: string, destination: string): Promise<void> {
     try {
-      if (typeof require !== 'undefined') {
-        const fs = require('fs').promises;
+      if (typeof require !== "undefined") {
+        const fs = require("fs").promises;
         await fs.copyFile(source, destination);
       } else {
-        throw new Error('File system operations not available in this environment');
+        throw new Error(
+          "File system operations not available in this environment",
+        );
       }
     } catch (error) {
-      debug.error('FileSystem', `Failed to copy ${source} to ${destination}: ${error}`);
+      debug.error(
+        "FileSystem",
+        `Failed to copy ${source} to ${destination}: ${error}`,
+      );
       throw new Error(`Failed to copy file: ${error}`);
     }
   }
@@ -192,14 +226,19 @@ export class FileSystem {
    */
   static async move(source: string, destination: string): Promise<void> {
     try {
-      if (typeof require !== 'undefined') {
-        const fs = require('fs').promises;
+      if (typeof require !== "undefined") {
+        const fs = require("fs").promises;
         await fs.rename(source, destination);
       } else {
-        throw new Error('File system operations not available in this environment');
+        throw new Error(
+          "File system operations not available in this environment",
+        );
       }
     } catch (error) {
-      debug.error('FileSystem', `Failed to move ${source} to ${destination}: ${error}`);
+      debug.error(
+        "FileSystem",
+        `Failed to move ${source} to ${destination}: ${error}`,
+      );
       throw new Error(`Failed to move: ${error}`);
     }
   }
@@ -207,23 +246,29 @@ export class FileSystem {
   /**
    * Create a readable stream for large files
    */
-  static createReadStream(path: string, options?: { encoding?: string; start?: number; end?: number }): any {
-    if (typeof require !== 'undefined') {
-      const fs = require('fs');
+  static createReadStream(
+    path: string,
+    options?: { encoding?: string; start?: number; end?: number },
+  ): any {
+    if (typeof require !== "undefined") {
+      const fs = require("fs");
       return fs.createReadStream(path, options);
     }
-    throw new Error('Streams not available in this environment');
+    throw new Error("Streams not available in this environment");
   }
 
   /**
    * Create a writable stream for large files
    */
-  static createWriteStream(path: string, options?: { encoding?: string; flags?: string }): any {
-    if (typeof require !== 'undefined') {
-      const fs = require('fs');
+  static createWriteStream(
+    path: string,
+    options?: { encoding?: string; flags?: string },
+  ): any {
+    if (typeof require !== "undefined") {
+      const fs = require("fs");
       return fs.createWriteStream(path, options);
     }
-    throw new Error('Streams not available in this environment');
+    throw new Error("Streams not available in this environment");
   }
 }
 

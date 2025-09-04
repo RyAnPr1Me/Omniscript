@@ -1,4 +1,4 @@
-import { Result } from '../runtime';
+import { Result } from "../runtime";
 
 export class List<T> {
   private items: T[] = [];
@@ -49,7 +49,7 @@ export class List<T> {
     try {
       return [...this.items];
     } finally {
-      this.lock.release(); 
+      this.lock.release();
     }
   }
 
@@ -68,7 +68,10 @@ export class List<T> {
     }
   }
 
-  async reduce<R>(reducer: (acc: R, item: T, index: number) => R, initialValue: R): Promise<R> {
+  async reduce<R>(
+    reducer: (acc: R, item: T, index: number) => R,
+    initialValue: R,
+  ): Promise<R> {
     await this.lock.acquire();
     try {
       return this.items.reduce(reducer, initialValue);
@@ -151,7 +154,9 @@ export class List<T> {
   }
 
   // Enhanced functional programming methods
-  async find(predicate: (item: T, index: number) => boolean): Promise<T | undefined> {
+  async find(
+    predicate: (item: T, index: number) => boolean,
+  ): Promise<T | undefined> {
     await this.lock.acquire();
     try {
       return this.items.find(predicate);
@@ -160,7 +165,9 @@ export class List<T> {
     }
   }
 
-  async findIndex(predicate: (item: T, index: number) => boolean): Promise<number> {
+  async findIndex(
+    predicate: (item: T, index: number) => boolean,
+  ): Promise<number> {
     await this.lock.acquire();
     try {
       return this.items.findIndex(predicate);
@@ -178,7 +185,9 @@ export class List<T> {
     }
   }
 
-  async every(predicate: (item: T, index: number) => boolean): Promise<boolean> {
+  async every(
+    predicate: (item: T, index: number) => boolean,
+  ): Promise<boolean> {
     await this.lock.acquire();
     try {
       return this.items.every(predicate);
@@ -205,7 +214,7 @@ export class List<T> {
     await this.lock.acquire();
     try {
       const groups = new globalThis.Map<K, T[]>();
-      
+
       for (const item of this.items) {
         const key = keySelector(item);
         if (!groups.has(key)) {
@@ -213,7 +222,7 @@ export class List<T> {
         }
         groups.get(key)!.push(item);
       }
-      
+
       const result = new Map<K, List<T>>();
       for (const [key, items] of groups) {
         const list = new List<T>();
@@ -222,19 +231,21 @@ export class List<T> {
         }
         await result.set(key, list);
       }
-      
+
       return result;
     } finally {
       this.lock.release();
     }
   }
 
-  async partition(predicate: (item: T) => boolean): Promise<[List<T>, List<T>]> {
+  async partition(
+    predicate: (item: T) => boolean,
+  ): Promise<[List<T>, List<T>]> {
     await this.lock.acquire();
     try {
       const truthy = new List<T>();
       const falsy = new List<T>();
-      
+
       for (const item of this.items) {
         if (predicate(item)) {
           await truthy.push(item);
@@ -242,7 +253,7 @@ export class List<T> {
           await falsy.push(item);
         }
       }
-      
+
       return [truthy, falsy];
     } finally {
       this.lock.release();
@@ -288,7 +299,7 @@ export class List<T> {
           break;
         }
       }
-      
+
       const newList = new List<T>();
       for (const item of taken) {
         await newList.push(item);
@@ -310,7 +321,7 @@ export class List<T> {
           break;
         }
       }
-      
+
       const dropped = this.items.slice(index);
       const newList = new List<T>();
       for (const item of dropped) {
@@ -327,7 +338,7 @@ export class List<T> {
     try {
       const seen = new Set();
       const unique: T[] = [];
-      
+
       for (const item of this.items) {
         const key = keySelector ? keySelector(item) : item;
         if (!seen.has(key)) {
@@ -335,7 +346,7 @@ export class List<T> {
           unique.push(item);
         }
       }
-      
+
       const newList = new List<T>();
       for (const item of unique) {
         await newList.push(item);
@@ -352,11 +363,11 @@ export class List<T> {
       const otherItems = await other.toArray();
       const zipped: [T, U][] = [];
       const minLength = Math.min(this.items.length, otherItems.length);
-      
+
       for (let i = 0; i < minLength; i++) {
         zipped.push([this.items[i], otherItems[i]]);
       }
-      
+
       const newList = new List<[T, U]>();
       for (const pair of zipped) {
         await newList.push(pair);
@@ -391,9 +402,13 @@ export class List<T> {
     try {
       if (this.items.length === 0) return undefined;
       if (!compareFn) {
-        return this.items.reduce((min, current) => current < min ? current : min);
+        return this.items.reduce((min, current) =>
+          current < min ? current : min,
+        );
       }
-      return this.items.reduce((min, current) => compareFn(current, min) < 0 ? current : min);
+      return this.items.reduce((min, current) =>
+        compareFn(current, min) < 0 ? current : min,
+      );
     } finally {
       this.lock.release();
     }
@@ -404,9 +419,13 @@ export class List<T> {
     try {
       if (this.items.length === 0) return undefined;
       if (!compareFn) {
-        return this.items.reduce((max, current) => current > max ? current : max);
+        return this.items.reduce((max, current) =>
+          current > max ? current : max,
+        );
       }
-      return this.items.reduce((max, current) => compareFn(current, max) > 0 ? current : max);
+      return this.items.reduce((max, current) =>
+        compareFn(current, max) > 0 ? current : max,
+      );
     } finally {
       this.lock.release();
     }
@@ -459,7 +478,7 @@ class Mutex {
 
   async acquire(): Promise<void> {
     let release: () => void;
-    const next = new Promise<void>(resolve => (release = resolve));
+    const next = new Promise<void>((resolve) => (release = resolve));
     const previous = this.promise;
     this.promise = next;
     await previous;
@@ -472,8 +491,8 @@ class Mutex {
 
   // Add timeout support
   async acquireWithTimeout(timeoutMs: number): Promise<boolean> {
-    const timeoutPromise = new Promise<false>(resolve => 
-      setTimeout(() => resolve(false), timeoutMs)
+    const timeoutPromise = new Promise<false>((resolve) =>
+      setTimeout(() => resolve(false), timeoutMs),
     );
     const acquirePromise = this.acquire().then(() => true);
     return Promise.race([acquirePromise, timeoutPromise]);
@@ -538,40 +557,40 @@ export class Set<T> {
     const result = new Set<T>();
     const thisArray = await this.toArray();
     const otherArray = await other.toArray();
-    
+
     for (const item of thisArray) {
       await result.add(item);
     }
     for (const item of otherArray) {
       await result.add(item);
     }
-    
+
     return result;
   }
 
   async intersection(other: Set<T>): Promise<Set<T>> {
     const result = new Set<T>();
     const thisArray = await this.toArray();
-    
+
     for (const item of thisArray) {
       if (await other.has(item)) {
         await result.add(item);
       }
     }
-    
+
     return result;
   }
 
   async difference(other: Set<T>): Promise<Set<T>> {
     const result = new Set<T>();
     const thisArray = await this.toArray();
-    
+
     for (const item of thisArray) {
       if (!(await other.has(item))) {
         await result.add(item);
       }
     }
-    
+
     return result;
   }
 }
@@ -595,15 +614,15 @@ export class PriorityQueue<T> {
     await this.lock.acquire();
     try {
       if (this.heap.length === 0) return undefined;
-      
+
       const result = this.heap[0].item;
       const last = this.heap.pop()!;
-      
+
       if (this.heap.length > 0) {
         this.heap[0] = last;
         this.heapifyDown(0);
       }
-      
+
       return result;
     } finally {
       this.lock.release();
@@ -629,10 +648,13 @@ export class PriorityQueue<T> {
 
   private heapifyUp(index: number): void {
     if (index === 0) return;
-    
+
     const parentIndex = Math.floor((index - 1) / 2);
     if (this.heap[index].priority > this.heap[parentIndex].priority) {
-      [this.heap[index], this.heap[parentIndex]] = [this.heap[parentIndex], this.heap[index]];
+      [this.heap[index], this.heap[parentIndex]] = [
+        this.heap[parentIndex],
+        this.heap[index],
+      ];
       this.heapifyUp(parentIndex);
     }
   }
@@ -642,16 +664,25 @@ export class PriorityQueue<T> {
     const rightChild = 2 * index + 2;
     let largest = index;
 
-    if (leftChild < this.heap.length && this.heap[leftChild].priority > this.heap[largest].priority) {
+    if (
+      leftChild < this.heap.length &&
+      this.heap[leftChild].priority > this.heap[largest].priority
+    ) {
       largest = leftChild;
     }
 
-    if (rightChild < this.heap.length && this.heap[rightChild].priority > this.heap[largest].priority) {
+    if (
+      rightChild < this.heap.length &&
+      this.heap[rightChild].priority > this.heap[largest].priority
+    ) {
       largest = rightChild;
     }
 
     if (largest !== index) {
-      [this.heap[index], this.heap[largest]] = [this.heap[largest], this.heap[index]];
+      [this.heap[index], this.heap[largest]] = [
+        this.heap[largest],
+        this.heap[index],
+      ];
       this.heapifyDown(largest);
     }
   }
@@ -692,7 +723,7 @@ export class Graph<T> {
     try {
       const edgeId = `${from}-${to}`;
       this.edges.set(edgeId, { from, to, weight });
-      
+
       if (!this.adjacencyList.has(from)) {
         this.adjacencyList.set(from, []);
       }
@@ -727,7 +758,7 @@ export class Graph<T> {
     while (queue.length > 0) {
       const current = queue.shift()!;
       if (current === to) return true;
-      
+
       if (visited.has(current)) continue;
       visited.add(current);
 
@@ -740,17 +771,19 @@ export class Graph<T> {
 
   async shortestPath(from: string, to: string): Promise<string[] | null> {
     const visited = new globalThis.Set<string>();
-    const queue: { node: string; path: string[] }[] = [{ node: from, path: [from] }];
+    const queue: { node: string; path: string[] }[] = [
+      { node: from, path: [from] },
+    ];
 
     while (queue.length > 0) {
       const { node: current, path } = queue.shift()!;
-      
+
       if (current === to) return path;
       if (visited.has(current)) continue;
-      
+
       visited.add(current);
       const neighbors = await this.getNeighbors(current);
-      
+
       for (const neighbor of neighbors) {
         if (!visited.has(neighbor)) {
           queue.push({ node: neighbor, path: [...path, neighbor] });
@@ -785,7 +818,7 @@ class TreeNode<T> {
   constructor(
     public value: T,
     public left: TreeNode<T> | null = null,
-    public right: TreeNode<T> | null = null
+    public right: TreeNode<T> | null = null,
   ) {}
 }
 
@@ -795,11 +828,13 @@ export class BinarySearchTree<T> {
   private compareFn: (a: T, b: T) => number;
 
   constructor(compareFn?: (a: T, b: T) => number) {
-    this.compareFn = compareFn || ((a, b) => {
-      if (a < b) return -1;
-      if (a > b) return 1;
-      return 0;
-    });
+    this.compareFn =
+      compareFn ||
+      ((a, b) => {
+        if (a < b) return -1;
+        if (a > b) return 1;
+        return 0;
+      });
   }
 
   async insert(value: T): Promise<void> {

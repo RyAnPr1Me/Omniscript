@@ -6,19 +6,19 @@
  * if(node.kind === ExpressionKind.Literal) { ... }
  */
 export enum ExpressionKind {
-	Binary = "Binary",
-	Unary = "Unary",
-	Literal = "Literal",
-	Identifier = "Identifier",
-	Call = "Call",
-	MemberAccess = "MemberAccess",
-	ArrayLiteral = "ArrayLiteral",
-	ObjectLiteral = "ObjectLiteral",
-		Ternary = "Ternary", // New: ternary expressions
-		Match = "Match", // New: pattern matching expression
-		Await = "Await", // New: await expression
-		Assignment = "Assignment", // New: assignment expression
-		TemplateLiteral = "TemplateLiteral" // New: template literal expression
+  Binary = "Binary",
+  Unary = "Unary",
+  Literal = "Literal",
+  Identifier = "Identifier",
+  Call = "Call",
+  MemberAccess = "MemberAccess",
+  ArrayLiteral = "ArrayLiteral",
+  ObjectLiteral = "ObjectLiteral",
+  Ternary = "Ternary", // New: ternary expressions
+  Match = "Match", // New: pattern matching expression
+  Await = "Await", // New: await expression
+  Assignment = "Assignment", // New: assignment expression
+  TemplateLiteral = "TemplateLiteral", // New: template literal expression
 }
 
 /**
@@ -29,17 +29,17 @@ export enum ExpressionKind {
  * if(operator === Operator.Plus) { ... }
  */
 export enum Operator {
-	Plus = "+",
-	Minus = "-",
-	Multiply = "*",
-	Divide = "/",
-	Modulo = "%",
-	Equal = "==",
-	NotEqual = "!=",
-	LessThan = "<",
-	GreaterThan = ">",
-	And = "&&",
-	Or = "||"
+  Plus = "+",
+  Minus = "-",
+  Multiply = "*",
+  Divide = "/",
+  Modulo = "%",
+  Equal = "==",
+  NotEqual = "!=",
+  LessThan = "<",
+  GreaterThan = ">",
+  And = "&&",
+  Or = "||",
 }
 
 /**
@@ -52,14 +52,14 @@ export enum Operator {
  * @property column - The column position (0-indexed) where the token starts.
  */
 export interface Token {
-	/** The textual representation of the token. */
-	text: string;
-	/** The numeric type identifier for the token. */
-	type: number;
-	/** Line number where the token occurs. */
-	line: number;
-	/** Column number where the token occurs. */
-	column: number;
+  /** The textual representation of the token. */
+  text: string;
+  /** The numeric type identifier for the token. */
+  type: number;
+  /** Line number where the token occurs. */
+  line: number;
+  /** Column number where the token occurs. */
+  column: number;
 }
 
 /**
@@ -70,18 +70,18 @@ export interface Token {
  * const lookahead = parserInput.LA(1);
  */
 export interface ParserInput {
-	/**
-	 * Look ahead by the given offset.
-	 * @param offset - The number of tokens to look ahead (1 returns the next token).
-	 * @returns The token type code at that offset.
-	 */
-	LA(offset: number): number;
-	/**
-	 * Get the token at the given lookahead offset.
-	 * @param offset - The number of tokens to look ahead.
-	 * @returns The Token object.
-	 */
-	LT(offset: number): Token;
+  /**
+   * Look ahead by the given offset.
+   * @param offset - The number of tokens to look ahead (1 returns the next token).
+   * @returns The token type code at that offset.
+   */
+  LA(offset: number): number;
+  /**
+   * Get the token at the given lookahead offset.
+   * @param offset - The number of tokens to look ahead.
+   * @returns The Token object.
+   */
+  LT(offset: number): Token;
 }
 
 /**
@@ -92,16 +92,16 @@ export interface ParserInput {
  * @property column - The column in the source code where the node begins.
  */
 export interface ASTNode {
-	/** A string identifying the type of AST node. */
-	type: string;
-	/** Line number where the node starts. */
-	line: number;
-	/** Column number where the node starts. */
-	column: number;
-	/** Subject expression for match expressions. */
-	subject?: Expression;
-	/** Arms for match expressions. */
-	arms?: MatchArm[];
+  /** A string identifying the type of AST node. */
+  type: string;
+  /** Line number where the node starts. */
+  line: number;
+  /** Column number where the node starts. */
+  column: number;
+  /** Subject expression for match expressions. */
+  subject?: Expression;
+  /** Arms for match expressions. */
+  arms?: MatchArm[];
 }
 
 /**
@@ -111,10 +111,10 @@ export interface ASTNode {
  * @property body - The statements to execute if the pattern matches.
  */
 export interface MatchArm {
-	/** The pattern expression to match against. */
-	pattern: Expression;
-	/** The statements to execute if the pattern matches. */
-	body: Statement[];
+  /** The pattern expression to match against. */
+  pattern: Expression;
+  /** The statements to execute if the pattern matches. */
+  body: Statement[];
 }
 
 /**
@@ -124,10 +124,10 @@ export interface MatchArm {
  * @property body - An array of statement nodes composing the program.
  */
 export interface Program extends ASTNode {
-	/** Constant discriminant for a program node. */
-	type: 'Program';
-	/** An array of statements that make up the program. */
-	body: Statement[];
+  /** Constant discriminant for a program node. */
+  type: "Program";
+  /** An array of statements that make up the program. */
+  body: Statement[];
 }
 
 /**
@@ -135,8 +135,19 @@ export interface Program extends ASTNode {
  * A statement can be a variable declaration, function declaration, decorator, or expression.
  */
 export interface Statement extends ASTNode {
-	/** Discriminated type identifying the statement kind. */
-	type: 'VariableDeclaration' | 'FunctionDeclaration' | 'Decorator' | 'Expression' | 'ReturnStatement' | 'IfStatement' | 'WhileStatement' | 'ForStatement' | 'ThrowStatement' | 'TryStatement' | 'ClassDeclaration';
+  /** Discriminated type identifying the statement kind. */
+  type:
+    | "VariableDeclaration"
+    | "FunctionDeclaration"
+    | "Decorator"
+    | "Expression"
+    | "ReturnStatement"
+    | "IfStatement"
+    | "WhileStatement"
+    | "ForStatement"
+    | "ThrowStatement"
+    | "TryStatement"
+    | "ClassDeclaration";
 }
 
 /**
@@ -156,49 +167,56 @@ export interface Statement extends ASTNode {
  * @property callee - For call expressions, the function being called.
  */
 export interface Expression extends ASTNode {
-	/** Constant discriminant for an expression node. */
-	type: 'Expression';
-	/** The kind of expression. */
-	kind: ExpressionKind;
-	/** Operator used (if applicable). */
-	operator?: Operator | '??=';
-	/** Left-hand side expression (if applicable). */
-	left?: Expression;
-	/** Right-hand side expression (if applicable). */
-	right?: Expression;
-	/**
-	 * The literal value of the expression.
-	 * Allowed types: string, number, boolean, or null.
-	 */
-	value?: string | number | boolean | null; // Updated to include null
-	/** Name for identifier expressions. */
-	name?: string;
-	/** Array of arguments for call expressions. */
-	arguments?: Expression[];
-	/** The object for member access expressions. */
-	object?: Expression;
-	/** The member name for member access expressions. */
-	member?: string;
-	/** Elements for array literal expressions. */
-	elements?: Expression[];
-	/** Properties for object literal expressions. */
-	properties?: { key: string; value: Expression }[];
-	/** The function or method callee for call expressions. */
-	callee?: Expression;
-	/** Condition for ternary expressions. */
-	condition?: Expression;
-	/** True expression for ternary expressions. */
-	trueExpr?: Expression;
-	/** False expression for ternary expressions. */
-	falseExpr?: Expression;
-	/** Subject for match expressions. */
-	subject?: Expression;
-	/** Arms for match expressions (renamed to avoid collision with ASTNode.arms). */
-	matchArms?: { pattern: { kind: 'Wildcard' } | { kind: 'Identifier'; name: string } | { kind: 'Number'; value: number }; guard?: Expression; value: Expression }[];
-	/** Parts for template literal expressions. */
-	parts?: (Expression | string)[];
-	/** Expressions in template literal interpolations. */
-	expressions?: Expression[];
+  /** Constant discriminant for an expression node. */
+  type: "Expression";
+  /** The kind of expression. */
+  kind: ExpressionKind;
+  /** Operator used (if applicable). */
+  operator?: Operator | "??=";
+  /** Left-hand side expression (if applicable). */
+  left?: Expression;
+  /** Right-hand side expression (if applicable). */
+  right?: Expression;
+  /**
+   * The literal value of the expression.
+   * Allowed types: string, number, boolean, or null.
+   */
+  value?: string | number | boolean | null; // Updated to include null
+  /** Name for identifier expressions. */
+  name?: string;
+  /** Array of arguments for call expressions. */
+  arguments?: Expression[];
+  /** The object for member access expressions. */
+  object?: Expression;
+  /** The member name for member access expressions. */
+  member?: string;
+  /** Elements for array literal expressions. */
+  elements?: Expression[];
+  /** Properties for object literal expressions. */
+  properties?: { key: string; value: Expression }[];
+  /** The function or method callee for call expressions. */
+  callee?: Expression;
+  /** Condition for ternary expressions. */
+  condition?: Expression;
+  /** True expression for ternary expressions. */
+  trueExpr?: Expression;
+  /** False expression for ternary expressions. */
+  falseExpr?: Expression;
+  /** Subject for match expressions. */
+  subject?: Expression;
+  /** Arms for match expressions (renamed to avoid collision with ASTNode.arms). */
+  matchArms?: {
+    pattern:
+      | { kind: "Wildcard" }
+      | { kind: "Identifier"; name: string }
+      | { kind: "Number"; value: number };
+    guard?: Expression;
+    value: Expression;
+  }[];
+  /** Parts for template literal expressions. */
+  parts?: (Expression | string)[];
+  /** Expressions in template literal interpolations. */
+  expressions?: Expression[];
 }
 
 /**
@@ -209,14 +227,14 @@ export interface Expression extends ASTNode {
  * @property initializer - The expression assigned to the variable, if any.
  */
 export interface VariableDeclaration extends Statement {
-	/** Constant discriminant for a variable declaration. */
-	type: 'VariableDeclaration';
-	/** The identifier name. */
-	name: string;
-	/** The type annotation, if any. */
-	varType: string | null;
-	/** The initializer expression, if present. */
-	initializer: Expression | null;
+  /** Constant discriminant for a variable declaration. */
+  type: "VariableDeclaration";
+  /** The identifier name. */
+  name: string;
+  /** The type annotation, if any. */
+  varType: string | null;
+  /** The initializer expression, if present. */
+  initializer: Expression | null;
 }
 
 /**
@@ -227,14 +245,14 @@ export interface VariableDeclaration extends Statement {
  * @property arguments - Optional arguments passed to the decorator.
  */
 export interface Decorator extends Statement {
-	/** Constant discriminant for a decorator node. */
-	type: 'Decorator';
-	/** The decorator's identifier name. */
-	name: string;
-	/** An array of arguments for the decorator function call. */
-	arguments: Expression[] | null;
-	/** Resolved metadata placeholder */
-	meta?: Record<string, any>;
+  /** Constant discriminant for a decorator node. */
+  type: "Decorator";
+  /** The decorator's identifier name. */
+  name: string;
+  /** An array of arguments for the decorator function call. */
+  arguments: Expression[] | null;
+  /** Resolved metadata placeholder */
+  meta?: Record<string, any>;
 }
 
 /**
@@ -247,20 +265,20 @@ export interface Decorator extends Statement {
  * @property details - Optional additional context or data regarding the error.
  */
 export interface ASTError {
-	/** The error message describing the issue. */
-	message: string;
-	/** The line number where the error occurred. */
-	line: number;
-	/** The column number where the error occurred. */
-	column: number;
-	/** Optional additional information about the error. */
-	details?: string;
-	/** Optional error code for categorizing the error. */
-	errorCode?: string;
-	/** Optional suggestions for fixing the error. */
-	suggestions?: string[];
-	/** Optional source of the error. */
-	source?: string;
+  /** The error message describing the issue. */
+  message: string;
+  /** The line number where the error occurred. */
+  line: number;
+  /** The column number where the error occurred. */
+  column: number;
+  /** Optional additional information about the error. */
+  details?: string;
+  /** Optional error code for categorizing the error. */
+  errorCode?: string;
+  /** Optional suggestions for fixing the error. */
+  suggestions?: string[];
+  /** Optional source of the error. */
+  source?: string;
 }
 
 /**
@@ -268,91 +286,91 @@ export interface ASTError {
  * Supports generic type parameters and async functions.
  */
 export interface FunctionDeclaration extends Statement {
-	type: 'FunctionDeclaration';
-	name: string;
-	generics?: GenericParameter[];
-	params: Parameter[];
-	returnType: TypeReference;
-	body: Statement[];
-	isAsync: boolean;
-	decorators?: Decorator[];
+  type: "FunctionDeclaration";
+  name: string;
+  generics?: GenericParameter[];
+  params: Parameter[];
+  returnType: TypeReference;
+  body: Statement[];
+  isAsync: boolean;
+  decorators?: Decorator[];
 }
 
 export interface MethodDeclaration {
-	type: 'MethodDeclaration';
-	name: string;
-	params: Parameter[];
-	returnType?: TypeReference;
-	body: Statement[];
-	isAsync?: boolean;
-	isOperator?: boolean;
-	operatorSymbol?: string;
-	decorators?: Decorator[];
+  type: "MethodDeclaration";
+  name: string;
+  params: Parameter[];
+  returnType?: TypeReference;
+  body: Statement[];
+  isAsync?: boolean;
+  isOperator?: boolean;
+  operatorSymbol?: string;
+  decorators?: Decorator[];
 }
 
 export interface ClassDeclaration extends Statement {
-	type: 'ClassDeclaration';
-	name: string;
-	methods: MethodDeclaration[];
-	decorators?: Decorator[];
+  type: "ClassDeclaration";
+  name: string;
+  methods: MethodDeclaration[];
+  decorators?: Decorator[];
 }
 
 export interface ReturnStatement extends Statement {
-	type: 'ReturnStatement';
-	argument?: Expression | null;
+  type: "ReturnStatement";
+  argument?: Expression | null;
 }
 
 export interface IfStatement extends Statement {
-	type: 'IfStatement';
-	condition: Expression;
-	thenBody: Statement[];
-	elseBody?: Statement[];
+  type: "IfStatement";
+  condition: Expression;
+  thenBody: Statement[];
+  elseBody?: Statement[];
 }
 
 export interface WhileStatement extends Statement {
-	type: 'WhileStatement';
-	condition: Expression;
-	body: Statement[];
+  type: "WhileStatement";
+  condition: Expression;
+  body: Statement[];
 }
 
 export interface ForStatement extends Statement {
-	type: 'ForStatement';
-	init?: Statement | null;
-	condition?: Expression | null;
-	update?: Expression | null;
-	body: Statement[];
+  type: "ForStatement";
+  init?: Statement | null;
+  condition?: Expression | null;
+  update?: Expression | null;
+  body: Statement[];
 }
 
 export interface ThrowStatement extends Statement {
-	type: 'ThrowStatement';
-	argument: Expression;
+  type: "ThrowStatement";
+  argument: Expression;
 }
 
 export interface TryStatement extends Statement {
-	type: 'TryStatement';
-	tryBlock: Statement[];
-	catchVar?: string;
-	catchBlock?: Statement[];
-	finallyBlock?: Statement[];
+  type: "TryStatement";
+  tryBlock: Statement[];
+  catchVar?: string;
+  catchBlock?: Statement[];
+  finallyBlock?: Statement[];
 }
 
 /**
  * Represents a generic type parameter with optional constraints.
  */
 export interface GenericParameter {
-	name: string;
-	constraint?: TypeReference;
-	default?: TypeReference;
+  name: string;
+  constraint?: TypeReference;
+  default?: TypeReference;
 }
 
 /**
  * Represents a parameter in a function declaration.
  */
 export interface Parameter {
-	name: string;
-	type: TypeReference;
-	optional: boolean;
-	defaultValue?: Expression;
+  name: string;
+  type: TypeReference;
+  optional: boolean;
+  defaultValue?: Expression;
 }
 
 /**
@@ -360,9 +378,9 @@ export interface Parameter {
  * or a complex generic type with type arguments.
  */
 export interface TypeReference {
-	name: string;
-	typeArguments?: TypeReference[];
-	isArray?: boolean;
-	isUnion?: boolean;
-	unionTypes?: TypeReference[];
+  name: string;
+  typeArguments?: TypeReference[];
+  isArray?: boolean;
+  isUnion?: boolean;
+  unionTypes?: TypeReference[];
 }

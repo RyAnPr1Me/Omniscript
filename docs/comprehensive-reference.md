@@ -19,7 +19,9 @@ This document contains a complete reference of every function, keyword, operator
 ### Variable Declaration Keywords
 
 #### `var`
+
 Declares a mutable variable.
+
 ```omniscript
 var x = 42;
 var name = "John";
@@ -27,7 +29,9 @@ x = 50; // allowed
 ```
 
 #### `def`
+
 Declares an immutable binding (constant).
+
 ```omniscript
 def PI = 3.14159;
 def colors = ["red", "green", "blue"];
@@ -35,14 +39,18 @@ def colors = ["red", "green", "blue"];
 ```
 
 #### `let`
+
 Alternative syntax for variable declaration with block scope.
+
 ```omniscript
 let count = 0;
 let isActive = true;
 ```
 
 #### `const`
+
 Immutable binding (similar to `def`).
+
 ```omniscript
 const MAX_SIZE = 1000;
 const config = { debug: true };
@@ -51,7 +59,9 @@ const config = { debug: true };
 ### Function Declaration Keywords
 
 #### `fn`
+
 Declares a function.
+
 ```omniscript
 fn add(a:: number, b:: number):: number {
   return a + b;
@@ -63,7 +73,9 @@ fn greet(name:: string):: void {
 ```
 
 #### `async`
+
 Declares an asynchronous function.
+
 ```omniscript
 async fn fetchData(url:: string):: Promise<string> {
   def response = await HTTP.get(url);
@@ -72,7 +84,9 @@ async fn fetchData(url:: string):: Promise<string> {
 ```
 
 #### `await`
+
 Waits for a promise to resolve.
+
 ```omniscript
 async fn example() {
   def data = await fetchData("https://api.example.com");
@@ -83,7 +97,9 @@ async fn example() {
 ### Control Flow Keywords
 
 #### `if` / `else`
+
 Conditional execution.
+
 ```omniscript
 if (score >= 90) {
   Console.log("Excellent!");
@@ -95,7 +111,9 @@ if (score >= 90) {
 ```
 
 #### `match`
+
 Pattern matching (similar to switch but more powerful).
+
 ```omniscript
 match value {
   0 => Console.log("zero"),
@@ -106,7 +124,9 @@ match value {
 ```
 
 #### `while`
+
 Loop while condition is true.
+
 ```omniscript
 var i = 0;
 while (i < 10) {
@@ -116,7 +136,9 @@ while (i < 10) {
 ```
 
 #### `for`
+
 Iteration loop.
+
 ```omniscript
 for (let i = 0; i < 10; i++) {
   Console.log(i);
@@ -131,7 +153,9 @@ for (item in collection) {
 ### Exception Handling Keywords
 
 #### `try` / `catch` / `finally`
+
 Exception handling.
+
 ```omniscript
 try {
   def result = riskyOperation();
@@ -144,7 +168,9 @@ try {
 ```
 
 #### `throw`
+
 Throws an exception.
+
 ```omniscript
 fn validateAge(age:: number):: void {
   if (age < 0) {
@@ -154,7 +180,9 @@ fn validateAge(age:: number):: void {
 ```
 
 #### `return`
+
 Returns a value from a function.
+
 ```omniscript
 fn multiply(a:: number, b:: number):: number {
   return a * b;
@@ -164,15 +192,17 @@ fn multiply(a:: number, b:: number):: number {
 ### Object-Oriented Keywords
 
 #### `class`
+
 Declares a class.
+
 ```omniscript
 class Person {
   constructor(private name:: string, private age:: number) {}
-  
+
   getName():: string {
     return this.name;
   }
-  
+
   getAge():: number {
     return this.age;
   }
@@ -180,13 +210,15 @@ class Person {
 ```
 
 #### `object`
+
 Declares an object (alternative to class).
+
 ```omniscript
 object Calculator {
   add(a:: number, b:: number):: number {
     return a + b;
   }
-  
+
   subtract(a:: number, b:: number):: number {
     return a - b;
   }
@@ -194,7 +226,9 @@ object Calculator {
 ```
 
 #### `interface`
+
 Declares an interface.
+
 ```omniscript
 interface Drawable {
   draw():: void;
@@ -203,11 +237,11 @@ interface Drawable {
 
 class Circle implements Drawable {
   constructor(private color:: string) {}
-  
+
   draw():: void {
     Console.log("Drawing circle");
   }
-  
+
   getColor():: string {
     return this.color;
   }
@@ -215,11 +249,13 @@ class Circle implements Drawable {
 ```
 
 #### `extends`
+
 Class inheritance.
+
 ```omniscript
 class Animal {
   constructor(protected name:: string) {}
-  
+
   speak():: void {
     Console.log(`${this.name} makes a sound`);
   }
@@ -235,7 +271,9 @@ class Dog extends Animal {
 ### Module Keywords
 
 #### `use`
+
 Imports symbols from other modules.
+
 ```omniscript
 use { HTTP, Database } from 'stdlib';
 use Calculator from './calculator.os';
@@ -243,13 +281,17 @@ use * as Utils from './utils.os';
 ```
 
 #### `from`
+
 Specifies the source module for imports.
+
 ```omniscript
 use { List, Map, Set } from 'stdlib/collections';
 ```
 
 #### `module`
+
 Declares a module.
+
 ```omniscript
 module MyModule;
 
@@ -261,7 +303,9 @@ export class Helper {
 ```
 
 #### `export`
+
 Exports symbols from a module.
+
 ```omniscript
 export fn calculateTax(amount:: number):: number {
   return amount * 0.1;
@@ -277,14 +321,18 @@ export class TaxCalculator {
 ### Miscellaneous Keywords
 
 #### `new`
+
 Creates a new instance.
+
 ```omniscript
 def person = new Person("Alice", 30);
 def list = new List<number>();
 ```
 
 #### `typeof`
+
 Returns the type of a value.
+
 ```omniscript
 def x = 42;
 Console.log(typeof x); // "number"
@@ -294,7 +342,9 @@ Console.log(typeof arr); // "object"
 ```
 
 #### `in`
+
 Checks if a property exists in an object.
+
 ```omniscript
 def obj = { name: "John", age: 30 };
 Console.log("name" in obj); // true
@@ -302,7 +352,9 @@ Console.log("address" in obj); // false
 ```
 
 #### `operator`
+
 Declares custom operators.
+
 ```omniscript
 operator ++(a:: Vector, b:: Vector):: Vector {
   return new Vector(a.x + b.x, a.y + b.y);
@@ -312,14 +364,18 @@ operator ++(a:: Vector, b:: Vector):: Vector {
 ### Literal Keywords
 
 #### `true` / `false`
+
 Boolean literals.
+
 ```omniscript
 def isActive = true;
 def isCompleted = false;
 ```
 
 #### `null`
+
 Null value.
+
 ```omniscript
 def value = null;
 if (value !== null) {
@@ -328,7 +384,9 @@ if (value !== null) {
 ```
 
 #### `undefined`
+
 Undefined value.
+
 ```omniscript
 def value:: string | undefined = undefined;
 ```
@@ -340,29 +398,34 @@ def value:: string | undefined = undefined;
 ### Arithmetic Operators
 
 #### `+` (Addition)
+
 ```omniscript
 def sum = 5 + 3; // 8
 def text = "Hello" + " World"; // "Hello World"
 ```
 
 #### `-` (Subtraction)
+
 ```omniscript
 def diff = 10 - 4; // 6
 def negative = -5; // -5 (unary minus)
 ```
 
 #### `*` (Multiplication)
+
 ```omniscript
 def product = 6 * 7; // 42
 ```
 
 #### `/` (Division)
+
 ```omniscript
 def quotient = 15 / 3; // 5
 def decimal = 7 / 2; // 3.5
 ```
 
 #### `%` (Modulo)
+
 ```omniscript
 def remainder = 10 % 3; // 1
 ```
@@ -370,36 +433,42 @@ def remainder = 10 % 3; // 1
 ### Assignment Operators
 
 #### `=` (Assignment)
+
 ```omniscript
 var x = 10;
 var name = "Alice";
 ```
 
 #### `+=` (Add and assign)
+
 ```omniscript
 var count = 5;
 count += 3; // count is now 8
 ```
 
 #### `-=` (Subtract and assign)
+
 ```omniscript
 var score = 100;
 score -= 10; // score is now 90
 ```
 
 #### `*=` (Multiply and assign)
+
 ```omniscript
 var value = 4;
 value *= 3; // value is now 12
 ```
 
 #### `/=` (Divide and assign)
+
 ```omniscript
 var total = 20;
 total /= 4; // total is now 5
 ```
 
 #### `%=` (Modulo and assign)
+
 ```omniscript
 var num = 17;
 num %= 5; // num is now 2
@@ -408,48 +477,56 @@ num %= 5; // num is now 2
 ### Comparison Operators
 
 #### `==` (Equal)
+
 ```omniscript
 Console.log(5 == 5); // true
 Console.log("hello" == "hello"); // true
 ```
 
 #### `!=` (Not equal)
+
 ```omniscript
 Console.log(5 != 3); // true
 Console.log("a" != "b"); // true
 ```
 
 #### `===` (Strict equal)
+
 ```omniscript
 Console.log(5 === 5); // true
 Console.log(5 === "5"); // false
 ```
 
 #### `!==` (Strict not equal)
+
 ```omniscript
 Console.log(5 !== "5"); // true
 Console.log(5 !== 5); // false
 ```
 
 #### `<` (Less than)
+
 ```omniscript
 Console.log(3 < 5); // true
 Console.log(10 < 8); // false
 ```
 
 #### `>` (Greater than)
+
 ```omniscript
 Console.log(7 > 4); // true
 Console.log(2 > 9); // false
 ```
 
 #### `<=` (Less than or equal)
+
 ```omniscript
 Console.log(5 <= 5); // true
 Console.log(3 <= 7); // true
 ```
 
 #### `>=` (Greater than or equal)
+
 ```omniscript
 Console.log(8 >= 8); // true
 Console.log(10 >= 6); // true
@@ -458,18 +535,21 @@ Console.log(10 >= 6); // true
 ### Logical Operators
 
 #### `&&` (Logical AND)
+
 ```omniscript
 def result = true && false; // false
 def value = x > 0 && x < 100; // true if x is between 0 and 100
 ```
 
 #### `||` (Logical OR)
+
 ```omniscript
 def result = true || false; // true
 def isValid = name.length > 0 || hasDefault; // true if either condition is true
 ```
 
 #### `!` (Logical NOT)
+
 ```omniscript
 def result = !true; // false
 def isEmpty = !list.length; // true if list is empty
@@ -478,12 +558,14 @@ def isEmpty = !list.length; // true if list is empty
 ### Nullish Operators
 
 #### `??` (Nullish coalescing)
+
 ```omniscript
 def value = userInput ?? "default";
 def config = savedConfig ?? defaultConfig;
 ```
 
 #### `??=` (Nullish assignment)
+
 ```omniscript
 var settings = null;
 settings ??= { theme: "dark" }; // assigns only if settings is null/undefined
@@ -492,6 +574,7 @@ settings ??= { theme: "dark" }; // assigns only if settings is null/undefined
 ### Increment/Decrement Operators
 
 #### `++` (Increment)
+
 ```omniscript
 var i = 5;
 i++; // post-increment, i is now 6
@@ -499,6 +582,7 @@ i++; // post-increment, i is now 6
 ```
 
 #### `--` (Decrement)
+
 ```omniscript
 var count = 10;
 count--; // post-decrement, count is now 9
@@ -508,12 +592,14 @@ count--; // post-decrement, count is now 9
 ### Special Operators
 
 #### `=>` (Arrow function)
+
 ```omniscript
 def square = (x:: number) => x * x;
 def numbers = [1, 2, 3].map(x => x * 2);
 ```
 
 #### `|>` (Pipeline operator)
+
 ```omniscript
 def result = data
   |> filter(x => x > 0)
@@ -522,12 +608,14 @@ def result = data
 ```
 
 #### `?` (Ternary operator)
+
 ```omniscript
 def message = score >= 60 ? "Pass" : "Fail";
 def value = isValid ? computeValue() : defaultValue;
 ```
 
 #### `.` (Member access)
+
 ```omniscript
 def name = person.name;
 def length = text.length;
@@ -535,17 +623,19 @@ person.setAge(25);
 ```
 
 #### `::` (Type annotation)
+
 ```omniscript
 def count:: number = 42;
 fn greet(name:: string):: void { ... }
 ```
 
 #### `@` (Decorator)
+
 ```omniscript
 @Component
 class MyComponent {
   @Input() name:: string;
-  
+
   @Method
   render():: void { ... }
 }
@@ -558,7 +648,9 @@ class MyComponent {
 ### Primitive Types
 
 #### `number`
+
 Numeric values (integers and floating-point).
+
 ```omniscript
 def age:: number = 25;
 def price:: number = 29.99;
@@ -566,7 +658,9 @@ def hex:: number = 0xFF; // 255
 ```
 
 #### `string`
+
 Text values.
+
 ```omniscript
 def name:: string = "Alice";
 def message:: string = `Hello, ${name}!`;
@@ -577,14 +671,18 @@ def multiline:: string = """
 ```
 
 #### `boolean`
+
 True or false values.
+
 ```omniscript
 def isActive:: boolean = true;
 def isCompleted:: boolean = false;
 ```
 
 #### `void`
+
 Absence of a return value.
+
 ```omniscript
 fn logMessage(msg:: string):: void {
   Console.log(msg);
@@ -594,6 +692,7 @@ fn logMessage(msg:: string):: void {
 ### Complex Types
 
 #### Array Types
+
 ```omniscript
 def numbers:: number[] = [1, 2, 3, 4, 5];
 def names:: Array<string> = ["Alice", "Bob", "Charlie"];
@@ -601,6 +700,7 @@ def matrix:: number[][] = [[1, 2], [3, 4]];
 ```
 
 #### Object Types
+
 ```omniscript
 def person:: { name: string, age: number } = {
   name: "John",
@@ -615,12 +715,14 @@ interface User {
 ```
 
 #### Function Types
+
 ```omniscript
 def calculator:: (a: number, b: number) => number = (a, b) => a + b;
 def handler:: (event: Event) => void = (e) => Console.log(e);
 ```
 
 #### Union Types
+
 ```omniscript
 def value:: string | number = "hello";
 value = 42; // also valid
@@ -629,6 +731,7 @@ def status:: "pending" | "completed" | "failed" = "pending";
 ```
 
 #### Intersection Types
+
 ```omniscript
 interface Named {
   name: string;
@@ -645,14 +748,15 @@ def person:: Named & Aged = {
 ```
 
 #### Generic Types
+
 ```omniscript
 class Box<T> {
   constructor(private value: T) {}
-  
+
   get():: T {
     return this.value;
   }
-  
+
   set(value:: T):: void {
     this.value = value;
   }
@@ -663,6 +767,7 @@ def numberBox = new Box<number>(42);
 ```
 
 #### Optional Types
+
 ```omniscript
 def name:: string? = null; // can be string or null
 def config:: Config? = undefined; // can be Config or undefined
@@ -679,38 +784,50 @@ fn findUser(id:: number):: User? {
 ### Console Functions
 
 #### `Console.log(...args)`
+
 Outputs general information.
+
 ```omniscript
 Console.log("Hello, World!");
 Console.log("User:", user.name, "Age:", user.age);
 ```
 
 #### `Console.info(...args)`
+
 Outputs informational messages.
+
 ```omniscript
 Console.info("Application started successfully");
 ```
 
 #### `Console.warn(...args)`
+
 Outputs warning messages.
+
 ```omniscript
 Console.warn("This feature is deprecated");
 ```
 
 #### `Console.error(...args)`
+
 Outputs error messages.
+
 ```omniscript
 Console.error("Failed to connect to database");
 ```
 
 #### `Console.debug(...args)`
+
 Outputs debug information.
+
 ```omniscript
 Console.debug("Variable state:", { x, y, z });
 ```
 
 #### `Console.time(label)` / `Console.timeEnd(label)`
+
 Measures execution time.
+
 ```omniscript
 Console.time("operation");
 performExpensiveOperation();
@@ -718,13 +835,17 @@ Console.timeEnd("operation"); // outputs: operation: 1234ms
 ```
 
 #### `Console.trace(...args)`
+
 Outputs a stack trace.
+
 ```omniscript
 Console.trace("Debug point reached");
 ```
 
 #### `Console.group(label)` / `Console.groupEnd()`
+
 Groups console output.
+
 ```omniscript
 Console.group("User Details");
 Console.log("Name:", user.name);
@@ -733,13 +854,17 @@ Console.groupEnd();
 ```
 
 #### `Console.clear()`
+
 Clears the console.
+
 ```omniscript
 Console.clear();
 ```
 
 #### `Console.table(data)`
+
 Displays data in table format.
+
 ```omniscript
 def users = [
   { name: "Alice", age: 30 },
@@ -751,7 +876,9 @@ Console.table(users);
 ### Collections
 
 #### `List<T>`
+
 Dynamic array with functional methods.
+
 ```omniscript
 def list = new List<number>();
 list.add(1);
@@ -770,7 +897,9 @@ def reversed = list.reverse();
 ```
 
 #### `Map<K, V>`
+
 Key-value collection.
+
 ```omniscript
 def map = new Map<string, number>();
 map.set("alice", 30);
@@ -786,7 +915,9 @@ map.clear();
 ```
 
 #### `Set<T>`
+
 Collection of unique values.
+
 ```omniscript
 def set = new Set<string>();
 set.add("apple");
@@ -801,7 +932,9 @@ set.clear();
 ```
 
 #### `PriorityQueue<T>`
+
 Priority-based queue.
+
 ```omniscript
 def pq = new PriorityQueue<number>((a, b) => a - b);
 pq.enqueue(3);
@@ -813,7 +946,9 @@ def peek = pq.peek(); // 2 (doesn't remove)
 ```
 
 #### `Graph<T>`
+
 Graph data structure.
+
 ```omniscript
 def graph = new Graph<string>();
 graph.addVertex("A");
@@ -825,7 +960,9 @@ def hasPath = graph.hasPath("A", "B"); // true
 ```
 
 #### `BinarySearchTree<T>`
+
 Binary search tree.
+
 ```omniscript
 def bst = new BinarySearchTree<number>();
 bst.insert(5);
@@ -839,37 +976,49 @@ def inOrder = bst.inOrderTraversal(); // [3, 5, 7]
 ### Math Utilities
 
 #### `MathUtils.PI`
+
 Mathematical constant π.
+
 ```omniscript
 def circumference = 2 * MathUtils.PI * radius;
 ```
 
 #### `MathUtils.E`
+
 Mathematical constant e.
+
 ```omniscript
 def exponential = Math.pow(MathUtils.E, x);
 ```
 
 #### `MathUtils.factorial(n)`
+
 Calculates factorial.
+
 ```omniscript
 def result = MathUtils.factorial(5); // 120
 ```
 
 #### `MathUtils.gcd(a, b)`
+
 Greatest common divisor.
+
 ```omniscript
 def gcd = MathUtils.gcd(48, 18); // 6
 ```
 
 #### `MathUtils.random(min, max)`
+
 Random number in range.
+
 ```omniscript
 def randomNum = MathUtils.random(1, 10); // 1-10
 ```
 
 #### `Vector2D` / `Vector3D`
+
 Vector mathematics.
+
 ```omniscript
 def v1 = new Vector2D(3, 4);
 def v2 = new Vector2D(1, 2);
@@ -883,7 +1032,9 @@ def cross = v3d.cross(new Vector3D(4, 5, 6));
 ```
 
 #### `Matrix`
+
 Matrix operations.
+
 ```omniscript
 def m1 = new Matrix([[1, 2], [3, 4]]);
 def m2 = new Matrix([[5, 6], [7, 8]]);
@@ -897,20 +1048,25 @@ def inverse = m1.inverse();
 ### DateTime
 
 #### `DateTime.now()`
+
 Current date and time.
+
 ```omniscript
 def now = DateTime.now();
 Console.log(now.toString()); // "2024-01-15T10:30:00Z"
 ```
 
 #### `DateTime.parse(dateString)`
+
 Parse date from string.
+
 ```omniscript
 def date = DateTime.parse("2024-01-15");
 def isoDate = DateTime.parse("2024-01-15T10:30:00Z");
 ```
 
 #### DateTime Methods
+
 ```omniscript
 def date = DateTime.now();
 
@@ -932,7 +1088,9 @@ def iso = date.toISOString();
 ```
 
 #### `DateTimeUtils`
+
 Utility functions for dates.
+
 ```omniscript
 def isLeapYear = DateTimeUtils.isLeapYear(2024); // true
 def daysBetween = DateTimeUtils.daysBetween(date1, date2);
@@ -941,7 +1099,9 @@ def endOfMonth = DateTimeUtils.endOfMonth(date);
 ```
 
 #### `Timezone`
+
 Timezone handling.
+
 ```omniscript
 def utc = Timezone.UTC;
 def pst = Timezone.create("America/Los_Angeles");
@@ -953,7 +1113,9 @@ def localTime = date.toTimezone(pst);
 ### Network and HTTP
 
 #### `HTTP.get(url, options?)`
+
 GET request.
+
 ```omniscript
 async fn fetchUser(id:: number) {
   try {
@@ -968,7 +1130,9 @@ async fn fetchUser(id:: number) {
 ```
 
 #### `HTTP.post(url, data, options?)`
+
 POST request.
+
 ```omniscript
 async fn createUser(userData:: UserData) {
   def response = await HTTP.post("/api/users", userData, {
@@ -981,7 +1145,9 @@ async fn createUser(userData:: UserData) {
 ```
 
 #### `HTTP.put(url, data, options?)`
+
 PUT request.
+
 ```omniscript
 async fn updateUser(id:: number, userData:: UserData) {
   def response = await HTTP.put(`/api/users/${id}`, userData);
@@ -990,7 +1156,9 @@ async fn updateUser(id:: number, userData:: UserData) {
 ```
 
 #### `HTTP.delete(url, options?)`
+
 DELETE request.
+
 ```omniscript
 async fn deleteUser(id:: number) {
   def response = await HTTP.delete(`/api/users/${id}`);
@@ -999,7 +1167,9 @@ async fn deleteUser(id:: number) {
 ```
 
 #### `HTTPClient`
+
 Configurable HTTP client.
+
 ```omniscript
 def client = new HTTPClient({
   baseURL: "https://api.example.com",
@@ -1013,7 +1183,9 @@ def response = await client.get("/users");
 ```
 
 #### `WebSocket`
+
 WebSocket connections.
+
 ```omniscript
 def ws = new WebSocket("ws://localhost:8080");
 
@@ -1036,7 +1208,9 @@ ws.onError((error) => {
 ```
 
 #### `WebSocketClient`
+
 Enhanced WebSocket client.
+
 ```omniscript
 def client = new WebSocketClient("ws://localhost:8080", {
   reconnectAttempts: 5,
@@ -1052,7 +1226,9 @@ client.subscribe("channel1", (message) => {
 ### Database
 
 #### `Database.query<T>(entityClass)`
+
 Create a query builder.
+
 ```omniscript
 def users = await Database.query<User>()
   .where(u => u.age >= 18)
@@ -1062,7 +1238,9 @@ def users = await Database.query<User>()
 ```
 
 #### `Database.save<T>(entity)`
+
 Save an entity.
+
 ```omniscript
 def user = new User("Alice", "alice@example.com");
 def savedUser = await Database.save(user);
@@ -1070,7 +1248,9 @@ Console.log("Saved with ID:", savedUser.id);
 ```
 
 #### `Database.findById<T>(entityClass, id)`
+
 Find by ID.
+
 ```omniscript
 def user = await Database.findById<User>(User, 123);
 if (user) {
@@ -1081,14 +1261,18 @@ if (user) {
 ```
 
 #### `Database.findAll<T>(entityClass)`
+
 Find all entities.
+
 ```omniscript
 def allUsers = await Database.findAll<User>(User);
 Console.log(`Found ${allUsers.length} users`);
 ```
 
 #### `QueryBuilder`
+
 Advanced query building.
+
 ```omniscript
 def query = new QueryBuilder<Order>(Order, database)
   .join("user")
@@ -1107,33 +1291,43 @@ def results = await query.execute();
 ### Cryptography
 
 #### `Crypto.hash(data, algorithm)`
+
 Hash data.
+
 ```omniscript
 def sha256 = Crypto.hash("password123", "SHA-256");
 def md5 = Crypto.hash("data", "MD5");
 ```
 
 #### `Crypto.encrypt(data, key, algorithm)`
+
 Encrypt data.
+
 ```omniscript
 def encrypted = Crypto.encrypt("secret message", key, "AES-256-GCM");
 ```
 
 #### `Crypto.decrypt(encryptedData, key, algorithm)`
+
 Decrypt data.
+
 ```omniscript
 def decrypted = Crypto.decrypt(encrypted, key, "AES-256-GCM");
 ```
 
 #### `Crypto.generateKey(algorithm, length?)`
+
 Generate cryptographic key.
+
 ```omniscript
 def aesKey = Crypto.generateKey("AES", 256);
 def rsaKeyPair = Crypto.generateKey("RSA", 2048);
 ```
 
 #### `SecureRandom`
+
 Cryptographically secure random numbers.
+
 ```omniscript
 def randomBytes = SecureRandom.bytes(32);
 def randomNumber = SecureRandom.number(1, 1000000);
@@ -1143,7 +1337,9 @@ def randomString = SecureRandom.string(16); // random alphanumeric string
 ### Reactive Programming
 
 #### `Stream<T>`
+
 Event stream.
+
 ```omniscript
 def stream = new Stream<number>();
 
@@ -1168,7 +1364,9 @@ unsubscribe();
 ```
 
 #### `Signal<T>`
+
 Reactive state.
+
 ```omniscript
 def count = new Signal<number>(0);
 
@@ -1187,7 +1385,9 @@ def isEven = count.map(x => x % 2 === 0);
 ```
 
 #### `Observable<T>`
+
 Advanced observable patterns.
+
 ```omniscript
 def observable = new Observable<string>(observer => {
   observer.next("Hello");
@@ -1205,7 +1405,9 @@ observable.subscribe({
 ### Utilities
 
 #### `sleep(ms)`
+
 Pause execution.
+
 ```omniscript
 async fn demo() {
   Console.log("Starting...");
@@ -1215,7 +1417,9 @@ async fn demo() {
 ```
 
 #### `GC` (Garbage Collector)
+
 Memory management.
+
 ```omniscript
 // Force garbage collection
 GC.collect();
@@ -1231,7 +1435,9 @@ GC.enableMemoryProfiling();
 ```
 
 #### `Thread`
+
 Threading utilities.
+
 ```omniscript
 // Create a new thread
 def thread = new Thread(() => {
@@ -1252,7 +1458,9 @@ try {
 ```
 
 #### `DOM` (Browser environment)
+
 DOM manipulation utilities.
+
 ```omniscript
 // Element selection
 def element = DOM.getElementById("myButton");
@@ -1272,60 +1480,78 @@ DOM.appendChild(parent, newElement);
 ### String Utilities
 
 #### `StringUtils.isEmpty(str)`
+
 Check if string is empty or only whitespace.
+
 ```omniscript
 def empty = StringUtils.isEmpty("   "); // true
 def notEmpty = StringUtils.isEmpty("hello"); // false
 ```
 
 #### `StringUtils.capitalize(str)`
+
 Capitalize first letter.
+
 ```omniscript
 def result = StringUtils.capitalize("hello world"); // "Hello world"
 ```
 
 #### `StringUtils.camelCase(str)` / `StringUtils.pascalCase(str)`
+
 Convert to camelCase or PascalCase.
+
 ```omniscript
 def camel = StringUtils.camelCase("hello world"); // "helloWorld"
 def pascal = StringUtils.pascalCase("hello world"); // "HelloWorld"
 ```
 
 #### `StringUtils.kebabCase(str)` / `StringUtils.snakeCase(str)`
+
 Convert to kebab-case or snake_case.
+
 ```omniscript
 def kebab = StringUtils.kebabCase("Hello World"); // "hello-world"
 def snake = StringUtils.snakeCase("Hello World"); // "hello_world"
 ```
 
 #### `StringUtils.truncate(str, maxLength, suffix?)`
+
 Truncate string with optional suffix.
+
 ```omniscript
 def short = StringUtils.truncate("Long text here", 8); // "Long tex..."
 ```
 
 #### `StringUtils.isEmail(str)` / `StringUtils.isUrl(str)`
+
 Validate email or URL format.
+
 ```omniscript
 def validEmail = StringUtils.isEmail("user@domain.com"); // true
 def validUrl = StringUtils.isUrl("https://example.com"); // true
 ```
 
 #### `StringUtils.random(length, charset?)`
+
 Generate random string.
+
 ```omniscript
 def id = StringUtils.random(8); // "aB3xY9mP"
 def numeric = StringUtils.randomNumeric(6); // "123456"
 ```
 
 #### `StringUtils.similarity(str1, str2)`
+
 Calculate string similarity (0-1).
+
 ```omniscript
 def sim = StringUtils.similarity("hello", "hallo"); // 0.8
 ```
 
 #### `StringUtils.escapeHtml(str)` / `StringUtils.unescapeHtml(str)`
+
 Escape/unescape HTML entities.
+
 ```omniscript
 def escaped = StringUtils.escapeHtml("<div>Hello</div>"); // "&lt;div&gt;Hello&lt;/div&gt;"
 ```
@@ -1333,13 +1559,17 @@ def escaped = StringUtils.escapeHtml("<div>Hello</div>"); // "&lt;div&gt;Hello&l
 ### Async Utilities
 
 #### `AsyncUtils.sleep(ms)`
+
 Sleep for specified milliseconds.
+
 ```omniscript
 await AsyncUtils.sleep(1000); // Wait 1 second
 ```
 
 #### `AsyncUtils.timeout(promise, ms)`
+
 Add timeout to promise.
+
 ```omniscript
 def result = await AsyncUtils.timeout(
   fetch("/api/data"),
@@ -1348,7 +1578,9 @@ def result = await AsyncUtils.timeout(
 ```
 
 #### `AsyncUtils.retry(fn, options)`
+
 Retry function with backoff.
+
 ```omniscript
 def result = await AsyncUtils.retry(
   () => unstableApiCall(),
@@ -1361,7 +1593,9 @@ def result = await AsyncUtils.retry(
 ```
 
 #### `AsyncUtils.parallel(tasks, maxConcurrency?)`
+
 Execute tasks with limited concurrency.
+
 ```omniscript
 def results = await AsyncUtils.parallel([
   () => fetchUser(1),
@@ -1371,14 +1605,18 @@ def results = await AsyncUtils.parallel([
 ```
 
 #### `AsyncUtils.debounce(fn, delay)` / `AsyncUtils.throttle(fn, delay)`
+
 Debounce or throttle function calls.
+
 ```omniscript
 def debouncedSave = AsyncUtils.debounce(saveDocument, 500);
 def throttledResize = AsyncUtils.throttle(handleResize, 100);
 ```
 
 #### `AsyncUtils.poll(fn, options)`
+
 Poll until condition is met.
+
 ```omniscript
 def result = await AsyncUtils.poll(
   () => checkJobStatus(jobId),
@@ -1393,7 +1631,9 @@ def result = await AsyncUtils.poll(
 ### URL Utilities
 
 #### `UrlUtils.parse(url)`
+
 Parse URL into components.
+
 ```omniscript
 def parsed = UrlUtils.parse("https://api.example.com/users?page=1#results");
 Console.log(parsed.hostname); // "api.example.com"
@@ -1401,14 +1641,18 @@ Console.log(parsed.searchParams.get("page")); // "1"
 ```
 
 #### `UrlUtils.join(...paths)`
+
 Join URL paths correctly.
+
 ```omniscript
 def url = UrlUtils.join("https://api.com", "v1", "users", "123");
 // "https://api.com/v1/users/123"
 ```
 
 #### `UrlUtils.addParams(url, params)`
+
 Add query parameters.
+
 ```omniscript
 def newUrl = UrlUtils.addParams("https://api.com/search", {
   q: "omniscript",
@@ -1419,7 +1663,9 @@ def newUrl = UrlUtils.addParams("https://api.com/search", {
 ```
 
 #### `UrlBuilder`
+
 Builder pattern for URLs.
+
 ```omniscript
 def url = new UrlBuilder("https://api.com")
   .path("/v1/users")
@@ -1429,7 +1675,9 @@ def url = new UrlBuilder("https://api.com")
 ```
 
 #### `UrlUtils.getDomain(url)` / `UrlUtils.getSubdomain(url)`
+
 Extract domain parts.
+
 ```omniscript
 def domain = UrlUtils.getDomain("https://api.example.com"); // "api.example.com"
 def subdomain = UrlUtils.getSubdomain("https://api.example.com"); // "api"
@@ -1439,14 +1687,18 @@ def root = UrlUtils.getRootDomain("https://api.example.com"); // "example.com"
 ### Random Utilities
 
 #### `RandomUtils.int(min, max)` / `RandomUtils.float(min, max)`
+
 Generate random numbers.
+
 ```omniscript
 def randomInt = RandomUtils.int(1, 10); // 1-10
 def randomFloat = RandomUtils.float(0, 1); // 0.0-1.0
 ```
 
 #### `RandomUtils.choice(array)` / `RandomUtils.sample(array, count)`
+
 Pick from arrays.
+
 ```omniscript
 def colors = ["red", "green", "blue"];
 def randomColor = RandomUtils.choice(colors);
@@ -1454,14 +1706,18 @@ def twoColors = RandomUtils.sample(colors, 2); // No duplicates
 ```
 
 #### `RandomUtils.shuffle(array)`
+
 Shuffle array using Fisher-Yates.
+
 ```omniscript
 def deck = [1, 2, 3, 4, 5];
 def shuffled = RandomUtils.shuffle(deck);
 ```
 
 #### `RandomUtils.weightedChoice(items)`
+
 Weighted random selection.
+
 ```omniscript
 def items = [
   { item: "rare", weight: 1 },
@@ -1471,14 +1727,18 @@ def selected = RandomUtils.weightedChoice(items);
 ```
 
 #### `RandomUtils.string(length, charset?)` / `RandomUtils.uuid()`
+
 Generate random strings.
+
 ```omniscript
 def id = RandomUtils.alphanumeric(8); // "aB3xY9mP"
 def uuid = RandomUtils.uuid(); // "550e8400-e29b-41d4-a716-446655440000"
 ```
 
 #### `RandomUtils.password(length, options)`
+
 Generate secure passwords.
+
 ```omniscript
 def password = RandomUtils.password(12, {
   includeSymbols: true,
@@ -1487,7 +1747,9 @@ def password = RandomUtils.password(12, {
 ```
 
 #### `RandomUtils.setSeed(seed)` / `RandomUtils.resetSeed()`
+
 Seeded random for reproducibility.
+
 ```omniscript
 RandomUtils.setSeed(12345);
 def a = RandomUtils.int(1, 100); // Always same result
@@ -1498,6 +1760,7 @@ RandomUtils.resetSeed(); // Back to Math.random()
 ### Enhanced Math Functions
 
 #### Advanced Number Theory
+
 ```omniscript
 def prime = MathUtils.isPrime(17); // true
 def nextPrime = MathUtils.nextPrime(17); // 19
@@ -1505,18 +1768,21 @@ def factors = MathUtils.primeFactors(24); // [2, 2, 2, 3]
 ```
 
 #### Combinatorics
+
 ```omniscript
 def permutations = MathUtils.permutations(5, 3); // 60
 def combinations = MathUtils.combinations(5, 3); // 10
 ```
 
 #### Trigonometry in Degrees
+
 ```omniscript
 def sinDeg = MathUtils.sinDeg(90); // 1
 def cosDeg = MathUtils.cosDeg(180); // -1
 ```
 
 #### Statistical Functions
+
 ```omniscript
 def data = [1, 2, 3, 4, 5];
 def percentile = MathUtils.percentile(data, 50); // Median
@@ -1525,12 +1791,14 @@ def correlation = MathUtils.correlation(x, y);
 ```
 
 #### Random Distributions
+
 ```omniscript
 def normal = MathUtils.randomGaussian(0, 1); // Normal distribution
 def uniform = MathUtils.randomFloat(0, 1); // Uniform distribution
 ```
 
 #### Utility Functions
+
 ```omniscript
 def clamped = MathUtils.clamp(value, 0, 100); // Keep within bounds
 def mapped = MathUtils.map(value, 0, 10, 0, 100); // Scale range
@@ -1540,6 +1808,7 @@ def smooth = MathUtils.smoothstep(0, 1, 0.5); // Smooth interpolation
 ### Enhanced Collections
 
 #### Advanced List Methods
+
 ```omniscript
 def list = new List<number>();
 await list.push(1);
@@ -1572,6 +1841,7 @@ def zipped = await list.zip(otherList); // Pair with another list
 ### Pattern Matching
 
 #### Basic Patterns
+
 ```omniscript
 fn describe(value:: any):: string {
   return match value {
@@ -1585,6 +1855,7 @@ fn describe(value:: any):: string {
 ```
 
 #### Object Pattern Matching
+
 ```omniscript
 fn processUser(user:: any):: string {
   return match user {
@@ -1597,6 +1868,7 @@ fn processUser(user:: any):: string {
 ```
 
 #### Array Pattern Matching
+
 ```omniscript
 fn processArray(arr:: any[]):: string {
   return match arr {
@@ -1609,6 +1881,7 @@ fn processArray(arr:: any[]):: string {
 ```
 
 #### Type Pattern Matching
+
 ```omniscript
 fn handleValue(value:: string | number | boolean):: string {
   return match value {
@@ -1623,6 +1896,7 @@ fn handleValue(value:: string | number | boolean):: string {
 ### Decorators
 
 #### Class Decorators
+
 ```omniscript
 @Component({
   selector: "my-component",
@@ -1631,7 +1905,7 @@ fn handleValue(value:: string | number | boolean):: string {
 class MyComponent {
   @Input() name:: string;
   @Output() click:: EventEmitter<void>;
-  
+
   @Method
   handleClick():: void {
     this.click.emit();
@@ -1640,6 +1914,7 @@ class MyComponent {
 ```
 
 #### Method Decorators
+
 ```omniscript
 class ApiService {
   @Cache(300) // Cache for 5 minutes
@@ -1648,7 +1923,7 @@ class ApiService {
     def response = await HTTP.get(`/api/data/${id}`);
     return response.json();
   }
-  
+
   @Throttle(1000) // Throttle to once per second
   logActivity(message:: string):: void {
     Console.log(message);
@@ -1657,35 +1932,37 @@ class ApiService {
 ```
 
 #### Property Decorators
+
 ```omniscript
 class User {
   @Required
   @MinLength(3)
   name:: string;
-  
+
   @Email
   email:: string;
-  
+
   @Range(0, 150)
   age:: number;
-  
+
   @Transform((value) => value.toLowerCase())
   username:: string;
 }
 ```
 
 #### Custom Decorators
+
 ```omniscript
 fn Logged(target:: any, propertyName:: string, descriptor:: PropertyDescriptor) {
   def originalMethod = descriptor.value;
-  
+
   descriptor.value = fn(...args:: any[]) {
     Console.log(`Calling ${propertyName} with args:`, args);
     def result = originalMethod.apply(this, args);
     Console.log(`${propertyName} returned:`, result);
     return result;
   };
-  
+
   return descriptor;
 }
 
@@ -1702,6 +1979,7 @@ class Calculator {
 #### Monads
 
 ##### Maybe Monad
+
 ```omniscript
 // Handle nullable values safely
 def maybeUser = just(user);
@@ -1723,6 +2001,7 @@ def result = just(5)
 ```
 
 ##### Either Monad
+
 ```omniscript
 fn divide(a:: number, b:: number):: Either<Error, number> {
   if (b === 0) {
@@ -1743,6 +2022,7 @@ match result {
 ```
 
 #### Function Composition
+
 ```omniscript
 // Compose functions right-to-left
 def addOne = (x:: number) => x + 1;
@@ -1764,6 +2044,7 @@ def result3 = 3
 ```
 
 #### Currying and Partial Application
+
 ```omniscript
 // Currying
 def add = curry((a:: number, b:: number, c:: number) => a + b + c);
@@ -1778,6 +2059,7 @@ def result2 = multiplyByTwo(3, 4); // 24
 ```
 
 #### Higher-Order Functions
+
 ```omniscript
 // Memoization
 def fibonacci = memoize((n:: number):: number => {
@@ -1804,6 +2086,7 @@ def result = flippedSubtract(3, 10); // 10 - 3 = 7
 ### Metaprogramming
 
 #### Macros
+
 ```omniscript
 // Built-in macros
 @debug(user.name); // Logs: "user.name = Alice"
@@ -1817,11 +2100,11 @@ def result = flippedSubtract(3, 10); // 10 - 3 = 7
 // Custom macros
 macro property(name, type) {
   private _${name}:: ${type};
-  
+
   get${name.capitalize()}():: ${type} {
     return this._${name};
   }
-  
+
   set${name.capitalize()}(value:: ${type}):: void {
     this._${name} = value;
   }
@@ -1836,9 +2119,9 @@ class Person {
 macro singleton(className) {
   class ${className} {
     private static instance:: ${className};
-    
+
     private constructor() {}
-    
+
     static getInstance():: ${className} {
       if (!this.instance) {
         this.instance = new ${className}();
@@ -1852,6 +2135,7 @@ macro singleton(className) {
 ```
 
 #### Reflection
+
 ```omniscript
 // Type reflection
 def typeInfo = Reflect.getType(MyClass);
@@ -1878,6 +2162,7 @@ def newInstance = Reflect.construct(MyClass, [constructorArg]);
 ### Concurrency
 
 #### Actor Model
+
 ```omniscript
 // Create an actor
 def counter = runtime.createActor(
@@ -1917,6 +2202,7 @@ def userManager = runtime.createActor(
 ```
 
 #### Coroutines
+
 ```omniscript
 // Schedule a coroutine
 runtime.scheduleCoroutine(async () => {
@@ -1930,7 +2216,7 @@ async fn cooperativeTask() {
   for (let i = 0; i < 1000000; i++) {
     // Do some work
     heavyComputation(i);
-    
+
     // Yield every 1000 iterations
     if (i % 1000 === 0) {
       await runtime.yield();
@@ -1953,6 +2239,7 @@ runtime.scheduleCoroutine(async () => {
 ```
 
 #### Parallel Execution
+
 ```omniscript
 // Run tasks in parallel
 def tasks = [
@@ -1979,6 +2266,7 @@ def winner = await runtime.race([
 ### Error Handling
 
 #### Result Type
+
 ```omniscript
 fn parseNumber(str:: string):: Result<number, Error> {
   def num = parseInt(str);
@@ -2004,6 +2292,7 @@ def finalResult = parseNumber("42")
 ```
 
 #### Option Type
+
 ```omniscript
 fn findUser(id:: number):: Option<User> {
   def user = database.find(id);
@@ -2030,6 +2319,7 @@ def result = Option.all([
 ### Memory Management
 
 #### Garbage Collection
+
 ```omniscript
 // Enable garbage collection
 runtime.enableGarbageCollection();
@@ -2052,6 +2342,7 @@ Console.log("External:", usage.external);
 ```
 
 #### Reference Counting
+
 ```omniscript
 // Enable reference counting
 runtime.enableReferenceCountingGC();
@@ -2063,6 +2354,7 @@ Console.log("References:", refCount);
 ```
 
 #### Circular Reference Detection
+
 ```omniscript
 // Enable detection
 runtime.detectCircularReferences();
@@ -2081,6 +2373,7 @@ Console.log("Detected cycles:", cycles.length);
 ### Performance Monitoring
 
 #### Profiling
+
 ```omniscript
 // Start profiling
 runtime.startProfiling();
@@ -2096,6 +2389,7 @@ Console.log("GC events:", profile.gcEvents);
 ```
 
 #### Benchmarking
+
 ```omniscript
 // Benchmark a function
 def benchmark = runtime.benchmark(() => {
@@ -2114,6 +2408,7 @@ Console.log("Operations per second:", benchmark.opsPerSecond);
 ### JIT Compilation
 
 #### Just-In-Time Compilation
+
 ```omniscript
 // Enable JIT
 runtime.enableJIT({
@@ -2132,6 +2427,7 @@ runtime.compileFunction(hotFunction);
 ```
 
 #### Ahead-of-Time Compilation
+
 ```omniscript
 // Compile module ahead of time
 def compiledModule = runtime.compileAOT("./my-module.os", {
@@ -2150,6 +2446,7 @@ def result = runtime.loadCompiledModule(compiledModule);
 ### Package Manager
 
 #### Installing Packages
+
 ```bash
 # Command line usage
 omni add package-name
@@ -2164,6 +2461,7 @@ PackageManager.install("@types/node", { dev: true });
 ```
 
 #### Package Configuration
+
 ```omniscript
 // omni.json
 {
@@ -2182,21 +2480,22 @@ PackageManager.install("@types/node", { dev: true });
 ### Testing Framework
 
 #### Basic Tests
+
 ```omniscript
 use { describe, it, expect, beforeEach, afterEach } from 'testing';
 
 describe("Calculator", () => {
   var calculator:: Calculator;
-  
+
   beforeEach(() => {
     calculator = new Calculator();
   });
-  
+
   it("should add numbers correctly", () => {
     def result = calculator.add(2, 3);
     expect(result).toBe(5);
   });
-  
+
   it("should handle negative numbers", () => {
     def result = calculator.add(-1, 1);
     expect(result).toBe(0);
@@ -2205,6 +2504,7 @@ describe("Calculator", () => {
 ```
 
 #### Async Tests
+
 ```omniscript
 describe("API Service", () => {
   it("should fetch user data", async () => {
@@ -2212,7 +2512,7 @@ describe("API Service", () => {
     expect(user).toBeDefined();
     expect(user.id).toBe(123);
   });
-  
+
   it("should handle errors gracefully", async () => {
     await expect(apiService.getUser(-1)).rejects.toThrow("Invalid user ID");
   });
@@ -2220,6 +2520,7 @@ describe("API Service", () => {
 ```
 
 #### Mocking
+
 ```omniscript
 use { mock, spy, stub } from 'testing';
 
@@ -2227,10 +2528,10 @@ describe("User Service", () => {
   it("should call database correctly", () => {
     def mockDb = mock(Database);
     mockDb.findById.returns(Promise.resolve(testUser));
-    
+
     def userService = new UserService(mockDb);
     def result = await userService.getUser(123);
-    
+
     expect(mockDb.findById).toHaveBeenCalledWith(123);
     expect(result).toBe(testUser);
   });
@@ -2240,6 +2541,7 @@ describe("User Service", () => {
 ### Debugging
 
 #### Debug Mode
+
 ```omniscript
 // Enable debug mode
 runtime.enableDebugMode();
@@ -2258,6 +2560,7 @@ debug.trace("Function call stack");
 ```
 
 #### Performance Debugging
+
 ```omniscript
 // Profile function execution
 @profile
@@ -2274,6 +2577,7 @@ Console.log("Potential leaks:", leaks);
 ### CLI Tools
 
 #### Command Line Interface
+
 ```bash
 # Run Omniscript files
 omni run script.os
@@ -2304,6 +2608,7 @@ omni build --production
 ## Examples and Use Cases
 
 ### Web Application
+
 ```omniscript
 use { HTTP, Database, Console } from 'stdlib';
 
@@ -2316,32 +2621,33 @@ class UserController {
         .where(u => u.active === true)
         .orderBy(u => u.name)
         .execute();
-      
+
       return HTTP.response(200, users);
     } catch (error) {
       Console.error("Failed to fetch users:", error);
       return HTTP.response(500, { error: "Internal server error" });
     }
   }
-  
+
   @Route("POST", "/users")
   async createUser(req:: HTTP.Request):: Promise<HTTP.Response> {
     def userData = await req.json();
-    
+
     def validation = validateUser(userData);
     if (!validation.isValid) {
       return HTTP.response(400, { errors: validation.errors });
     }
-    
+
     def user = new User(userData.name, userData.email);
     def savedUser = await Database.save(user);
-    
+
     return HTTP.response(201, savedUser);
   }
 }
 ```
 
 ### Data Processing Pipeline
+
 ```omniscript
 use { Stream, File, Console } from 'stdlib';
 
@@ -2358,45 +2664,46 @@ async fn processLogFiles() {
       }))
     |> Stream.sortBy(item => item.date)
     |> Stream.collect();
-  
+
   Console.table(results);
 }
 ```
 
 ### Real-time Chat Application
+
 ```omniscript
 use { WebSocket, Database, Console } from 'stdlib';
 
 class ChatServer {
   private clients:: Map<string, WebSocket> = new Map();
-  
+
   start(port:: number):: void {
     def server = new WebSocket.Server({ port });
-    
+
     server.onConnection((client, userId) => {
       this.clients.set(userId, client);
-      
+
       client.onMessage(async (message) => {
         def chatMessage = await this.saveMessage(userId, message);
         this.broadcastMessage(chatMessage);
       });
-      
+
       client.onDisconnect(() => {
         this.clients.delete(userId);
       });
     });
-    
+
     Console.log(`Chat server started on port ${port}`);
   }
-  
+
   private async saveMessage(userId:: string, content:: string):: Promise<ChatMessage> {
     def message = new ChatMessage(userId, content, DateTime.now());
     return await Database.save(message);
   }
-  
+
   private broadcastMessage(message:: ChatMessage):: void {
     def messageData = JSON.stringify(message);
-    
+
     for (def client of this.clients.values()) {
       client.send(messageData);
     }

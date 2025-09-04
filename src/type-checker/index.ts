@@ -1,8 +1,15 @@
-import { OmniscriptError, TypeMismatchError } from '../errors';
+import { OmniscriptError, TypeMismatchError } from "../errors";
 
 // Advanced type system for Omniscript
 export interface Type {
-  kind: 'primitive' | 'union' | 'intersection' | 'generic' | 'function' | 'object' | 'array';
+  kind:
+    | "primitive"
+    | "union"
+    | "intersection"
+    | "generic"
+    | "function"
+    | "object"
+    | "array";
   name?: string;
   types?: Type[];
   parameters?: Type[];
@@ -17,75 +24,91 @@ export class TypeInferenceEngine {
   private genericConstraints: Map<string, Type[]> = new Map();
 
   inferType(expr: any, context: Map<string, Type> = new Map()): Type {
-    if (!expr) return { kind: 'primitive', name: 'unknown' };
-    
+    if (!expr) return { kind: "primitive", name: "unknown" };
+
     switch (expr.type || expr.kind) {
-      case 'Literal':
+      case "Literal":
         return this.inferLiteralType(expr);
-      case 'Identifier':
-        return context.get(expr.name) || this.symbolTable.get(expr.name) || { kind: 'primitive', name: 'unknown' };
-      case 'Binary':
+      case "Identifier":
+        return (
+          context.get(expr.name) ||
+          this.symbolTable.get(expr.name) || {
+            kind: "primitive",
+            name: "unknown",
+          }
+        );
+      case "Binary":
         return this.inferBinaryType(expr, context);
-      case 'Call':
+      case "Call":
         return this.inferCallType(expr, context);
-      case 'ObjectLiteral':
+      case "ObjectLiteral":
         return this.inferObjectType(expr, context);
-      case 'ArrayLiteral':
+      case "ArrayLiteral":
         return this.inferArrayType(expr, context);
       default:
-        return { kind: 'primitive', name: 'unknown' };
+        return { kind: "primitive", name: "unknown" };
     }
   }
 
   private inferLiteralType(expr: any): Type {
     const value = expr.value;
-    if (typeof value === 'number') return { kind: 'primitive', name: 'number' };
-    if (typeof value === 'string') return { kind: 'primitive', name: 'string' };
-    if (typeof value === 'boolean') return { kind: 'primitive', name: 'boolean' };
-    if (value === null) return { kind: 'primitive', name: 'null' };
-    if (value === undefined) return { kind: 'primitive', name: 'undefined' };
-    return { kind: 'primitive', name: 'unknown' };
+    if (typeof value === "number") return { kind: "primitive", name: "number" };
+    if (typeof value === "string") return { kind: "primitive", name: "string" };
+    if (typeof value === "boolean")
+      return { kind: "primitive", name: "boolean" };
+    if (value === null) return { kind: "primitive", name: "null" };
+    if (value === undefined) return { kind: "primitive", name: "undefined" };
+    return { kind: "primitive", name: "unknown" };
   }
 
   private inferBinaryType(expr: any, context: Map<string, Type>): Type {
     const leftType = this.inferType(expr.left, context);
     const rightType = this.inferType(expr.right, context);
-    
+
     switch (expr.operator) {
-      case '+':
-      case '-':
-      case '*':
-      case '/':
-      case '%':
+      case "+":
+      case "-":
+      case "*":
+      case "/":
+      case "%":
         // Numeric operations - check for type coercion
         if (this.isNumericType(leftType) && this.isNumericType(rightType)) {
-          return { kind: 'primitive', name: 'number' };
+          return { kind: "primitive", name: "number" };
         }
-        if (expr.operator === '+' && (this.isStringType(leftType) || this.isStringType(rightType))) {
-          return { kind: 'primitive', name: 'string' };
+        if (
+          expr.operator === "+" &&
+          (this.isStringType(leftType) || this.isStringType(rightType))
+        ) {
+          return { kind: "primitive", name: "string" };
         }
-        return { kind: 'union', types: [{ kind: 'primitive', name: 'number' }, { kind: 'primitive', name: 'string' }] };
-      case '==':
-      case '!=':
-      case '<':
-      case '>':
-      case '<=':
-      case '>=':
-        return { kind: 'primitive', name: 'boolean' };
-      case '&&':
-      case '||':
-        return { kind: 'union', types: [leftType, rightType] };
+        return {
+          kind: "union",
+          types: [
+            { kind: "primitive", name: "number" },
+            { kind: "primitive", name: "string" },
+          ],
+        };
+      case "==":
+      case "!=":
+      case "<":
+      case ">":
+      case "<=":
+      case ">=":
+        return { kind: "primitive", name: "boolean" };
+      case "&&":
+      case "||":
+        return { kind: "union", types: [leftType, rightType] };
       default:
-        return { kind: 'primitive', name: 'unknown' };
+        return { kind: "primitive", name: "unknown" };
     }
   }
 
   private inferCallType(expr: any, context: Map<string, Type>): Type {
     const calleeType = this.inferType(expr.callee, context);
-    if (calleeType.kind === 'function' && calleeType.returnType) {
+    if (calleeType.kind === "function" && calleeType.returnType) {
       return calleeType.returnType;
     }
-    return { kind: 'primitive', name: 'unknown' };
+    return { kind: "primitive", name: "unknown" };
   }
 
   private inferObjectType(expr: any, context: Map<string, Type>): Type {
@@ -95,36 +118,41 @@ export class TypeInferenceEngine {
         properties[prop.key] = this.inferType(prop.value, context);
       }
     }
-    return { kind: 'object', properties };
+    return { kind: "object", properties };
   }
 
   private inferArrayType(expr: any, context: Map<string, Type>): Type {
     if (expr.elements && expr.elements.length > 0) {
-      const elementTypes = expr.elements.map((el: any) => this.inferType(el, context));
+      const elementTypes = expr.elements.map((el: any) =>
+        this.inferType(el, context),
+      );
       // Find common type or create union
       const commonType = this.findCommonType(elementTypes);
-      return { kind: 'array', elementType: commonType };
+      return { kind: "array", elementType: commonType };
     }
-    return { kind: 'array', elementType: { kind: 'primitive', name: 'unknown' } };
+    return {
+      kind: "array",
+      elementType: { kind: "primitive", name: "unknown" },
+    };
   }
 
   private isNumericType(type: Type): boolean {
-    return type.kind === 'primitive' && type.name === 'number';
+    return type.kind === "primitive" && type.name === "number";
   }
 
   private isStringType(type: Type): boolean {
-    return type.kind === 'primitive' && type.name === 'string';
+    return type.kind === "primitive" && type.name === "string";
   }
 
   private findCommonType(types: Type[]): Type {
-    if (types.length === 0) return { kind: 'primitive', name: 'unknown' };
+    if (types.length === 0) return { kind: "primitive", name: "unknown" };
     if (types.length === 1) return types[0];
-    
+
     const firstType = types[0];
-    const allSame = types.every(t => this.typesEqual(t, firstType));
-    
+    const allSame = types.every((t) => this.typesEqual(t, firstType));
+
     if (allSame) return firstType;
-    return { kind: 'union', types };
+    return { kind: "union", types };
   }
 
   private typesEqual(type1: Type, type2: Type): boolean {
@@ -134,15 +162,15 @@ export class TypeInferenceEngine {
   }
 
   createUnionType(types: Type[]): Type {
-    return { kind: 'union', types };
+    return { kind: "union", types };
   }
 
   createIntersectionType(types: Type[]): Type {
-    return { kind: 'intersection', types };
+    return { kind: "intersection", types };
   }
 
   createFunctionType(parameters: Type[], returnType: Type): Type {
-    return { kind: 'function', parameters, returnType };
+    return { kind: "function", parameters, returnType };
   }
 }
 
@@ -152,35 +180,37 @@ export class TypeChecker {
   check(ast: any) {
     const errors: any[] = [];
     this.visitNode(ast, errors);
-    
+
     if (errors.length > 0) {
-      throw new OmniscriptError(`Type errors found: ${errors.map(e => e.message).join(', ')}`);
+      throw new OmniscriptError(
+        `Type errors found: ${errors.map((e) => e.message).join(", ")}`,
+      );
     }
-    
+
     return {
-      errors: []
+      errors: [],
     };
   }
 
   private visitNode(node: any, errors: any[]): void {
     if (!node) return;
-    
+
     switch (node.type) {
-      case 'Program':
+      case "Program":
         if (node.body) {
           node.body.forEach((stmt: any) => this.visitNode(stmt, errors));
         }
         break;
-      case 'VariableDeclaration':
+      case "VariableDeclaration":
         this.checkVariableDeclaration(node, errors);
         break;
-      case 'FunctionDeclaration':
+      case "FunctionDeclaration":
         this.checkFunctionDeclaration(node, errors);
         break;
-      case 'ClassDeclaration':
+      case "ClassDeclaration":
         this.checkClassDeclaration(node, errors);
         break;
-      case 'BinaryExpression':
+      case "BinaryExpression":
         this.checkBinaryExpression(node, errors);
         break;
       default:
@@ -198,12 +228,12 @@ export class TypeChecker {
     if (node.varType && node.initializer) {
       const expectedType = this.parseTypeString(node.varType);
       const actualType = this.inferenceEngine.inferType(node.initializer);
-      
+
       if (!this.isTypeCompatible(actualType, expectedType)) {
         errors.push({
           message: `Type mismatch: expected ${this.typeToString(expectedType)} but got ${this.typeToString(actualType)}`,
           line: node.line || 0,
-          column: node.column || 0
+          column: node.column || 0,
         });
       }
     }
@@ -218,21 +248,21 @@ export class TypeChecker {
         }
       }
     }
-    
+
     // Check return type consistency
     if (node.returnType && node.body) {
       const inferredReturnType = this.inferReturnType(node.body);
       const expectedReturnType = this.parseTypeString(node.returnType);
-      
+
       if (!this.isTypeCompatible(inferredReturnType, expectedReturnType)) {
         errors.push({
           message: `Return type mismatch: expected ${this.typeToString(expectedReturnType)} but function returns ${this.typeToString(inferredReturnType)}`,
           line: node.line || 0,
-          column: node.column || 0
+          column: node.column || 0,
         });
       }
     }
-    
+
     // Visit function body
     if (node.body) {
       node.body.forEach((stmt: any) => this.visitNode(stmt, errors));
@@ -242,37 +272,41 @@ export class TypeChecker {
   private checkClassDeclaration(node: any, errors: any[]): void {
     // Check method compatibility, inheritance, etc.
     if (node.methods) {
-      node.methods.forEach((method: any) => this.checkFunctionDeclaration(method, errors));
+      node.methods.forEach((method: any) =>
+        this.checkFunctionDeclaration(method, errors),
+      );
     }
   }
 
   private checkBinaryExpression(node: any, errors: any[]): void {
     const leftType = this.inferenceEngine.inferType(node.left);
     const rightType = this.inferenceEngine.inferType(node.right);
-    
+
     // Check operator compatibility
     switch (node.operator) {
-      case '+':
+      case "+":
         // Allow number + number or string + string, but warn about mixed types
-        if (!this.isTypeCompatible(leftType, rightType) && 
-            !(this.isNumericType(leftType) && this.isNumericType(rightType)) &&
-            !(this.isStringType(leftType) || this.isStringType(rightType))) {
+        if (
+          !this.isTypeCompatible(leftType, rightType) &&
+          !(this.isNumericType(leftType) && this.isNumericType(rightType)) &&
+          !(this.isStringType(leftType) || this.isStringType(rightType))
+        ) {
           errors.push({
             message: `Potentially unsafe addition: ${this.typeToString(leftType)} + ${this.typeToString(rightType)}`,
             line: node.line || 0,
-            column: node.column || 0
+            column: node.column || 0,
           });
         }
         break;
-      case '-':
-      case '*':
-      case '/':
+      case "-":
+      case "*":
+      case "/":
         // Numeric operations
         if (!this.isNumericType(leftType) || !this.isNumericType(rightType)) {
           errors.push({
             message: `Arithmetic operation requires numbers: ${this.typeToString(leftType)} ${node.operator} ${this.typeToString(rightType)}`,
             line: node.line || 0,
-            column: node.column || 0
+            column: node.column || 0,
           });
         }
         break;
@@ -282,61 +316,78 @@ export class TypeChecker {
   private parseTypeString(typeStr: string): Type {
     // Simple type parsing - could be expanded for complex types
     switch (typeStr) {
-      case 'number': return { kind: 'primitive', name: 'number' };
-      case 'string': return { kind: 'primitive', name: 'string' };
-      case 'boolean': return { kind: 'primitive', name: 'boolean' };
-      case 'void': return { kind: 'primitive', name: 'void' };
-      default: return { kind: 'primitive', name: 'unknown' };
+      case "number":
+        return { kind: "primitive", name: "number" };
+      case "string":
+        return { kind: "primitive", name: "string" };
+      case "boolean":
+        return { kind: "primitive", name: "boolean" };
+      case "void":
+        return { kind: "primitive", name: "void" };
+      default:
+        return { kind: "primitive", name: "unknown" };
     }
   }
 
   private isTypeCompatible(actual: Type, expected: Type): boolean {
-    if (actual.kind === 'union') {
-      return actual.types?.some(t => this.isTypeCompatible(t, expected)) ?? false;
+    if (actual.kind === "union") {
+      return (
+        actual.types?.some((t) => this.isTypeCompatible(t, expected)) ?? false
+      );
     }
-    if (expected.kind === 'union') {
-      return expected.types?.some(t => this.isTypeCompatible(actual, t)) ?? false;
+    if (expected.kind === "union") {
+      return (
+        expected.types?.some((t) => this.isTypeCompatible(actual, t)) ?? false
+      );
     }
     return actual.kind === expected.kind && actual.name === expected.name;
   }
 
   private isNumericType(type: Type): boolean {
-    return type.kind === 'primitive' && type.name === 'number';
+    return type.kind === "primitive" && type.name === "number";
   }
 
   private isStringType(type: Type): boolean {
-    return type.kind === 'primitive' && type.name === 'string';
+    return type.kind === "primitive" && type.name === "string";
   }
 
   private inferReturnType(body: any[]): Type {
     // Find return statements and infer their types
     for (const stmt of body) {
-      if (stmt.type === 'ReturnStatement' && stmt.argument) {
+      if (stmt.type === "ReturnStatement" && stmt.argument) {
         return this.inferenceEngine.inferType(stmt.argument);
       }
     }
-    return { kind: 'primitive', name: 'void' };
+    return { kind: "primitive", name: "void" };
   }
 
   private typeToString(type: Type): string {
     switch (type.kind) {
-      case 'primitive':
-        return type.name || 'unknown';
-      case 'union':
-        return type.types?.map(t => this.typeToString(t)).join(' | ') || 'union';
-      case 'intersection':
-        return type.types?.map(t => this.typeToString(t)).join(' & ') || 'intersection';
-      case 'function': {
-        const params = type.parameters?.map(t => this.typeToString(t)).join(', ') || '';
-        const ret = type.returnType ? this.typeToString(type.returnType) : 'unknown';
+      case "primitive":
+        return type.name || "unknown";
+      case "union":
+        return (
+          type.types?.map((t) => this.typeToString(t)).join(" | ") || "union"
+        );
+      case "intersection":
+        return (
+          type.types?.map((t) => this.typeToString(t)).join(" & ") ||
+          "intersection"
+        );
+      case "function": {
+        const params =
+          type.parameters?.map((t) => this.typeToString(t)).join(", ") || "";
+        const ret = type.returnType
+          ? this.typeToString(type.returnType)
+          : "unknown";
         return `(${params}) => ${ret}`;
       }
-      case 'array':
-        return `${type.elementType ? this.typeToString(type.elementType) : 'unknown'}[]`;
-      case 'object':
-        return 'object';
+      case "array":
+        return `${type.elementType ? this.typeToString(type.elementType) : "unknown"}[]`;
+      case "object":
+        return "object";
       default:
-        return 'unknown';
+        return "unknown";
     }
   }
 
@@ -345,10 +396,20 @@ export class TypeChecker {
     return this.typeToString(type);
   }
 
-  validateType(expected: string, actual: string, line: number = 0, column: number = 0) {
+  validateType(
+    expected: string,
+    actual: string,
+    line: number = 0,
+    column: number = 0,
+  ) {
     if (expected !== actual) {
-      const location = { filename: '<unknown>', line, column };
-      throw new TypeMismatchError(`Expected type ${expected} but got ${actual}`, location, expected, actual);
+      const location = { filename: "<unknown>", line, column };
+      throw new TypeMismatchError(
+        `Expected type ${expected} but got ${actual}`,
+        location,
+        expected,
+        actual,
+      );
     }
   }
 }

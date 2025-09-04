@@ -5,14 +5,17 @@
 
 // Tuple type definitions for type checking
 export type Tuple<T extends readonly unknown[]> = Readonly<T>;
-export type TupleElement<T, Index extends number> = T extends readonly [...infer _, infer Rest] 
-  ? Index extends T['length'] 
-    ? Rest 
-    : never 
+export type TupleElement<T, Index extends number> = T extends readonly [
+  ...infer _,
+  infer Rest,
+]
+  ? Index extends T["length"]
+    ? Rest
+    : never
   : never;
 
 export interface TuplePattern<T extends readonly unknown[]> {
-  type: 'tuple';
+  type: "tuple";
   elements: readonly unknown[];
   size: number;
 }
@@ -70,9 +73,12 @@ export class OmniTuple<T extends readonly unknown[]> {
   /**
    * Create new tuple with element replaced at index
    */
-  with<Index extends number, U>(index: Index, value: U): OmniTuple<
+  with<Index extends number, U>(
+    index: Index,
+    value: U,
+  ): OmniTuple<
     T extends readonly [...infer Before, unknown, ...infer After]
-      ? Index extends Before['length']
+      ? Index extends Before["length"]
         ? readonly [...Before, U, ...After]
         : T
       : T
@@ -80,23 +86,27 @@ export class OmniTuple<T extends readonly unknown[]> {
     if (index < 0 || index >= this._size) {
       throw new Error(`Tuple index ${index} out of bounds [0, ${this._size})`);
     }
-    
+
     const newElements = [...this._elements];
     newElements[index] = value;
-    return new OmniTuple(...newElements as any);
+    return new OmniTuple(...(newElements as any));
   }
 
   /**
    * Append element(s) to create new tuple
    */
-  append<U extends readonly unknown[]>(...elements: U): OmniTuple<readonly unknown[]> {
+  append<U extends readonly unknown[]>(
+    ...elements: U
+  ): OmniTuple<readonly unknown[]> {
     return new OmniTuple(...this._elements, ...elements);
   }
 
   /**
    * Prepend element(s) to create new tuple
    */
-  prepend<U extends readonly unknown[]>(...elements: U): OmniTuple<readonly unknown[]> {
+  prepend<U extends readonly unknown[]>(
+    ...elements: U
+  ): OmniTuple<readonly unknown[]> {
     return new OmniTuple(...elements, ...this._elements);
   }
 
@@ -104,7 +114,7 @@ export class OmniTuple<T extends readonly unknown[]> {
    * Take first N elements
    */
   take<N extends number>(n: N): OmniTuple<readonly unknown[]> {
-    if (n < 0) throw new Error('Take count cannot be negative');
+    if (n < 0) throw new Error("Take count cannot be negative");
     return new OmniTuple(...this._elements.slice(0, n));
   }
 
@@ -112,7 +122,7 @@ export class OmniTuple<T extends readonly unknown[]> {
    * Drop first N elements
    */
   drop<N extends number>(n: N): OmniTuple<readonly unknown[]> {
-    if (n < 0) throw new Error('Drop count cannot be negative');
+    if (n < 0) throw new Error("Drop count cannot be negative");
     return new OmniTuple(...this._elements.slice(n));
   }
 
@@ -153,7 +163,7 @@ export class OmniTuple<T extends readonly unknown[]> {
     return this._elements.every((elem, i) => {
       const otherElem = other._elements[i];
       if (elem === otherElem) return true;
-      if (typeof elem === 'object' && typeof otherElem === 'object') {
+      if (typeof elem === "object" && typeof otherElem === "object") {
         return JSON.stringify(elem) === JSON.stringify(otherElem);
       }
       return false;
@@ -164,7 +174,7 @@ export class OmniTuple<T extends readonly unknown[]> {
    * String representation
    */
   toString(): string {
-    return `(${this._elements.map(e => typeof e === 'string' ? `"${e}"` : String(e)).join(', ')})`;
+    return `(${this._elements.map((e) => (typeof e === "string" ? `"${e}"` : String(e))).join(", ")})`;
   }
 
   /**
@@ -186,9 +196,11 @@ export class OmniTuple<T extends readonly unknown[]> {
   /**
    * Pattern matching support
    */
-  match<U>(patterns: {
-    [K in keyof T]?: (value: T[K]) => U;
-  } & { _: () => U }): U {
+  match<U>(
+    patterns: {
+      [K in keyof T]?: (value: T[K]) => U;
+    } & { _: () => U },
+  ): U {
     for (let i = 0; i < this._size; i++) {
       const pattern = patterns[i as keyof T];
       if (pattern) {
@@ -234,26 +246,34 @@ export class TupleUtils {
   /**
    * Create triple tuple
    */
-  static triple<T, U, V>(first: T, second: U, third: V): OmniTuple<readonly [T, U, V]> {
+  static triple<T, U, V>(
+    first: T,
+    second: U,
+    third: V,
+  ): OmniTuple<readonly [T, U, V]> {
     return new OmniTuple(first, second, third);
   }
 
   /**
    * Zip multiple arrays into tuple of tuples
    */
-  static zip<T extends readonly unknown[][]>(...arrays: T): OmniTuple<
-    readonly OmniTuple<{ [K in keyof T]: T[K] extends readonly (infer U)[] ? U : never }>[]
+  static zip<T extends readonly unknown[][]>(
+    ...arrays: T
+  ): OmniTuple<
+    readonly OmniTuple<{
+      [K in keyof T]: T[K] extends readonly (infer U)[] ? U : never;
+    }>[]
   > {
     if (arrays.length === 0) return new OmniTuple();
-    
-    const minLength = Math.min(...arrays.map(arr => arr.length));
+
+    const minLength = Math.min(...arrays.map((arr) => arr.length));
     const result: OmniTuple<any>[] = [];
-    
+
     for (let i = 0; i < minLength; i++) {
-      const elements = arrays.map(arr => arr[i]);
+      const elements = arrays.map((arr) => arr[i]);
       result.push(new OmniTuple(...elements));
     }
-    
+
     return new OmniTuple(...result);
   }
 
@@ -261,27 +281,34 @@ export class TupleUtils {
    * Unzip tuple of tuples into separate arrays
    */
   static unzip<T extends readonly OmniTuple<readonly unknown[]>[]>(
-    tuples: OmniTuple<T>
+    tuples: OmniTuple<T>,
   ): readonly unknown[][] {
     if (tuples.size === 0) return [];
-    
+
     const firstTuple = tuples.get(0);
-    const result: unknown[][] = Array.from({ length: firstTuple.size }, () => []);
-    
+    const result: unknown[][] = Array.from(
+      { length: firstTuple.size },
+      () => [],
+    );
+
     for (let i = 0; i < tuples.size; i++) {
       const tuple = tuples.get(i);
       for (let j = 0; j < tuple.size; j++) {
         result[j].push(tuple.get(j));
       }
     }
-    
+
     return result;
   }
 
   /**
    * Create range tuple
    */
-  static range(start: number, end: number, step: number = 1): OmniTuple<readonly number[]> {
+  static range(
+    start: number,
+    end: number,
+    step: number = 1,
+  ): OmniTuple<readonly number[]> {
     const elements: number[] = [];
     for (let i = start; i < end; i += step) {
       elements.push(i);
@@ -293,25 +320,27 @@ export class TupleUtils {
    * Repeat value N times
    */
   static repeat<T>(value: T, count: number): OmniTuple<readonly T[]> {
-    if (count < 0) throw new Error('Repeat count cannot be negative');
+    if (count < 0) throw new Error("Repeat count cannot be negative");
     return new OmniTuple(...Array(count).fill(value));
   }
 
   /**
    * Flatten nested tuples
    */
-  static flatten<T>(tuple: OmniTuple<readonly (T | OmniTuple<readonly T[]>)[]>): OmniTuple<readonly T[]> {
+  static flatten<T>(
+    tuple: OmniTuple<readonly (T | OmniTuple<readonly T[]>)[]>,
+  ): OmniTuple<readonly T[]> {
     const result: T[] = [];
-    
+
     for (let i = 0; i < tuple.size; i++) {
       const element = tuple.get(i);
       if (element instanceof OmniTuple) {
-        result.push(...element.toArray() as T[]);
+        result.push(...(element.toArray() as T[]));
       } else {
         result.push(element as T);
       }
     }
-    
+
     return new OmniTuple(...result);
   }
 
@@ -319,26 +348,26 @@ export class TupleUtils {
    * Group elements by key function
    */
   static groupBy<T, K>(
-    tuple: OmniTuple<readonly T[]>, 
-    keyFn: (value: T) => K
+    tuple: OmniTuple<readonly T[]>,
+    keyFn: (value: T) => K,
   ): Map<K, OmniTuple<readonly T[]>> {
     const groups = new Map<K, T[]>();
-    
+
     for (let i = 0; i < tuple.size; i++) {
       const element = tuple.get(i);
       const key = keyFn(element);
-      
+
       if (!groups.has(key)) {
         groups.set(key, []);
       }
       groups.get(key)!.push(element);
     }
-    
+
     const result = new Map<K, OmniTuple<readonly T[]>>();
     for (const [key, values] of groups) {
       result.set(key, new OmniTuple(...values));
     }
-    
+
     return result;
   }
 
@@ -346,8 +375,8 @@ export class TupleUtils {
    * Sort tuple elements
    */
   static sort<T>(
-    tuple: OmniTuple<readonly T[]>, 
-    compareFn?: (a: unknown, b: unknown) => number
+    tuple: OmniTuple<readonly T[]>,
+    compareFn?: (a: unknown, b: unknown) => number,
   ): OmniTuple<readonly unknown[]> {
     const sorted = [...tuple.toArray()].sort(compareFn);
     return new OmniTuple(...sorted);
@@ -357,14 +386,14 @@ export class TupleUtils {
    * Check if tuple matches pattern
    */
   static matches<T extends readonly unknown[]>(
-    tuple: OmniTuple<T>, 
-    pattern: TuplePattern<T>
+    tuple: OmniTuple<T>,
+    pattern: TuplePattern<T>,
   ): boolean {
     if (tuple.size !== pattern.size) return false;
-    
+
     return pattern.elements.every((patternElement, index) => {
       const tupleElement = tuple.get(index);
-      if (patternElement === '_') return true; // Wildcard
+      if (patternElement === "_") return true; // Wildcard
       return tupleElement === patternElement;
     });
   }
@@ -377,13 +406,13 @@ export class TupleUtils {
   ): OmniTuple<readonly OmniTuple<readonly unknown[]>[]> {
     if (tuples.length === 0) return new OmniTuple();
     if (tuples.length === 1) {
-      return new OmniTuple(...tuples[0].toArray().map(x => new OmniTuple(x)));
+      return new OmniTuple(...tuples[0].toArray().map((x) => new OmniTuple(x)));
     }
-    
+
     const [first, ...rest] = tuples;
     const restProduct = TupleUtils.cartesianProduct(...rest);
     const result: OmniTuple<readonly unknown[]>[] = [];
-    
+
     for (let i = 0; i < first.size; i++) {
       const firstElement = first.get(i);
       for (let j = 0; j < restProduct.size; j++) {
@@ -391,20 +420,24 @@ export class TupleUtils {
         result.push(new OmniTuple(firstElement, ...restElement.toArray()));
       }
     }
-    
+
     return new OmniTuple(...result);
   }
 }
 
 // Export convenience functions
-export const tuple = <T extends readonly unknown[]>(...elements: T): OmniTuple<T> => 
-  new OmniTuple(...elements);
+export const tuple = <T extends readonly unknown[]>(
+  ...elements: T
+): OmniTuple<T> => new OmniTuple(...elements);
 
-export const pair = <T, U>(first: T, second: U): OmniTuple<readonly [T, U]> => 
+export const pair = <T, U>(first: T, second: U): OmniTuple<readonly [T, U]> =>
   TupleUtils.pair(first, second);
 
-export const triple = <T, U, V>(first: T, second: U, third: V): OmniTuple<readonly [T, U, V]> => 
-  TupleUtils.triple(first, second, third);
+export const triple = <T, U, V>(
+  first: T,
+  second: U,
+  third: V,
+): OmniTuple<readonly [T, U, V]> => TupleUtils.triple(first, second, third);
 
 // Export with alias to avoid conflicts
 export default OmniTuple;

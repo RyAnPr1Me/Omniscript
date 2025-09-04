@@ -3,9 +3,9 @@
  * Implements property-based testing and random input generation for security
  */
 
-import { Parser } from '../parser/index';
-import { Runtime } from '../runtime/index';
-import { OmniscriptError } from '../errors';
+import { Parser } from "../parser/index";
+import { Runtime } from "../runtime/index";
+import { OmniscriptError } from "../errors";
 
 export interface FuzzingConfig {
   maxIterations: number;
@@ -20,7 +20,7 @@ export interface FuzzingResult {
   failures: Array<{
     input: string;
     error: string;
-    type: 'parser' | 'runtime';
+    type: "parser" | "runtime";
   }>;
   crashes: number;
   timeouts: number;
@@ -40,7 +40,7 @@ export class Fuzzer {
       includeUnicode: true,
       includeControlChars: false,
       timeout: 5000,
-      ...config
+      ...config,
     };
   }
 
@@ -54,7 +54,7 @@ export class Fuzzer {
       () => this.generateRandomClass(),
       () => this.generateRandomFunction(),
       () => this.generateRandomString(),
-      () => this.generateRandomSymbols()
+      () => this.generateRandomSymbols(),
     ];
 
     const generator = generators[Math.floor(Math.random() * generators.length)];
@@ -66,9 +66,9 @@ export class Fuzzer {
       `${this.randomNumber()} + ${this.randomNumber()}`,
       `"${this.randomString()}" + "${this.randomString()}"`,
       `let x = ${this.randomNumber()}; x * 2`,
-      `[${Array.from({length: Math.floor(Math.random() * 5)}, () => this.randomNumber()).join(', ')}]`,
+      `[${Array.from({ length: Math.floor(Math.random() * 5) }, () => this.randomNumber()).join(", ")}]`,
       `{${this.randomString()}: ${this.randomNumber()}}`,
-      `match ${this.randomNumber()} { ${this.randomNumber()} => "match", _ => "default" }`
+      `match ${this.randomNumber()} { ${this.randomNumber()} => "match", _ => "default" }`,
     ];
     return expressions[Math.floor(Math.random() * expressions.length)];
   }
@@ -79,7 +79,7 @@ export class Fuzzer {
       `if (${this.randomBoolean()}) { ${this.randomNumber()} } else { ${this.randomNumber()} }`,
       `for (let i = 0; i < ${Math.floor(Math.random() * 10)}; i++) { ${this.randomNumber()} }`,
       `try { throw "${this.randomString()}" } catch (e) { e }`,
-      `function ${this.randomIdentifier()}() { return ${this.randomNumber()}; }`
+      `function ${this.randomIdentifier()}() { return ${this.randomNumber()}; }`,
     ];
     return statements[Math.floor(Math.random() * statements.length)];
   }
@@ -101,41 +101,46 @@ export class Fuzzer {
   }
 
   private generateRandomSymbols(): string {
-    const symbols = ['!@#$%^&*()', '{}[]();', '+-*/', '==!=<>', '&&||', '??'];
+    const symbols = ["!@#$%^&*()", "{}[]();", "+-*/", "==!=<>", "&&||", "??"];
     return symbols[Math.floor(Math.random() * symbols.length)];
   }
 
   private randomString(maxLength?: number): string {
-    const length = Math.floor(Math.random() * (maxLength || this.config.maxStringLength)) + 1;
-    let result = '';
-    
+    const length =
+      Math.floor(Math.random() * (maxLength || this.config.maxStringLength)) +
+      1;
+    let result = "";
+
     for (let i = 0; i < length; i++) {
       if (this.config.includeUnicode && Math.random() < 0.1) {
         // Add some Unicode characters
-        result += String.fromCharCode(0x1F600 + Math.floor(Math.random() * 100));
+        result += String.fromCharCode(
+          0x1f600 + Math.floor(Math.random() * 100),
+        );
       } else if (this.config.includeControlChars && Math.random() < 0.05) {
         // Add control characters
         result += String.fromCharCode(Math.floor(Math.random() * 32));
       } else {
         // Regular ASCII
-        const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ';
+        const chars =
+          "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ";
         result += chars[Math.floor(Math.random() * chars.length)];
       }
     }
-    
+
     return result;
   }
 
   private randomIdentifier(): string {
-    const start = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_';
-    const chars = start + '0123456789';
+    const start = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_";
+    const chars = start + "0123456789";
     let result = start[Math.floor(Math.random() * start.length)];
-    
+
     const length = Math.floor(Math.random() * 10) + 1;
     for (let i = 1; i < length; i++) {
       result += chars[Math.floor(Math.random() * chars.length)];
     }
-    
+
     return result;
   }
 
@@ -159,7 +164,10 @@ export class Fuzzer {
         // Expected parsing errors are fine
         return { success: true };
       }
-      return { success: false, error: error instanceof Error ? error.message : String(error) };
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
     }
   }
 
@@ -176,7 +184,10 @@ export class Fuzzer {
         // Expected runtime errors are fine
         return { success: true };
       }
-      return { success: false, error: error instanceof Error ? error.message : String(error) };
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
     }
   }
 
@@ -188,10 +199,12 @@ export class Fuzzer {
       totalTests: 0,
       failures: [],
       crashes: 0,
-      timeouts: 0
+      timeouts: 0,
     };
 
-    console.log(`Starting fuzzing with ${this.config.maxIterations} iterations...`);
+    console.log(
+      `Starting fuzzing with ${this.config.maxIterations} iterations...`,
+    );
 
     for (let i = 0; i < this.config.maxIterations; i++) {
       const input = this.generateRandomInput();
@@ -206,8 +219,8 @@ export class Fuzzer {
             if (!parserResult.success) {
               result.failures.push({
                 input,
-                error: parserResult.error || 'Unknown parser error',
-                type: 'parser'
+                error: parserResult.error || "Unknown parser error",
+                type: "parser",
               });
               result.crashes++;
             } else {
@@ -216,8 +229,8 @@ export class Fuzzer {
               if (!runtimeResult.success) {
                 result.failures.push({
                   input,
-                  error: runtimeResult.error || 'Unknown runtime error',
-                  type: 'runtime'
+                  error: runtimeResult.error || "Unknown runtime error",
+                  type: "runtime",
                 });
                 result.crashes++;
               }
@@ -225,27 +238,29 @@ export class Fuzzer {
             resolve();
           }),
           new Promise<void>((_, reject) => {
-            setTimeout(() => reject(new Error('Timeout')), this.config.timeout);
-          })
+            setTimeout(() => reject(new Error("Timeout")), this.config.timeout);
+          }),
         ]);
 
         await testPromise;
       } catch (error) {
-        if (error instanceof Error && error.message === 'Timeout') {
+        if (error instanceof Error && error.message === "Timeout") {
           result.timeouts++;
         } else {
           result.crashes++;
           result.failures.push({
             input,
             error: error instanceof Error ? error.message : String(error),
-            type: 'runtime'
+            type: "runtime",
           });
         }
       }
 
       // Progress reporting
       if (i % Math.floor(this.config.maxIterations / 10) === 0) {
-        console.log(`Fuzzing progress: ${Math.floor((i / this.config.maxIterations) * 100)}%`);
+        console.log(
+          `Fuzzing progress: ${Math.floor((i / this.config.maxIterations) * 100)}%`,
+        );
       }
     }
 
@@ -255,13 +270,16 @@ export class Fuzzer {
   /**
    * Generate property-based test for specific features
    */
-  async testProperty(property: string, iterations: number = 100): Promise<boolean> {
+  async testProperty(
+    property: string,
+    iterations: number = 100,
+  ): Promise<boolean> {
     switch (property) {
-      case 'parser-never-hangs':
+      case "parser-never-hangs":
         return this.testParserNeverHangs(iterations);
-      case 'runtime-memory-safe':
+      case "runtime-memory-safe":
         return this.testRuntimeMemorySafe(iterations);
-      case 'type-safety':
+      case "type-safety":
         return this.testTypeSafety(iterations);
       default:
         throw new Error(`Unknown property: ${property}`);
@@ -272,13 +290,13 @@ export class Fuzzer {
     for (let i = 0; i < iterations; i++) {
       const input = this.generateRandomInput();
       const start = Date.now();
-      
+
       try {
         this.parser.parse(input);
       } catch {
         // Errors are fine, hangs are not
       }
-      
+
       if (Date.now() - start > 1000) {
         console.error(`Parser hung on input: ${input}`);
         return false;
@@ -289,7 +307,7 @@ export class Fuzzer {
 
   private async testRuntimeMemorySafe(iterations: number): Promise<boolean> {
     const initialMemory = process.memoryUsage().heapUsed;
-    
+
     for (let i = 0; i < iterations; i++) {
       const input = this.generateRandomExpression();
       try {
@@ -298,13 +316,13 @@ export class Fuzzer {
       } catch {
         // Errors are fine
       }
-      
+
       // Check for memory leaks
       if (i % 50 === 0) {
         if (global.gc) global.gc();
         const currentMemory = process.memoryUsage().heapUsed;
         if (currentMemory > initialMemory * 10) {
-          console.error('Potential memory leak detected');
+          console.error("Potential memory leak detected");
           return false;
         }
       }
@@ -318,11 +336,15 @@ export class Fuzzer {
       try {
         const ast = this.parser.parse(input);
         const result = this.runtime.execute(ast);
-        
+
         // Basic type invariants
         if (result !== null && result !== undefined) {
           const type = typeof result;
-          if (!['number', 'string', 'boolean', 'object', 'function'].includes(type)) {
+          if (
+            !["number", "string", "boolean", "object", "function"].includes(
+              type,
+            )
+          ) {
             console.error(`Invalid type returned: ${type}`);
             return false;
           }
@@ -338,7 +360,9 @@ export class Fuzzer {
 /**
  * Convenience function to run basic fuzzing
  */
-export async function runFuzzTest(config?: Partial<FuzzingConfig>): Promise<FuzzingResult> {
+export async function runFuzzTest(
+  config?: Partial<FuzzingConfig>,
+): Promise<FuzzingResult> {
   const fuzzer = new Fuzzer(config);
   return await fuzzer.fuzz();
 }
@@ -346,7 +370,10 @@ export async function runFuzzTest(config?: Partial<FuzzingConfig>): Promise<Fuzz
 /**
  * Run property-based tests
  */
-export async function runPropertyTest(property: string, iterations?: number): Promise<boolean> {
+export async function runPropertyTest(
+  property: string,
+  iterations?: number,
+): Promise<boolean> {
   const fuzzer = new Fuzzer();
   return await fuzzer.testProperty(property, iterations);
 }

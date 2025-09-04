@@ -5,6 +5,7 @@ This directory contains comprehensive examples demonstrating Omniscript's produc
 ## Modern Language Features Used
 
 ### Updated Syntax
+
 - **`def`** - Immutable variable declarations (replaces `const`)
 - **`object`** - Class definitions with enhanced features (replaces `class`)
 - **`::`** - Type annotations for better type safety
@@ -14,6 +15,7 @@ This directory contains comprehensive examples demonstrating Omniscript's produc
 - **Enhanced error handling** - `Either<L, R>` and `Option<T>` types
 
 ### Advanced Features
+
 - **Type system** - Generics, union types, intersection types, type inference
 - **Functional programming** - Immutable data, higher-order functions, monads
 - **Actor model** - Concurrent programming with message passing
@@ -24,7 +26,9 @@ This directory contains comprehensive examples demonstrating Omniscript's produc
 ## Basic Examples
 
 ### 1. Hello World (`hello.os`)
+
 A comprehensive introduction showcasing:
+
 - **Modern syntax**: `def`, `object`, `use` keywords with type annotations
 - **HTTP server**: Updated server creation and routing
 - **Operator overloading**: Vector mathematics with enhanced operators
@@ -32,7 +36,9 @@ A comprehensive introduction showcasing:
 - **Functional programming**: Pipeline operators and functional composition
 
 ### 2. Functional Programming (`functional.os`)
+
 Advanced functional programming concepts:
+
 - **Immutable bindings**: `def` declarations with type safety
 - **Monadic error handling**: `Maybe<T>` and `Either<L, R>` types
 - **Function composition**: `compose`, `pipe`, and higher-order functions
@@ -41,7 +47,9 @@ Advanced functional programming concepts:
 - **Pipeline operations**: Fluent data transformation chains
 
 ### 3. REST API (`rest-api.os`)
+
 Production-ready REST API with:
+
 - **Type-safe ORM**: Enhanced database queries with generics
 - **Error handling**: Comprehensive error types and pattern matching
 - **Input validation**: Type-checked request/response schemas
@@ -51,7 +59,9 @@ Production-ready REST API with:
 ## Advanced Production Examples
 
 ### 4. E-commerce Application (`ecommerce-app.os`)
+
 Full-featured e-commerce system featuring:
+
 - **Enhanced data models**: Type-safe entities with validation methods
 - **Authentication system**: Secure user registration and login
 - **Order processing**: Complex business logic with functional patterns
@@ -60,7 +70,9 @@ Full-featured e-commerce system featuring:
 - **Type safety**: End-to-end type checking for all operations
 
 ### 5. Real-time Chat Application (`chat-app.os`)
+
 Modern chat system with:
+
 - **Actor model**: Message processing with concurrent actors
 - **WebSocket management**: Type-safe real-time communication
 - **State management**: Immutable state with reactive updates
@@ -69,7 +81,9 @@ Modern chat system with:
 - **Connection management**: Automatic reconnection and presence tracking
 
 ### 6. Microservices Architecture (`microservices.os`)
+
 Production microservices system demonstrating:
+
 - **Service discovery**: Dynamic service registration and health checks
 - **Load balancing**: Multiple strategies with circuit breakers
 - **API Gateway**: Request routing with authentication and rate limiting
@@ -78,7 +92,9 @@ Production microservices system demonstrating:
 - **Observability**: Comprehensive logging and metrics
 
 ### 7. Data Processing Pipeline (`data-pipeline.os`)
+
 High-performance data processing system featuring:
+
 - **Functional pipelines**: Compose complex data transformations
 - **Stream processing**: Real-time and batch data processing
 - **Error handling**: Resilient processing with functional error types
@@ -87,7 +103,9 @@ High-performance data processing system featuring:
 - **Type-safe transformations**: Compile-time validation of data flows
 
 ### 8. Machine Learning Inference Service (`ml-inference.os`)
+
 Production ML service with:
+
 - **Model registry**: Version management with type-safe configs
 - **Feature engineering**: Automated feature computation and caching
 - **Prediction caching**: Intelligent caching with TTL and LRU eviction
@@ -98,7 +116,9 @@ Production ML service with:
 ## New Advanced Examples
 
 ### 9. Pattern Matching (`pattern-matching.os`)
+
 Comprehensive pattern matching demonstrations:
+
 - **Algebraic data types**: `enum` definitions with associated data
 - **Exhaustiveness checking**: Compile-time verification of pattern completeness
 - **Guard patterns**: Conditional pattern matching with custom predicates
@@ -107,7 +127,9 @@ Comprehensive pattern matching demonstrations:
 - **Error handling**: Pattern-based error recovery strategies
 
 ### 10. Reactive Programming (`reactive-programming.os`)
+
 Advanced reactive programming patterns:
+
 - **Observable streams**: Event-driven programming with functional operators
 - **State management**: Reactive state with automatic UI updates
 - **Async composition**: Complex async operations with reactive patterns
@@ -116,7 +138,9 @@ Advanced reactive programming patterns:
 - **Performance optimization**: Efficient stream processing and memory management
 
 ### 11. Concurrency (`concurrency.os`)
+
 Modern concurrency and parallelism:
+
 - **Actor system**: Message-passing concurrency with supervision
 - **CSP channels**: Go-style communication between coroutines
 - **Worker pools**: CPU-intensive task distribution
@@ -150,6 +174,7 @@ omni run examples/concurrency.os
 ## Example API Usage
 
 ### E-commerce API
+
 ```bash
 # Start the server
 omni run examples/ecommerce-app.os
@@ -166,26 +191,30 @@ curl -H "Authorization: Bearer valid-token" \
 ```
 
 ### Chat Application WebSocket
+
 ```javascript
 // Connect to chat server
-const ws = new WebSocket('ws://localhost:8080');
+const ws = new WebSocket("ws://localhost:8080");
 
 // Authenticate
-ws.send(JSON.stringify({ type: 'AUTH', userId: 1 }));
+ws.send(JSON.stringify({ type: "AUTH", userId: 1 }));
 
 // Join a room
-ws.send(JSON.stringify({ type: 'JOIN_ROOM', roomId: 1 }));
+ws.send(JSON.stringify({ type: "JOIN_ROOM", roomId: 1 }));
 
 // Send a message
-ws.send(JSON.stringify({ 
-  type: 'SEND_MESSAGE', 
-  roomId: 1, 
-  content: 'Hello world!',
-  messageType: 'text'
-}));
+ws.send(
+  JSON.stringify({
+    type: "SEND_MESSAGE",
+    roomId: 1,
+    content: "Hello world!",
+    messageType: "text",
+  }),
+);
 ```
 
 ### ML Inference API
+
 ```bash
 # Start ML inference server
 omni run examples/ml-inference.os
@@ -214,6 +243,7 @@ All examples include production-ready features:
 - **Graceful shutdown**: Clean resource cleanup on termination
 
 ### Docker Deployment
+
 ```dockerfile
 FROM omniscript:latest
 COPY examples/ /app/examples/
@@ -223,6 +253,7 @@ CMD ["omni", "run", "examples/ecommerce-app.os"]
 ```
 
 ### Kubernetes Deployment
+
 ```yaml
 apiVersion: apps/v1
 kind: Deployment
@@ -239,28 +270,30 @@ spec:
         app: omniscript-app
     spec:
       containers:
-      - name: app
-        image: omniscript-example:latest
-        ports:
-        - containerPort: 3000
-        env:
-        - name: NODE_ENV
-          value: "production"
-        - name: DATABASE_URL
-          valueFrom:
-            secretKeyRef:
-              name: db-credentials
-              key: url
+        - name: app
+          image: omniscript-example:latest
+          ports:
+            - containerPort: 3000
+          env:
+            - name: NODE_ENV
+              value: "production"
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: url
 ```
 
 ## Development
 
 ### Prerequisites
+
 - Omniscript runtime v2.0+
 - Node.js 18+ (for some stdlib features)
 - TypeScript 5.0+ (for type checking)
 
 ### Setting up Development Environment
+
 ```bash
 # Install Omniscript
 curl -sSf https://get.omniscript.dev | sh

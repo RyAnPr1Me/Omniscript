@@ -3,8 +3,8 @@
  * Multi-level caching with TTL, LRU, and distributed cache support
  */
 
-import { DateTime } from './datetime';
-import { logger } from './logging';
+import { DateTime } from "./datetime";
+import { logger } from "./logging";
 
 export interface CacheEntry<T> {
   value: T;
@@ -50,14 +50,14 @@ export abstract class BaseCache<T = any> {
     size: 0,
     memory: 0,
     hitRate: 0,
-    evictions: 0
+    evictions: 0,
   };
 
   protected defaultOptions: CacheOptions = {
     ttl: 300000, // 5 minutes
     maxSize: 1000,
     maxMemory: 50 * 1024 * 1024, // 50MB
-    serialize: false
+    serialize: false,
   };
 
   constructor(protected options: CacheOptions = {}) {
@@ -86,7 +86,7 @@ export abstract class BaseCache<T = any> {
       size: 0,
       memory: 0,
       hitRate: 0,
-      evictions: 0
+      evictions: 0,
     };
   }
 
@@ -101,19 +101,19 @@ export abstract class BaseCache<T = any> {
   }
 
   protected calculateSize(value: T): number {
-    if (typeof value === 'string') {
+    if (typeof value === "string") {
       return value.length * 2; // 2 bytes per character in UTF-16
     }
-    if (typeof value === 'number') {
+    if (typeof value === "number") {
       return 8; // 64-bit number
     }
-    if (typeof value === 'boolean') {
+    if (typeof value === "boolean") {
       return 1;
     }
     if (value === null || value === undefined) {
       return 0;
     }
-    
+
     // For objects, try to estimate size
     try {
       return JSON.stringify(value).length * 2;
@@ -128,23 +128,26 @@ export abstract class BaseCache<T = any> {
     await Promise.all(
       keys.map(async (key) => {
         result[key] = await this.get(key);
-      })
+      }),
     );
     return result;
   }
 
-  async mset(entries: Record<string, T>, options?: CacheOptions): Promise<void> {
+  async mset(
+    entries: Record<string, T>,
+    options?: CacheOptions,
+  ): Promise<void> {
     await Promise.all(
       Object.entries(entries).map(([key, value]) =>
-        this.set(key, value, options)
-      )
+        this.set(key, value, options),
+      ),
     );
   }
 
   async deleteByTag(tag: string): Promise<number> {
     const keys = await this.keys();
     let deleted = 0;
-    
+
     for (const key of keys) {
       const entry = await this.getEntry(key);
       if (entry && entry.tags && entry.tags.includes(tag)) {
@@ -153,7 +156,7 @@ export abstract class BaseCache<T = any> {
         }
       }
     }
-    
+
     return deleted;
   }
 
@@ -167,7 +170,7 @@ export class MemoryCache<T = any> extends BaseCache<T> {
 
   async get(key: string): Promise<T | null> {
     const entry = this.storage.get(key);
-    
+
     if (!entry) {
       this.stats.misses++;
       this.updateHitRate();
@@ -189,7 +192,7 @@ export class MemoryCache<T = any> extends BaseCache<T> {
 
     this.stats.hits++;
     this.updateHitRate();
-    
+
     return entry.value;
   }
 
@@ -201,11 +204,11 @@ export class MemoryCache<T = any> extends BaseCache<T> {
     const entry: CacheEntry<T> = {
       value,
       createdAt: now,
-      expiresAt: opts.ttl ? now.add(opts.ttl, 'milliseconds') : undefined,
+      expiresAt: opts.ttl ? now.add(opts.ttl, "milliseconds") : undefined,
       accessCount: 0,
       lastAccessed: now,
       size,
-      tags: opts.tags
+      tags: opts.tags,
     };
 
     // Check if we need to evict entries
@@ -221,7 +224,11 @@ export class MemoryCache<T = any> extends BaseCache<T> {
     this.stats.size++;
     this.stats.memory += size;
 
-    logger.debug('MemoryCache set', { key, size: this.stats.size, memory: this.stats.memory });
+    logger.debug("MemoryCache set", {
+      key,
+      size: this.stats.size,
+      memory: this.stats.memory,
+    });
   }
 
   async delete(key: string): Promise<boolean> {
@@ -273,7 +280,7 @@ export class MemoryCache<T = any> extends BaseCache<T> {
 
   private async evictExpired(): Promise<void> {
     const keysToDelete: string[] = [];
-    
+
     for (const [key, entry] of this.storage) {
       if (this.isExpired(entry)) {
         keysToDelete.push(key);
@@ -287,7 +294,7 @@ export class MemoryCache<T = any> extends BaseCache<T> {
 
   private async evictLRU(count: number): Promise<void> {
     const keysToEvict = Array.from(this.accessOrder).slice(0, count);
-    
+
     for (const key of keysToEvict) {
       await this.delete(key);
       this.stats.evictions++;
@@ -300,7 +307,7 @@ export class TieredCache<T = any> extends BaseCache<T> {
   constructor(
     private l1Cache: BaseCache<T>,
     private l2Cache: BaseCache<T>,
-    options?: CacheOptions
+    options?: CacheOptions,
   ) {
     super(options);
   }
@@ -333,16 +340,16 @@ export class TieredCache<T = any> extends BaseCache<T> {
     // Set in both caches
     await Promise.all([
       this.l1Cache.set(key, value, options),
-      this.l2Cache.set(key, value, options)
+      this.l2Cache.set(key, value, options),
     ]);
-    
+
     this.stats.size++;
   }
 
   async delete(key: string): Promise<boolean> {
     const [l1Deleted, l2Deleted] = await Promise.all([
       this.l1Cache.delete(key),
-      this.l2Cache.delete(key)
+      this.l2Cache.delete(key),
     ]);
 
     if (l1Deleted || l2Deleted) {
@@ -354,11 +361,8 @@ export class TieredCache<T = any> extends BaseCache<T> {
   }
 
   async clear(): Promise<void> {
-    await Promise.all([
-      this.l1Cache.clear(),
-      this.l2Cache.clear()
-    ]);
-    
+    await Promise.all([this.l1Cache.clear(), this.l2Cache.clear()]);
+
     this.stats.size = 0;
     this.stats.memory = 0;
   }
@@ -366,30 +370,32 @@ export class TieredCache<T = any> extends BaseCache<T> {
   async keys(): Promise<string[]> {
     const [l1Keys, l2Keys] = await Promise.all([
       this.l1Cache.keys(),
-      this.l2Cache.keys()
+      this.l2Cache.keys(),
     ]);
-    
+
     return Array.from(new Set([...l1Keys, ...l2Keys]));
   }
 
   protected async getEntry(key: string): Promise<CacheEntry<T> | null> {
-    const l1Entry = await this.l1Cache['getEntry'](key);
+    const l1Entry = await this.l1Cache["getEntry"](key);
     if (l1Entry) return l1Entry;
-    
-    return await this.l2Cache['getEntry'](key);
+
+    return await this.l2Cache["getEntry"](key);
   }
 
   getStats(): CacheStats {
     const l1Stats = this.l1Cache.getStats();
     const l2Stats = this.l2Cache.getStats();
-    
+
     return {
       hits: l1Stats.hits + l2Stats.hits,
       misses: l1Stats.misses + l2Stats.misses,
       size: l1Stats.size + l2Stats.size,
       memory: l1Stats.memory + l2Stats.memory,
-      hitRate: (l1Stats.hits + l2Stats.hits) / (l1Stats.hits + l2Stats.hits + l1Stats.misses + l2Stats.misses) || 0,
-      evictions: l1Stats.evictions + l2Stats.evictions
+      hitRate:
+        (l1Stats.hits + l2Stats.hits) /
+          (l1Stats.hits + l2Stats.hits + l1Stats.misses + l2Stats.misses) || 0,
+      evictions: l1Stats.evictions + l2Stats.evictions,
     };
   }
 }
@@ -401,13 +407,19 @@ export function cached<T extends (...args: any[]) => any>(
     keyGenerator?: (...args: Parameters<T>) => string;
     ttl?: number;
     tags?: string[];
-  } = {}
+  } = {},
 ) {
-  return function (target: any, propertyName: string, descriptor: PropertyDescriptor) {
+  return function (
+    target: any,
+    propertyName: string,
+    descriptor: PropertyDescriptor,
+  ) {
     const method = descriptor.value;
 
     descriptor.value = async function (...args: Parameters<T>) {
-      const keyGen = options.keyGenerator || ((...args) => `${propertyName}:${JSON.stringify(args)}`);
+      const keyGen =
+        options.keyGenerator ||
+        ((...args) => `${propertyName}:${JSON.stringify(args)}`);
       const cacheKey = keyGen(...args);
 
       // Try to get from cache
@@ -420,7 +432,7 @@ export function cached<T extends (...args: any[]) => any>(
       result = await method.apply(this, args);
       await cache.set(cacheKey, result, {
         ttl: options.ttl,
-        tags: options.tags
+        tags: options.tags,
       });
 
       return result;
@@ -440,13 +452,13 @@ export class Memoizer<T = any> {
 
   memoize<F extends (...args: any[]) => any>(
     fn: F,
-    keyGenerator?: (...args: Parameters<F>) => string
+    keyGenerator?: (...args: Parameters<F>) => string,
   ): F {
     const keyGen = keyGenerator || ((...args) => JSON.stringify(args));
 
     return (async (...args: Parameters<F>) => {
       const key = keyGen(...args);
-      
+
       let result = await this.cache.get(key);
       if (result !== null) {
         return result;
@@ -456,7 +468,7 @@ export class Memoizer<T = any> {
       if (result !== null) {
         await this.cache.set(key, result);
       }
-      
+
       return result;
     }) as F;
   }
@@ -478,7 +490,7 @@ export class WriteThroughCache<T = any> extends BaseCache<T> {
       get(key: string): Promise<T | null>;
       set(key: string, value: T): Promise<void>;
       delete(key: string): Promise<boolean>;
-    }
+    },
   ) {
     super();
   }
@@ -513,14 +525,14 @@ export class WriteThroughCache<T = any> extends BaseCache<T> {
     // Write to both cache and data source
     await Promise.all([
       this.cache.set(key, value, options),
-      this.dataSource.set(key, value)
+      this.dataSource.set(key, value),
     ]);
   }
 
   async delete(key: string): Promise<boolean> {
     const [cacheResult, dataSourceResult] = await Promise.all([
       this.cache.delete(key),
-      this.dataSource.delete(key)
+      this.dataSource.delete(key),
     ]);
 
     return cacheResult || dataSourceResult;
@@ -535,7 +547,7 @@ export class WriteThroughCache<T = any> extends BaseCache<T> {
   }
 
   protected async getEntry(key: string): Promise<CacheEntry<T> | null> {
-    return this.cache['getEntry'](key);
+    return this.cache["getEntry"](key);
   }
 }
 
@@ -550,7 +562,7 @@ export class WriteBehindCache<T = any> extends BaseCache<T> {
       set(key: string, value: T): Promise<void>;
       setMany(entries: Record<string, T>): Promise<void>;
     },
-    private flushInterval = 5000 // 5 seconds
+    private flushInterval = 5000, // 5 seconds
   ) {
     super();
     this.startWriteTimer();
@@ -563,7 +575,7 @@ export class WriteBehindCache<T = any> extends BaseCache<T> {
   async set(key: string, value: T, options?: CacheOptions): Promise<void> {
     // Write to cache immediately
     await this.cache.set(key, value, options);
-    
+
     // Queue for background write
     this.writeQueue.set(key, value);
   }
@@ -571,7 +583,7 @@ export class WriteBehindCache<T = any> extends BaseCache<T> {
   async delete(key: string): Promise<boolean> {
     // Remove from write queue
     this.writeQueue.delete(key);
-    
+
     return this.cache.delete(key);
   }
 
@@ -585,7 +597,7 @@ export class WriteBehindCache<T = any> extends BaseCache<T> {
   }
 
   protected async getEntry(key: string): Promise<CacheEntry<T> | null> {
-    return this.cache['getEntry'](key);
+    return this.cache["getEntry"](key);
   }
 
   async flush(): Promise<void> {
@@ -596,9 +608,11 @@ export class WriteBehindCache<T = any> extends BaseCache<T> {
 
     try {
       await this.dataSource.setMany(entries);
-      logger.debug('WriteBehindCache flushed', { count: Object.keys(entries).length });
+      logger.debug("WriteBehindCache flushed", {
+        count: Object.keys(entries).length,
+      });
     } catch (error) {
-      logger.error('WriteBehindCache flush failed', error as Error);
+      logger.error("WriteBehindCache flush failed", error as Error);
       // Re-queue the entries for retry
       for (const [key, value] of Object.entries(entries)) {
         this.writeQueue.set(key, value);
@@ -608,8 +622,8 @@ export class WriteBehindCache<T = any> extends BaseCache<T> {
 
   private startWriteTimer(): void {
     this.writeTimer = setInterval(() => {
-      this.flush().catch(error => {
-        logger.error('WriteBehindCache background flush failed', error);
+      this.flush().catch((error) => {
+        logger.error("WriteBehindCache background flush failed", error);
       });
     }, this.flushInterval);
   }
@@ -619,7 +633,7 @@ export class WriteBehindCache<T = any> extends BaseCache<T> {
       clearInterval(this.writeTimer);
       this.writeTimer = null;
     }
-    
+
     await this.flush();
   }
 }
@@ -648,6 +662,8 @@ export const tieredCache = CacheFactory.createTieredCache();
 export const memoizer = CacheFactory.createMemoizer();
 
 // Only log initialization in non-CLI contexts
-if (!process.argv.some(arg => arg.includes('cli.js') || arg.includes('bin/cli'))) {
-  logger.info('Cache library initialized');
+if (
+  !process.argv.some((arg) => arg.includes("cli.js") || arg.includes("bin/cli"))
+) {
+  logger.info("Cache library initialized");
 }

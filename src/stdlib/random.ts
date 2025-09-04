@@ -1,4 +1,4 @@
-import { debug } from '../debug';
+import { debug } from "../debug";
 
 export interface RandomOptions {
   seed?: number;
@@ -11,7 +11,7 @@ export interface WeightedItem<T> {
 
 export class RandomUtils {
   private static seed: number | null = null;
-  
+
   /**
    * Set seed for reproducible random numbers
    */
@@ -57,7 +57,7 @@ export class RandomUtils {
    */
   static choice<T>(array: T[]): T {
     if (array.length === 0) {
-      throw new Error('Cannot pick from empty array');
+      throw new Error("Cannot pick from empty array");
     }
     return array[this.int(0, array.length - 1)];
   }
@@ -78,9 +78,9 @@ export class RandomUtils {
    */
   static sample<T>(array: T[], count: number): T[] {
     if (count > array.length) {
-      throw new Error('Sample size cannot be larger than array length');
+      throw new Error("Sample size cannot be larger than array length");
     }
-    
+
     const shuffled = this.shuffle([...array]);
     return shuffled.slice(0, count);
   }
@@ -91,7 +91,7 @@ export class RandomUtils {
   static weightedChoice<T>(items: WeightedItem<T>[]): T {
     const totalWeight = items.reduce((sum, item) => sum + item.weight, 0);
     const random = this.float(0, totalWeight);
-    
+
     let currentWeight = 0;
     for (const item of items) {
       currentWeight += item.weight;
@@ -99,7 +99,7 @@ export class RandomUtils {
         return item.item;
       }
     }
-    
+
     // Fallback (shouldn't happen with valid weights)
     return items[items.length - 1].item;
   }
@@ -119,8 +119,11 @@ export class RandomUtils {
   /**
    * Generate random string
    */
-  static string(length: number, charset: string = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'): string {
-    let result = '';
+  static string(
+    length: number,
+    charset: string = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789",
+  ): string {
+    let result = "";
     for (let i = 0; i < length; i++) {
       result += charset.charAt(this.int(0, charset.length - 1));
     }
@@ -131,37 +134,43 @@ export class RandomUtils {
    * Generate random alphanumeric string
    */
   static alphanumeric(length: number): string {
-    return this.string(length, 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789');
+    return this.string(
+      length,
+      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789",
+    );
   }
 
   /**
    * Generate random alphabetic string
    */
   static alpha(length: number): string {
-    return this.string(length, 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz');
+    return this.string(
+      length,
+      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz",
+    );
   }
 
   /**
    * Generate random numeric string
    */
   static numeric(length: number): string {
-    return this.string(length, '0123456789');
+    return this.string(length, "0123456789");
   }
 
   /**
    * Generate random hex string
    */
   static hex(length: number): string {
-    return this.string(length, '0123456789ABCDEF');
+    return this.string(length, "0123456789ABCDEF");
   }
 
   /**
    * Generate UUID v4
    */
   static uuid(): string {
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
       const r = this.int(0, 15);
-      const v = c === 'x' ? r : (r & 0x3 | 0x8);
+      const v = c === "x" ? r : (r & 0x3) | 0x8;
       return v.toString(16);
     });
   }
@@ -170,7 +179,7 @@ export class RandomUtils {
    * Generate random color in hex format
    */
   static color(): string {
-    return '#' + this.hex(6).toLowerCase();
+    return "#" + this.hex(6).toLowerCase();
   }
 
   /**
@@ -180,7 +189,7 @@ export class RandomUtils {
     return {
       r: this.int(0, 255),
       g: this.int(0, 255),
-      b: this.int(0, 255)
+      b: this.int(0, 255),
     };
   }
 
@@ -191,7 +200,7 @@ export class RandomUtils {
     return {
       h: this.int(0, 360),
       s: this.int(0, 100),
-      l: this.int(0, 100)
+      l: this.int(0, 100),
     };
   }
 
@@ -237,12 +246,12 @@ export class RandomUtils {
     const L = Math.exp(-lambda);
     let k = 0;
     let p = 1;
-    
+
     do {
       k++;
       p *= this.getRandom();
     } while (p > L);
-    
+
     return k - 1;
   }
 
@@ -260,17 +269,22 @@ export class RandomUtils {
     return {
       hours: this.int(0, 23),
       minutes: this.int(0, 59),
-      seconds: this.int(0, 59)
+      seconds: this.int(0, 59),
     };
   }
 
   /**
    * Generate random coordinate within bounds
    */
-  static coordinate(bounds: { minLat: number; maxLat: number; minLng: number; maxLng: number }): { lat: number; lng: number } {
+  static coordinate(bounds: {
+    minLat: number;
+    maxLat: number;
+    minLng: number;
+    maxLng: number;
+  }): { lat: number; lng: number } {
     return {
       lat: this.float(bounds.minLat, bounds.maxLat),
-      lng: this.float(bounds.minLng, bounds.maxLng)
+      lng: this.float(bounds.minLng, bounds.maxLng),
     };
   }
 
@@ -281,7 +295,7 @@ export class RandomUtils {
     const angle = this.float(0, 2 * Math.PI);
     return {
       x: Math.cos(angle),
-      y: Math.sin(angle)
+      y: Math.sin(angle),
     };
   }
 
@@ -292,11 +306,11 @@ export class RandomUtils {
     const u = this.float(-1, 1);
     const t = this.float(0, 2 * Math.PI);
     const s = Math.sqrt(1 - u * u);
-    
+
     return {
       x: s * Math.cos(t),
       y: s * Math.sin(t),
-      z: u
+      z: u,
     };
   }
 
@@ -306,19 +320,24 @@ export class RandomUtils {
   static walk(steps: number, stepSize: number = 1): number[] {
     const walk = [0];
     let current = 0;
-    
+
     for (let i = 0; i < steps; i++) {
       current += this.boolean() ? stepSize : -stepSize;
       walk.push(current);
     }
-    
+
     return walk;
   }
 
   /**
    * Generate random matrix
    */
-  static matrix(rows: number, cols: number, min: number = 0, max: number = 1): number[][] {
+  static matrix(
+    rows: number,
+    cols: number,
+    min: number = 0,
+    max: number = 1,
+  ): number[][] {
     const matrix: number[][] = [];
     for (let i = 0; i < rows; i++) {
       const row: number[] = [];
@@ -333,38 +352,45 @@ export class RandomUtils {
   /**
    * Generate random password
    */
-  static password(length: number = 12, options: {
-    includeUppercase?: boolean;
-    includeLowercase?: boolean;
-    includeNumbers?: boolean;
-    includeSymbols?: boolean;
-    excludeAmbiguous?: boolean;
-  } = {}): string {
+  static password(
+    length: number = 12,
+    options: {
+      includeUppercase?: boolean;
+      includeLowercase?: boolean;
+      includeNumbers?: boolean;
+      includeSymbols?: boolean;
+      excludeAmbiguous?: boolean;
+    } = {},
+  ): string {
     const {
       includeUppercase = true,
       includeLowercase = true,
       includeNumbers = true,
       includeSymbols = false,
-      excludeAmbiguous = false
+      excludeAmbiguous = false,
     } = options;
 
-    let charset = '';
-    
+    let charset = "";
+
     if (includeUppercase) {
-      charset += excludeAmbiguous ? 'ABCDEFGHJKLMNPQRSTUVWXYZ' : 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      charset += excludeAmbiguous
+        ? "ABCDEFGHJKLMNPQRSTUVWXYZ"
+        : "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     }
     if (includeLowercase) {
-      charset += excludeAmbiguous ? 'abcdefghjkmnpqrstuvwxyz' : 'abcdefghijklmnopqrstuvwxyz';
+      charset += excludeAmbiguous
+        ? "abcdefghjkmnpqrstuvwxyz"
+        : "abcdefghijklmnopqrstuvwxyz";
     }
     if (includeNumbers) {
-      charset += excludeAmbiguous ? '23456789' : '0123456789';
+      charset += excludeAmbiguous ? "23456789" : "0123456789";
     }
     if (includeSymbols) {
-      charset += '!@#$%^&*()_+-=[]{}|;:,.<>?';
+      charset += "!@#$%^&*()_+-=[]{}|;:,.<>?";
     }
 
-    if (charset === '') {
-      throw new Error('At least one character type must be included');
+    if (charset === "") {
+      throw new Error("At least one character type must be included");
     }
 
     return this.string(length, charset);
@@ -375,10 +401,32 @@ export class RandomUtils {
    */
   static firstName(): string {
     const names = [
-      'Alice', 'Bob', 'Charlie', 'Diana', 'Edward', 'Fiona', 'George', 'Helen',
-      'Ivan', 'Julia', 'Kevin', 'Luna', 'Mike', 'Nina', 'Oscar', 'Penny',
-      'Quinn', 'Rose', 'Sam', 'Tina', 'Uma', 'Victor', 'Wendy', 'Xander',
-      'Yuki', 'Zoe'
+      "Alice",
+      "Bob",
+      "Charlie",
+      "Diana",
+      "Edward",
+      "Fiona",
+      "George",
+      "Helen",
+      "Ivan",
+      "Julia",
+      "Kevin",
+      "Luna",
+      "Mike",
+      "Nina",
+      "Oscar",
+      "Penny",
+      "Quinn",
+      "Rose",
+      "Sam",
+      "Tina",
+      "Uma",
+      "Victor",
+      "Wendy",
+      "Xander",
+      "Yuki",
+      "Zoe",
     ];
     return this.choice(names);
   }
@@ -388,10 +436,30 @@ export class RandomUtils {
    */
   static lastName(): string {
     const names = [
-      'Anderson', 'Brown', 'Clark', 'Davis', 'Evans', 'Foster', 'Garcia',
-      'Harris', 'Jackson', 'Johnson', 'King', 'Lewis', 'Martinez', 'Nelson',
-      'Parker', 'Rodriguez', 'Smith', 'Taylor', 'Thomas', 'Walker',
-      'White', 'Williams', 'Wilson', 'Young'
+      "Anderson",
+      "Brown",
+      "Clark",
+      "Davis",
+      "Evans",
+      "Foster",
+      "Garcia",
+      "Harris",
+      "Jackson",
+      "Johnson",
+      "King",
+      "Lewis",
+      "Martinez",
+      "Nelson",
+      "Parker",
+      "Rodriguez",
+      "Smith",
+      "Taylor",
+      "Thomas",
+      "Walker",
+      "White",
+      "Williams",
+      "Wilson",
+      "Young",
     ];
     return this.choice(names);
   }
@@ -407,7 +475,7 @@ export class RandomUtils {
    * Generate random email
    */
   static email(): string {
-    const domains = ['example.com', 'test.org', 'demo.net', 'sample.co'];
+    const domains = ["example.com", "test.org", "demo.net", "sample.co"];
     const username = this.alphanumeric(this.int(5, 12)).toLowerCase();
     const domain = this.choice(domains);
     return `${username}@${domain}`;
@@ -416,7 +484,7 @@ export class RandomUtils {
   /**
    * Generate random phone number
    */
-  static phoneNumber(format: string = '(###) ###-####'): string {
+  static phoneNumber(format: string = "(###) ###-####"): string {
     return format.replace(/#/g, () => this.numeric(1));
   }
 
@@ -436,5 +504,5 @@ export const {
   choice: randomChoice,
   shuffle: randomShuffle,
   string: randomString,
-  uuid: randomUuid
+  uuid: randomUuid,
 } = RandomUtils;

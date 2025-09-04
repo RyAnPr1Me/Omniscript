@@ -17,7 +17,7 @@ export class MathUtils {
   static median(numbers: number[]): number {
     const sorted = [...numbers].sort((a, b) => a - b);
     const mid = Math.floor(sorted.length / 2);
-    return sorted.length % 2 === 0 
+    return sorted.length % 2 === 0
       ? (sorted[mid - 1] + sorted[mid]) / 2
       : sorted[mid];
   }
@@ -25,29 +25,29 @@ export class MathUtils {
   static mode(numbers: number[]): number | number[] {
     const frequency: Map<number, number> = new Map();
     let maxCount = 0;
-    
+
     for (const num of numbers) {
       const count = (frequency.get(num) || 0) + 1;
       frequency.set(num, count);
       maxCount = Math.max(maxCount, count);
     }
-    
+
     const modes = Array.from(frequency.entries())
       .filter(([_, count]) => count === maxCount)
       .map(([num, _]) => num);
-    
+
     return modes.length === 1 ? modes[0] : modes;
   }
 
   static std(numbers: number[]): number {
     const avg = this.mean(numbers);
-    const squareDiffs = numbers.map(n => (n - avg) ** 2);
+    const squareDiffs = numbers.map((n) => (n - avg) ** 2);
     return Math.sqrt(this.mean(squareDiffs));
   }
 
   static variance(numbers: number[]): number {
     const avg = this.mean(numbers);
-    const squareDiffs = numbers.map(n => (n - avg) ** 2);
+    const squareDiffs = numbers.map((n) => (n - avg) ** 2);
     return this.mean(squareDiffs);
   }
 
@@ -67,7 +67,7 @@ export class MathUtils {
   static factorial(n: number): number {
     if (n < 0) throw new Error("Factorial is not defined for negative numbers");
     if (n === 0 || n === 1) return 1;
-    
+
     // Use iterative approach for better performance
     let result = 1;
     for (let i = 2; i <= n; i++) {
@@ -79,8 +79,9 @@ export class MathUtils {
   static fibonacci(n: number): number {
     if (n < 0) throw new Error("Fibonacci is not defined for negative numbers");
     if (n <= 1) return n;
-    
-    let a = 0, b = 1;
+
+    let a = 0,
+      b = 1;
     for (let i = 2; i <= n; i++) {
       [a, b] = [b, a + b];
     }
@@ -107,7 +108,7 @@ export class MathUtils {
     if (n < 2) return false;
     if (n === 2) return true;
     if (n % 2 === 0) return false;
-    
+
     for (let i = 3; i <= Math.sqrt(n); i += 2) {
       if (n % i === 0) return false;
     }
@@ -170,7 +171,7 @@ export class MathUtils {
   // Linear algebra utilities
   static dotProduct(a: number[], b: number[]): number {
     if (a.length !== b.length) {
-      throw new Error('Vectors must have the same length');
+      throw new Error("Vectors must have the same length");
     }
     return a.reduce((sum, val, i) => sum + val * b[i], 0);
   }
@@ -181,33 +182,35 @@ export class MathUtils {
 
   static normalize(vector: number[]): number[] {
     const magnitude = this.vectorMagnitude(vector);
-    return magnitude === 0 ? vector.slice() : vector.map(val => val / magnitude);
+    return magnitude === 0
+      ? vector.slice()
+      : vector.map((val) => val / magnitude);
   }
 
   static crossProduct(a: number[], b: number[]): number[] {
     if (a.length !== 3 || b.length !== 3) {
-      throw new Error('Cross product is only defined for 3D vectors');
+      throw new Error("Cross product is only defined for 3D vectors");
     }
     return [
       a[1] * b[2] - a[2] * b[1],
       a[2] * b[0] - a[0] * b[2],
-      a[0] * b[1] - a[1] * b[0]
+      a[0] * b[1] - a[1] * b[0],
     ];
   }
 
   // Matrix operations
   static matrixAdd(a: number[][], b: number[][]): number[][] {
     if (a.length !== b.length || a[0].length !== b[0].length) {
-      throw new Error('Matrices must have the same dimensions');
+      throw new Error("Matrices must have the same dimensions");
     }
     return a.map((row, i) => row.map((val, j) => val + b[i][j]));
   }
 
   static matrixMultiply(a: number[][], b: number[][]): number[][] {
     if (a[0].length !== b.length) {
-      throw new Error('Matrix dimensions do not match for multiplication');
+      throw new Error("Matrix dimensions do not match for multiplication");
     }
-    
+
     const result: number[][] = [];
     for (let i = 0; i < a.length; i++) {
       result[i] = [];
@@ -223,18 +226,24 @@ export class MathUtils {
   }
 
   static matrixTranspose(matrix: number[][]): number[][] {
-    return matrix[0].map((_, colIndex) => matrix.map(row => row[colIndex]));
+    return matrix[0].map((_, colIndex) => matrix.map((row) => row[colIndex]));
   }
 
   static matrixDeterminant2x2(matrix: number[][]): number {
     if (matrix.length !== 2 || matrix[0].length !== 2) {
-      throw new Error('Matrix must be 2x2');
+      throw new Error("Matrix must be 2x2");
     }
     return matrix[0][0] * matrix[1][1] - matrix[0][1] * matrix[1][0];
   }
 
   // Interpolation and curve fitting
-  static linearInterpolation(x1: number, y1: number, x2: number, y2: number, x: number): number {
+  static linearInterpolation(
+    x1: number,
+    y1: number,
+    x2: number,
+    y2: number,
+    x: number,
+  ): number {
     return y1 + (y2 - y1) * ((x - x1) / (x2 - x1));
   }
 
@@ -278,29 +287,43 @@ export class MathUtils {
   }
 
   // Complex number operations
-  static complexAdd(a: {real: number, imag: number}, b: {real: number, imag: number}) {
+  static complexAdd(
+    a: { real: number; imag: number },
+    b: { real: number; imag: number },
+  ) {
     return { real: a.real + b.real, imag: a.imag + b.imag };
   }
 
-  static complexMultiply(a: {real: number, imag: number}, b: {real: number, imag: number}) {
+  static complexMultiply(
+    a: { real: number; imag: number },
+    b: { real: number; imag: number },
+  ) {
     return {
       real: a.real * b.real - a.imag * b.imag,
-      imag: a.real * b.imag + a.imag * b.real
+      imag: a.real * b.imag + a.imag * b.real,
     };
   }
 
-  static complexMagnitude(complex: {real: number, imag: number}): number {
+  static complexMagnitude(complex: { real: number; imag: number }): number {
     return Math.sqrt(complex.real * complex.real + complex.imag * complex.imag);
   }
 
   // Statistical distributions
-  static normalDistribution(x: number, mean: number = 0, stdDev: number = 1): number {
+  static normalDistribution(
+    x: number,
+    mean: number = 0,
+    stdDev: number = 1,
+  ): number {
     const coefficient = 1 / (stdDev * Math.sqrt(2 * this.PI));
     const exponent = -0.5 * Math.pow((x - mean) / stdDev, 2);
     return coefficient * Math.exp(exponent);
   }
 
-  static uniformDistribution(x: number, min: number = 0, max: number = 1): number {
+  static uniformDistribution(
+    x: number,
+    min: number = 0,
+    max: number = 1,
+  ): number {
     if (x < min || x > max) return 0;
     return 1 / (max - min);
   }
@@ -311,90 +334,128 @@ export class MathUtils {
   }
 
   // Advanced numerical methods
-  static derivative(fn: (x: number) => number, x: number, h: number = 1e-7): number {
+  static derivative(
+    fn: (x: number) => number,
+    x: number,
+    h: number = 1e-7,
+  ): number {
     return (fn(x + h) - fn(x - h)) / (2 * h);
   }
 
-  static integral(fn: (x: number) => number, a: number, b: number, n: number = 1000): number {
+  static integral(
+    fn: (x: number) => number,
+    a: number,
+    b: number,
+    n: number = 1000,
+  ): number {
     const h = (b - a) / n;
     let sum = (fn(a) + fn(b)) / 2;
-    
+
     for (let i = 1; i < n; i++) {
       sum += fn(a + i * h);
     }
-    
+
     return sum * h;
   }
 
-  static newtonRaphson(fn: (x: number) => number, x0: number, maxIterations: number = 100, tolerance: number = 1e-10): number {
+  static newtonRaphson(
+    fn: (x: number) => number,
+    x0: number,
+    maxIterations: number = 100,
+    tolerance: number = 1e-10,
+  ): number {
     let x = x0;
-    
+
     for (let i = 0; i < maxIterations; i++) {
       const fx = fn(x);
       const dfx = this.derivative(fn, x);
-      
+
       if (Math.abs(dfx) < tolerance) {
-        throw new Error('Derivative is too small, no convergence');
+        throw new Error("Derivative is too small, no convergence");
       }
-      
+
       const newX = x - fx / dfx;
-      
+
       if (Math.abs(newX - x) < tolerance) {
         return newX;
       }
-      
+
       x = newX;
     }
-    
-    throw new Error('No convergence after maximum iterations');
+
+    throw new Error("No convergence after maximum iterations");
   }
 
   // Computational geometry
-  static distance2D(p1: {x: number, y: number}, p2: {x: number, y: number}): number {
+  static distance2D(
+    p1: { x: number; y: number },
+    p2: { x: number; y: number },
+  ): number {
     return Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
   }
 
-  static distance3D(p1: {x: number, y: number, z: number}, p2: {x: number, y: number, z: number}): number {
+  static distance3D(
+    p1: { x: number; y: number; z: number },
+    p2: { x: number; y: number; z: number },
+  ): number {
     return Math.sqrt(
-      Math.pow(p2.x - p1.x, 2) + 
-      Math.pow(p2.y - p1.y, 2) + 
-      Math.pow(p2.z - p1.z, 2)
+      Math.pow(p2.x - p1.x, 2) +
+        Math.pow(p2.y - p1.y, 2) +
+        Math.pow(p2.z - p1.z, 2),
     );
   }
 
-  static pointInPolygon(point: {x: number, y: number}, polygon: {x: number, y: number}[]): boolean {
+  static pointInPolygon(
+    point: { x: number; y: number },
+    polygon: { x: number; y: number }[],
+  ): boolean {
     let inside = false;
-    
+
     for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-      if (((polygon[i].y > point.y) !== (polygon[j].y > point.y)) &&
-          (point.x < (polygon[j].x - polygon[i].x) * (point.y - polygon[i].y) / (polygon[j].y - polygon[i].y) + polygon[i].x)) {
+      if (
+        polygon[i].y > point.y !== polygon[j].y > point.y &&
+        point.x <
+          ((polygon[j].x - polygon[i].x) * (point.y - polygon[i].y)) /
+            (polygon[j].y - polygon[i].y) +
+            polygon[i].x
+      ) {
         inside = !inside;
       }
     }
-    
+
     return inside;
   }
 
-  static convexHull(points: {x: number, y: number}[]): {x: number, y: number}[] {
+  static convexHull(
+    points: { x: number; y: number }[],
+  ): { x: number; y: number }[] {
     if (points.length < 3) return points;
 
     // Sort points lexicographically
-    const sorted = [...points].sort((a, b) => a.x === b.x ? a.y - b.y : a.x - b.x);
+    const sorted = [...points].sort((a, b) =>
+      a.x === b.x ? a.y - b.y : a.x - b.x,
+    );
 
     // Build lower hull
-    const lower: {x: number, y: number}[] = [];
+    const lower: { x: number; y: number }[] = [];
     for (const point of sorted) {
-      while (lower.length >= 2 && this.cross(lower[lower.length - 2], lower[lower.length - 1], point) <= 0) {
+      while (
+        lower.length >= 2 &&
+        this.cross(lower[lower.length - 2], lower[lower.length - 1], point) <= 0
+      ) {
         lower.pop();
       }
       lower.push(point);
     }
 
     // Build upper hull
-    const upper: {x: number, y: number}[] = [];
+    const upper: { x: number; y: number }[] = [];
     for (let i = sorted.length - 1; i >= 0; i--) {
       const point = sorted[i];
-      while (upper.length >= 2 && this.cross(upper[upper.length - 2], upper[upper.length - 1], point) <= 0) {
+      while (
+        upper.length >= 2 &&
+        this.cross(upper[upper.length - 2], upper[upper.length - 1], point) <= 0
+      ) {
         upper.pop();
       }
       upper.push(point);
@@ -403,30 +464,57 @@ export class MathUtils {
     // Remove last point of each half because it's repeated
     lower.pop();
     upper.pop();
-    
+
     return [...lower, ...upper];
   }
 
-  private static cross(o: {x: number, y: number}, a: {x: number, y: number}, b: {x: number, y: number}): number {
+  private static cross(
+    o: { x: number; y: number },
+    a: { x: number; y: number },
+    b: { x: number; y: number },
+  ): number {
     return (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
   }
 
   // Financial mathematics
-  static presentValue(futureValue: number, rate: number, periods: number): number {
+  static presentValue(
+    futureValue: number,
+    rate: number,
+    periods: number,
+  ): number {
     return futureValue / Math.pow(1 + rate, periods);
   }
 
-  static futureValue(presentValue: number, rate: number, periods: number): number {
+  static futureValue(
+    presentValue: number,
+    rate: number,
+    periods: number,
+  ): number {
     return presentValue * Math.pow(1 + rate, periods);
   }
 
-  static compoundInterest(principal: number, rate: number, periods: number, compoundingFrequency: number = 1): number {
-    return principal * Math.pow(1 + rate / compoundingFrequency, compoundingFrequency * periods);
+  static compoundInterest(
+    principal: number,
+    rate: number,
+    periods: number,
+    compoundingFrequency: number = 1,
+  ): number {
+    return (
+      principal *
+      Math.pow(1 + rate / compoundingFrequency, compoundingFrequency * periods)
+    );
   }
 
-  static annuityPayment(principal: number, rate: number, periods: number): number {
+  static annuityPayment(
+    principal: number,
+    rate: number,
+    periods: number,
+  ): number {
     if (rate === 0) return principal / periods;
-    return principal * (rate * Math.pow(1 + rate, periods)) / (Math.pow(1 + rate, periods) - 1);
+    return (
+      (principal * (rate * Math.pow(1 + rate, periods))) /
+      (Math.pow(1 + rate, periods) - 1)
+    );
   }
 
   // Enhanced mathematical functions
@@ -435,11 +523,11 @@ export class MathUtils {
     if (z < 0) return NaN;
     if (z === 0) return Infinity;
     if (z === 1 || z === 2) return 1;
-    
+
     // Use Stirling's approximation for large values
     if (z > 171.624) return Infinity; // Overflow protection
-    
-    return Math.sqrt(2 * Math.PI / z) * Math.pow(z / Math.E, z);
+
+    return Math.sqrt((2 * Math.PI) / z) * Math.pow(z / Math.E, z);
   }
 
   static nextPrime(n: number): number {
@@ -452,10 +540,10 @@ export class MathUtils {
 
   static primeFactors(n: number): number[] {
     if (n < 2 || !Number.isInteger(n)) return [];
-    
+
     const factors: number[] = [];
     let divisor = 2;
-    
+
     while (divisor * divisor <= n) {
       while (n % divisor === 0) {
         factors.push(divisor);
@@ -463,11 +551,11 @@ export class MathUtils {
       }
       divisor++;
     }
-    
+
     if (n > 1) {
       factors.push(n);
     }
-    
+
     return factors;
   }
 
@@ -507,10 +595,10 @@ export class MathUtils {
   // Number theory
   static modPow(base: number, exponent: number, modulus: number): number {
     if (modulus === 1) return 0;
-    
+
     let result = 1;
     base = base % modulus;
-    
+
     while (exponent > 0) {
       if (exponent % 2 === 1) {
         result = (result * base) % modulus;
@@ -518,7 +606,7 @@ export class MathUtils {
       exponent = Math.floor(exponent / 2);
       base = (base * base) % modulus;
     }
-    
+
     return result;
   }
 
@@ -559,15 +647,15 @@ export class MathUtils {
   static percentile(numbers: number[], percentile: number): number {
     const sorted = [...numbers].sort((a, b) => a - b);
     const index = (percentile / 100) * (sorted.length - 1);
-    
+
     if (Number.isInteger(index)) {
       return sorted[index];
     }
-    
+
     const lower = Math.floor(index);
     const upper = Math.ceil(index);
     const weight = index - lower;
-    
+
     return sorted[lower] * (1 - weight) + sorted[upper] * weight;
   }
 
@@ -575,7 +663,7 @@ export class MathUtils {
     return {
       q1: this.percentile(numbers, 25),
       q2: this.percentile(numbers, 50),
-      q3: this.percentile(numbers, 75)
+      q3: this.percentile(numbers, 75),
     };
   }
 
@@ -584,21 +672,26 @@ export class MathUtils {
     return q3 - q1;
   }
 
-  static zScore(value: number, mean: number, standardDeviation: number): number {
+  static zScore(
+    value: number,
+    mean: number,
+    standardDeviation: number,
+  ): number {
     return (value - mean) / standardDeviation;
   }
 
   static correlation(x: number[], y: number[]): number {
-    if (x.length !== y.length) throw new Error('Arrays must have the same length');
-    
+    if (x.length !== y.length)
+      throw new Error("Arrays must have the same length");
+
     const n = x.length;
     const meanX = this.mean(x);
     const meanY = this.mean(y);
-    
+
     let numerator = 0;
     let sumSquareX = 0;
     let sumSquareY = 0;
-    
+
     for (let i = 0; i < n; i++) {
       const diffX = x[i] - meanX;
       const diffY = y[i] - meanY;
@@ -606,13 +699,16 @@ export class MathUtils {
       sumSquareX += diffX * diffX;
       sumSquareY += diffY * diffY;
     }
-    
+
     const denominator = Math.sqrt(sumSquareX * sumSquareY);
     return denominator === 0 ? 0 : numerator / denominator;
   }
 
   // Random number utilities with different distributions
-  static randomGaussian(mean: number = 0, standardDeviation: number = 1): number {
+  static randomGaussian(
+    mean: number = 0,
+    standardDeviation: number = 1,
+  ): number {
     // Box-Muller transformation
     const u1 = Math.random();
     const u2 = Math.random();
@@ -630,7 +726,13 @@ export class MathUtils {
     return (value - a) / (b - a);
   }
 
-  static map(value: number, inMin: number, inMax: number, outMin: number, outMax: number): number {
+  static map(
+    value: number,
+    inMin: number,
+    inMax: number,
+    outMin: number,
+    outMax: number,
+  ): number {
     return this.lerp(outMin, outMax, this.inverseLerp(inMin, inMax, value));
   }
 

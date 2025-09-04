@@ -1,4 +1,4 @@
-import { OmniscriptError } from '../errors';
+import { OmniscriptError } from "../errors";
 
 // Macro system for compile-time code generation and transformation
 export interface MacroDefinition {
@@ -37,7 +37,7 @@ export class MacroProcessor {
       iterations++;
 
       for (const [name, macro] of this.macros) {
-        const pattern = new RegExp(`@${name}\\s*\\(([^)]*)\\)`, 'g');
+        const pattern = new RegExp(`@${name}\\s*\\(([^)]*)\\)`, "g");
         expanded = expanded.replace(pattern, (match, args) => {
           changed = true;
           return this.expandMacro(macro, args, match);
@@ -46,17 +46,25 @@ export class MacroProcessor {
     }
 
     if (iterations >= maxIterations) {
-      throw new OmniscriptError('Macro expansion limit exceeded - possible infinite recursion');
+      throw new OmniscriptError(
+        "Macro expansion limit exceeded - possible infinite recursion",
+      );
     }
 
     return expanded;
   }
 
-  private expandMacro(macro: MacroDefinition, argsString: string, original: string): string {
+  private expandMacro(
+    macro: MacroDefinition,
+    argsString: string,
+    original: string,
+  ): string {
     const args = this.parseArguments(argsString);
-    
+
     if (args.length !== macro.parameters.length) {
-      throw new OmniscriptError(`Macro ${macro.name} expects ${macro.parameters.length} arguments but got ${args.length}`);
+      throw new OmniscriptError(
+        `Macro ${macro.name} expects ${macro.parameters.length} arguments but got ${args.length}`,
+      );
     }
 
     let expanded = macro.body;
@@ -66,7 +74,7 @@ export class MacroProcessor {
     macro.parameters.forEach((param, index) => {
       const value = args[index].trim();
       context[param] = value;
-      const paramPattern = new RegExp(`\\$${param}\\b`, 'g');
+      const paramPattern = new RegExp(`\\$${param}\\b`, "g");
       expanded = expanded.replace(paramPattern, value);
     });
 
@@ -74,7 +82,7 @@ export class MacroProcessor {
     this.expansionHistory.push({
       original,
       expanded,
-      context
+      context,
     });
 
     return expanded;
@@ -82,19 +90,19 @@ export class MacroProcessor {
 
   private parseArguments(argsString: string): string[] {
     if (!argsString.trim()) return [];
-    
+
     const args: string[] = [];
-    let current = '';
+    let current = "";
     let depth = 0;
     let inString = false;
-    let stringChar = '';
+    let stringChar = "";
 
     for (let i = 0; i < argsString.length; i++) {
       const char = argsString[i];
-      
+
       if (inString) {
         current += char;
-        if (char === stringChar && argsString[i - 1] !== '\\') {
+        if (char === stringChar && argsString[i - 1] !== "\\") {
           inString = false;
         }
       } else {
@@ -102,15 +110,15 @@ export class MacroProcessor {
           inString = true;
           stringChar = char;
           current += char;
-        } else if (char === '(' || char === '[' || char === '{') {
+        } else if (char === "(" || char === "[" || char === "{") {
           depth++;
           current += char;
-        } else if (char === ')' || char === ']' || char === '}') {
+        } else if (char === ")" || char === "]" || char === "}") {
           depth--;
           current += char;
-        } else if (char === ',' && depth === 0) {
+        } else if (char === "," && depth === 0) {
           args.push(current.trim());
-          current = '';
+          current = "";
         } else {
           current += char;
         }
@@ -127,24 +135,24 @@ export class MacroProcessor {
   private registerBuiltinMacros(): void {
     // Debug macro
     this.registerMacro({
-      name: 'debug',
-      parameters: ['message'],
+      name: "debug",
+      parameters: ["message"],
       body: 'console.log("[DEBUG]", $message)',
-      isCompileTime: false
+      isCompileTime: false,
     });
 
     // Assert macro
     this.registerMacro({
-      name: 'assert',
-      parameters: ['condition', 'message'],
+      name: "assert",
+      parameters: ["condition", "message"],
       body: 'if (!($condition)) { throw new Error("Assertion failed: " + $message); }',
-      isCompileTime: false
+      isCompileTime: false,
     });
 
     // Benchmark macro
     this.registerMacro({
-      name: 'benchmark',
-      parameters: ['name', 'code'],
+      name: "benchmark",
+      parameters: ["name", "code"],
       body: `
         console.time($name);
         try {
@@ -153,25 +161,25 @@ export class MacroProcessor {
           console.timeEnd($name);
         }
       `,
-      isCompileTime: false
+      isCompileTime: false,
     });
 
     // Generate getter/setter macro
     this.registerMacro({
-      name: 'property',
-      parameters: ['name', 'type'],
+      name: "property",
+      parameters: ["name", "type"],
       body: `
         private _$name: $type;
         get $name(): $type { return this._$name; }
         set $name(value: $type) { this._$name = value; }
       `,
-      isCompileTime: true
+      isCompileTime: true,
     });
 
     // Singleton macro
     this.registerMacro({
-      name: 'singleton',
-      parameters: ['className'],
+      name: "singleton",
+      parameters: ["className"],
       body: `
         private static _instance: $className;
         static getInstance(): $className {
@@ -181,13 +189,13 @@ export class MacroProcessor {
           return $className._instance;
         }
       `,
-      isCompileTime: true
+      isCompileTime: true,
     });
 
     // Event emitter macro
     this.registerMacro({
-      name: 'eventEmitter',
-      parameters: ['eventName'],
+      name: "eventEmitter",
+      parameters: ["eventName"],
       body: `
         private listeners_$eventName: Array<(data: any) => void> = [];
         on$eventName(callback: (data: any) => void): void {
@@ -197,7 +205,7 @@ export class MacroProcessor {
           this.listeners_$eventName.forEach(callback => callback(data));
         }
       `,
-      isCompileTime: true
+      isCompileTime: true,
     });
   }
 
@@ -220,7 +228,7 @@ export class CompileTimeEvaluator {
       // In a real implementation, this would have a proper AST evaluator
       const constPattern = /const\s+(\w+)\s*=\s*(.+);/g;
       let match;
-      
+
       while ((match = constPattern.exec(expr)) !== null) {
         const [, name, value] = match;
         this.constants.set(name, this.evaluateValue(value));
@@ -228,55 +236,60 @@ export class CompileTimeEvaluator {
 
       return this.evaluateValue(expr);
     } catch (error: any) {
-      throw new OmniscriptError(`Compile-time evaluation failed: ${error.message}`);
+      throw new OmniscriptError(
+        `Compile-time evaluation failed: ${error.message}`,
+      );
     }
   }
 
   private evaluateValue(value: string): any {
     value = value.trim();
-    
+
     // Number literals
     if (/^\d+(\.\d+)?$/.test(value)) {
       return parseFloat(value);
     }
-    
+
     // String literals
     if (/^["'].*["']$/.test(value)) {
       return value.slice(1, -1);
     }
-    
+
     // Boolean literals
-    if (value === 'true') return true;
-    if (value === 'false') return false;
-    
+    if (value === "true") return true;
+    if (value === "false") return false;
+
     // Array literals
-    if (value.startsWith('[') && value.endsWith(']')) {
-      const elements = value.slice(1, -1).split(',').map(el => this.evaluateValue(el.trim()));
+    if (value.startsWith("[") && value.endsWith("]")) {
+      const elements = value
+        .slice(1, -1)
+        .split(",")
+        .map((el) => this.evaluateValue(el.trim()));
       return elements;
     }
-    
+
     // Object literals
-    if (value.startsWith('{') && value.endsWith('}')) {
+    if (value.startsWith("{") && value.endsWith("}")) {
       const obj: any = {};
       const content = value.slice(1, -1);
-      const pairs = content.split(',');
+      const pairs = content.split(",");
       for (const pair of pairs) {
-        const [key, val] = pair.split(':').map(s => s.trim());
+        const [key, val] = pair.split(":").map((s) => s.trim());
         obj[this.evaluateValue(key)] = this.evaluateValue(val);
       }
       return obj;
     }
-    
+
     // Constants
     if (this.constants.has(value)) {
       return this.constants.get(value);
     }
-    
+
     // Simple arithmetic
     if (/^\d+\s*[+\-*/]\s*\d+$/.test(value)) {
       return Function(`"use strict"; return (${value})`)();
     }
-    
+
     return value;
   }
 
@@ -311,7 +324,7 @@ export class ReflectionAPI {
 
   hasDecorator(target: string, decoratorName: string): boolean {
     const decorators = this.getDecoratorMetadata(target);
-    return decorators.some(d => d.name === decoratorName);
+    return decorators.some((d) => d.name === decoratorName);
   }
 
   getMethodSignature(className: string, methodName: string): any {
@@ -324,10 +337,14 @@ export class ReflectionAPI {
 
   getPropertyType(className: string, propertyName: string): string {
     const metadata = this.getTypeMetadata(className);
-    if (metadata && metadata.properties && propertyName in metadata.properties) {
+    if (
+      metadata &&
+      metadata.properties &&
+      propertyName in metadata.properties
+    ) {
       return metadata.properties[propertyName];
     }
-    return 'unknown';
+    return "unknown";
   }
 
   listMethods(className: string): string[] {

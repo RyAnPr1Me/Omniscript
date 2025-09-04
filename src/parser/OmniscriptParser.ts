@@ -1,11 +1,27 @@
-import { Parser } from 'antlr4';
-import { OmniscriptError } from '../errors';
-import { 
-  Program, Statement, Expression, VariableDeclaration, 
-  Decorator, ParserInput, Token, ExpressionKind, 
-  Operator, FunctionDeclaration, GenericParameter,
-  Parameter, TypeReference, ASTError, ReturnStatement, IfStatement, WhileStatement, ForStatement, ThrowStatement, TryStatement 
-} from './types';
+import { Parser } from "antlr4";
+import { OmniscriptError } from "../errors";
+import {
+  Program,
+  Statement,
+  Expression,
+  VariableDeclaration,
+  Decorator,
+  ParserInput,
+  Token,
+  ExpressionKind,
+  Operator,
+  FunctionDeclaration,
+  GenericParameter,
+  Parameter,
+  TypeReference,
+  ASTError,
+  ReturnStatement,
+  IfStatement,
+  WhileStatement,
+  ForStatement,
+  ThrowStatement,
+  TryStatement,
+} from "./types";
 
 /**
  * OmniscriptParser is responsible for parsing Omniscript source code into an AST.
@@ -15,14 +31,14 @@ import {
  * - Async/await functions
  * - Decorators
  * - Enhanced error recovery
- * 
+ *
  * @example
  * ```typescript
  * // Parse a generic function
  * fn map<T, U>(items: T[], fn: (item: T) => U): U[] {
  *   return items.map(fn);
  * }
- * 
+ *
  * // Parse a decorated class with generic constraint
  * @component
  * class List<T extends Comparable> {
@@ -76,44 +92,44 @@ export default class OmniscriptParser extends Parser {
   /**
    * Core token definitions for the Omniscript parser.
    * Each token represents a discrete lexical element in the language syntax.
-   * 
+   *
    * Token Categories:
    * ----------------
    * Basic Syntax (1-9):      Core language building blocks
    *   VAR, AT, COLON, etc.   - Basic syntax elements
-   * 
+   *
    * Operators (10-23):       Mathematical and logical operations
    *   PLUS, MINUS, etc.      - Arithmetic operators
    *   AND, OR, etc.          - Logical operators
-   * 
+   *
    * Literals (24-28):        Constant values
    *   STRING, NUMBER         - Basic data types
    *   TRUE, FALSE, NULL      - Special literals
-   * 
+   *
    * Delimiters (29-32):      Code block and grouping symbols
    *   LBRACKET/RBRACKET     - Array literals, indexing
    *   LBRACE/RBRACE         - Object literals, blocks
-   * 
+   *
    * Keywords (33-39):        Reserved language keywords
    *   ASYNC/AWAIT           - Asynchronous programming
    *   FN                    - Function declarations
    *   MATCH/CASE           - Pattern matching
-   * 
+   *
    * Types (40-46):          Advanced type system tokens
-   *   EXTENDS/PIPE         - Inheritance and unions  
+   *   EXTENDS/PIPE         - Inheritance and unions
    *   GENERIC             - Generic type parameters
    *   IMPLEMENTS          - Interface implementation
    *   ABSTRACT           - Abstract classes/methods
    *   TYPEOF            - Type queries
    *   INFER             - Type inference
-   * 
+   *
    * Control Flow (47-52):   Enhanced flow control
    *   YIELD             - Generator functions
    *   WITH              - Resource management
-   *   DO               - Expression blocks  
+   *   DO               - Expression blocks
    *   UNLESS           - Inverted if
    *   UNTIL            - Inverted while
-   * 
+   *
    * Pattern Matching (53-58): Pattern matching features
    *   AS               - Pattern binding
    *   WHEN             - Pattern guards
@@ -121,7 +137,7 @@ export default class OmniscriptParser extends Parser {
    *   IS               - Type testing
    *   SOME             - Optional matching
    *   NONE             - Optional matching
-   * 
+   *
    * @example
    * ```typescript
    * // Pattern matching with type guards
@@ -130,19 +146,19 @@ export default class OmniscriptParser extends Parser {
    *   case Some(x) => x,
    *   case None => "nothing"
    * }
-   * 
+   *
    * // Enhanced control flow
    * do {
    *   let x = compute()
    *   x * 2
    * }
-   * 
+   *
    * // Resource management
    * with(file.open()) {
    *   file.write()
    * }
    * ```
-   * 
+   *
    * Developer Notes:
    * - Token values are sequential for efficient lookup
    * - Categories are grouped logically for maintainability
@@ -155,37 +171,37 @@ export default class OmniscriptParser extends Parser {
 
   /** Boolean literal false */
   static readonly FALSE = 27;
-  
+
   /** Null literal */
   static readonly NULL = 28;
-  
+
   /** Left square bracket [ */
   static readonly LBRACKET = 29;
-  
+
   /** Right square bracket ] */
   static readonly RBRACKET = 30;
-  
+
   /** Left curly brace { */
   static readonly LBRACE = 31;
-  
+
   /** Right curly brace } */
   static readonly RBRACE = 32;
-  
+
   /** async keyword for asynchronous functions */
   static readonly ASYNC = 33;
-  
+
   /** await keyword for awaiting Promises */
   static readonly AWAIT = 34;
-  
+
   /** fn keyword for function declarations */
   static readonly FN = 35;
-  
+
   /** extends keyword for type constraints and class inheritance */
   static readonly EXTENDS = 36;
-  
+
   /** | operator for union types */
   static readonly PIPE = 37;
-  
+
   /** Generic type parameter tokens like <T> */
   static readonly GENERIC = 38;
 
@@ -207,7 +223,7 @@ export default class OmniscriptParser extends Parser {
   static readonly SEMI = 52; // ;
   static readonly MATCH = 53; // match keyword
   static readonly ARROW = 54; // =>
-  
+
   // New unique keywords for Omniscript
   static readonly DEF = 55; // def keyword (replaces const)
   static readonly OBJECT = 56; // object keyword (replaces class)
@@ -216,7 +232,7 @@ export default class OmniscriptParser extends Parser {
 
   constructor(input: any) {
     if (!input) {
-      throw new OmniscriptError('No input provided to parser');
+      throw new OmniscriptError("No input provided to parser");
     }
     super(input);
   }
@@ -225,26 +241,28 @@ export default class OmniscriptParser extends Parser {
     try {
       // Validate input stream
       if (!this._input || !this._input.LT) {
-        throw new OmniscriptError('Invalid parser input stream');
+        throw new OmniscriptError("Invalid parser input stream");
       }
 
       // Get first token for line/column info
       const startToken = this._input.LT(1);
       if (!startToken) {
-        throw new OmniscriptError('Unable to read first token');
+        throw new OmniscriptError("Unable to read first token");
       }
 
       return {
-        type: 'Program',
+        type: "Program",
         body: this.parseStatements(),
         line: startToken.line || 0,
-        column: startToken.column || 0
+        column: startToken.column || 0,
       };
     } catch (error) {
       if (error instanceof OmniscriptError) {
         throw error;
       }
-      throw new OmniscriptError(`Parser error: ${error instanceof Error ? error.message : String(error)}`);
+      throw new OmniscriptError(
+        `Parser error: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
 
@@ -254,7 +272,7 @@ export default class OmniscriptParser extends Parser {
       while (this._input && this._input.LA(1) !== OmniscriptParser.EOF) {
         const token = this._input.LT(1);
         if (!token) {
-          throw new OmniscriptError('Unexpected end of input');
+          throw new OmniscriptError("Unexpected end of input");
         }
         statements.push(this.statement());
       }
@@ -263,7 +281,9 @@ export default class OmniscriptParser extends Parser {
       if (error instanceof OmniscriptError) {
         throw error;
       }
-      throw new OmniscriptError(`Error parsing statements: ${error instanceof Error ? error.message : String(error)}`);
+      throw new OmniscriptError(
+        `Error parsing statements: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
 
@@ -279,14 +299,20 @@ export default class OmniscriptParser extends Parser {
         decorators.push(this.decorator());
       }
       // After decorators, expect class or function
-      if (this._input.LA(1) === OmniscriptParser.FN || this._input.LA(1) === OmniscriptParser.ASYNC) {
+      if (
+        this._input.LA(1) === OmniscriptParser.FN ||
+        this._input.LA(1) === OmniscriptParser.ASYNC
+      ) {
         const isAsync = this._input.LA(1) === OmniscriptParser.ASYNC;
         if (isAsync) this.match(OmniscriptParser.ASYNC);
         const fnDecl = this.functionDeclaration(isAsync);
         (fnDecl as any).decorators = decorators;
         return fnDecl as any;
       }
-      if (this._input.LA(1) === OmniscriptParser.IDENTIFIER && this._input.LT(1).text === 'class') {
+      if (
+        this._input.LA(1) === OmniscriptParser.IDENTIFIER &&
+        this._input.LT(1).text === "class"
+      ) {
         // but 'class' is not tokenized yet; treat as identifier for now
         return this.classDeclaration(decorators);
       }
@@ -301,7 +327,10 @@ export default class OmniscriptParser extends Parser {
       return this.functionDeclaration(false);
     }
     // naive 'class' keyword recognition (IDENTIFIER with text 'class')
-    if (this._input.LA(1) === OmniscriptParser.IDENTIFIER && token.text === 'class') {
+    if (
+      this._input.LA(1) === OmniscriptParser.IDENTIFIER &&
+      token.text === "class"
+    ) {
       return this.classDeclaration();
     }
     if (this._input.LA(1) === OmniscriptParser.RETURN) {
@@ -322,43 +351,60 @@ export default class OmniscriptParser extends Parser {
     if (this._input.LA(1) === OmniscriptParser.THROW) {
       return this.throwStatement();
     }
-      // Handle import statements
-      if (this._input.LA(1) === OmniscriptParser.IDENTIFIER && token.text === 'import') {
-        // Simple import node for AST, not full implementation
-        this.match(OmniscriptParser.IDENTIFIER);
-        let imported = null;
-        if (this._input.LA(1) === OmniscriptParser.LBRACE) {
-          this.match(OmniscriptParser.LBRACE);
-          imported = [];
-          while (this._input.LA(1) === OmniscriptParser.IDENTIFIER) {
-            imported.push(this.match(OmniscriptParser.IDENTIFIER).text);
-            if (this._input.LA(1) === OmniscriptParser.COMMA) this.match(OmniscriptParser.COMMA);
-          }
-          this.match(OmniscriptParser.RBRACE);
-          if (this._input.LA(1) === OmniscriptParser.IDENTIFIER && this._input.LT(1).text === 'from') this.match(OmniscriptParser.IDENTIFIER);
+    // Handle import statements
+    if (
+      this._input.LA(1) === OmniscriptParser.IDENTIFIER &&
+      token.text === "import"
+    ) {
+      // Simple import node for AST, not full implementation
+      this.match(OmniscriptParser.IDENTIFIER);
+      let imported = null;
+      if (this._input.LA(1) === OmniscriptParser.LBRACE) {
+        this.match(OmniscriptParser.LBRACE);
+        imported = [];
+        while (this._input.LA(1) === OmniscriptParser.IDENTIFIER) {
+          imported.push(this.match(OmniscriptParser.IDENTIFIER).text);
+          if (this._input.LA(1) === OmniscriptParser.COMMA)
+            this.match(OmniscriptParser.COMMA);
         }
-        const from = this.match(OmniscriptParser.STRING).text;
-        if (this._input.LA(1) === OmniscriptParser.SEMI) this.match(OmniscriptParser.SEMI);
-        return { type: 'ImportDeclaration', imported, from, line: token.line, column: token.column } as any;
+        this.match(OmniscriptParser.RBRACE);
+        if (
+          this._input.LA(1) === OmniscriptParser.IDENTIFIER &&
+          this._input.LT(1).text === "from"
+        )
+          this.match(OmniscriptParser.IDENTIFIER);
       }
-      // Handle match statements as expressions
-      if (this._input.LA(1) === OmniscriptParser.MATCH) {
-        return this.parseMatchExpression();
-      }
-    throw new Error(`Unexpected token: ${token.text} at line ${token.line}:${token.column}`);
+      const from = this.match(OmniscriptParser.STRING).text;
+      if (this._input.LA(1) === OmniscriptParser.SEMI)
+        this.match(OmniscriptParser.SEMI);
+      return {
+        type: "ImportDeclaration",
+        imported,
+        from,
+        line: token.line,
+        column: token.column,
+      } as any;
+    }
+    // Handle match statements as expressions
+    if (this._input.LA(1) === OmniscriptParser.MATCH) {
+      return this.parseMatchExpression();
+    }
+    throw new Error(
+      `Unexpected token: ${token.text} at line ${token.line}:${token.column}`,
+    );
   }
 
   variableDeclaration(): VariableDeclaration {
     const startToken = this._input.LT(1);
     this.match(OmniscriptParser.VAR);
     const name = this.match(OmniscriptParser.IDENTIFIER).text;
-    
+
     let type = null;
     if (this._input.LA(1) === OmniscriptParser.COLON) {
       this.match(OmniscriptParser.COLON);
       type = this.type();
     }
-    
+
     let initializer = null;
     if (this._input.LA(1) === OmniscriptParser.ASSIGN) {
       this.match(OmniscriptParser.ASSIGN);
@@ -366,12 +412,12 @@ export default class OmniscriptParser extends Parser {
     }
 
     return {
-      type: 'VariableDeclaration',
+      type: "VariableDeclaration",
       name,
       varType: type,
       initializer,
       line: startToken.line,
-      column: startToken.column
+      column: startToken.column,
     };
   }
 
@@ -385,12 +431,12 @@ export default class OmniscriptParser extends Parser {
       args = this.argumentList();
       this.match(OmniscriptParser.RPAREN);
     }
-    return { 
-      type: 'Decorator', 
-      name, 
+    return {
+      type: "Decorator",
+      name,
       arguments: args,
       line: startToken.line,
-      column: startToken.column
+      column: startToken.column,
     };
   }
 
@@ -400,7 +446,7 @@ export default class OmniscriptParser extends Parser {
       this.match(OmniscriptParser.DOT);
       parts.push(this.match(OmniscriptParser.IDENTIFIER).text);
     }
-    return parts.join('.');
+    return parts.join(".");
   }
 
   argumentList(): any[] {
@@ -443,13 +489,13 @@ export default class OmniscriptParser extends Parser {
         this.match(OmniscriptParser.COLON);
         const falseExpr = this.expression();
         left = {
-          type: 'Expression',
+          type: "Expression",
           kind: ExpressionKind.Ternary,
           condition: left,
           trueExpr,
           falseExpr,
           line: left.line,
-          column: left.column
+          column: left.column,
         };
         continue;
       }
@@ -459,13 +505,13 @@ export default class OmniscriptParser extends Parser {
         this.match(OmniscriptParser.NULLISH_ASSIGN);
         const right = this.parseBinaryExpression(newPrecedence);
         left = {
-          type: 'Expression',
+          type: "Expression",
           kind: ExpressionKind.Binary,
-          operator: '??=',
+          operator: "??=",
           left,
           right,
           line: left.line,
-          column: left.column
+          column: left.column,
         };
         continue;
       }
@@ -478,13 +524,13 @@ export default class OmniscriptParser extends Parser {
       const right = this.parseBinaryExpression(newPrecedence);
 
       left = {
-        type: 'Expression',
+        type: "Expression",
         kind: ExpressionKind.Binary,
         operator,
         left,
         right,
         line: left.line,
-        column: left.column
+        column: left.column,
       };
     }
 
@@ -498,18 +544,24 @@ export default class OmniscriptParser extends Parser {
       this.match(token.type);
       const operand = this.parseUnaryExpression();
       return {
-        type: 'Expression',
+        type: "Expression",
         kind: ExpressionKind.Unary,
         operator,
         left: operand,
         line: token.line,
-        column: token.column
+        column: token.column,
       };
     }
     if (token.type === OmniscriptParser.AWAIT) {
       this.match(OmniscriptParser.AWAIT);
       const expr = this.parseUnaryExpression();
-      return { type:'Expression', kind: ExpressionKind.Await, left: expr, line: token.line, column: token.column } as any;
+      return {
+        type: "Expression",
+        kind: ExpressionKind.Await,
+        left: expr,
+        line: token.line,
+        column: token.column,
+      } as any;
     }
     return this.parsePrimaryExpression();
   }
@@ -517,46 +569,50 @@ export default class OmniscriptParser extends Parser {
   private parsePrimaryExpression(): Expression {
     const token = this._input.LT(1);
     if (!token) {
-      throw new OmniscriptError('Unexpected end of input in expression');
+      throw new OmniscriptError("Unexpected end of input in expression");
     }
-    
+
     switch (token.type) {
       case OmniscriptParser.IDENTIFIER: {
         this.match(OmniscriptParser.IDENTIFIER);
         let expr: Expression = {
-          type: 'Expression',
+          type: "Expression",
           kind: ExpressionKind.Identifier,
           name: token.text,
           line: token.line,
-          column: token.column
+          column: token.column,
         };
 
         // Handle member access and function calls
-        while (this._input.LA(1) === OmniscriptParser.DOT || 
-               this._input.LA(1) === OmniscriptParser.LPAREN) {
+        while (
+          this._input.LA(1) === OmniscriptParser.DOT ||
+          this._input.LA(1) === OmniscriptParser.LPAREN
+        ) {
           if (this._input.LA(1) === OmniscriptParser.DOT) {
             this.match(OmniscriptParser.DOT);
             const member = this.match(OmniscriptParser.IDENTIFIER).text;
             expr = {
-              type: 'Expression',
+              type: "Expression",
               kind: ExpressionKind.MemberAccess,
               object: expr,
               member,
               line: token.line,
-              column: token.column
+              column: token.column,
             };
           } else {
             this.match(OmniscriptParser.LPAREN);
-            const args = this._input.LA(1) !== OmniscriptParser.RPAREN ? 
-              this.argumentList() : [];
+            const args =
+              this._input.LA(1) !== OmniscriptParser.RPAREN
+                ? this.argumentList()
+                : [];
             this.match(OmniscriptParser.RPAREN);
             expr = {
-              type: 'Expression',
+              type: "Expression",
               kind: ExpressionKind.Call,
               callee: expr,
               arguments: args,
               line: token.line,
-              column: token.column
+              column: token.column,
             };
           }
         }
@@ -566,42 +622,42 @@ export default class OmniscriptParser extends Parser {
       case OmniscriptParser.NUMBER:
         this.match(OmniscriptParser.NUMBER);
         return {
-          type: 'Expression',
+          type: "Expression",
           kind: ExpressionKind.Literal,
           value: Number(token.text),
           line: token.line,
-          column: token.column
+          column: token.column,
         };
 
       case OmniscriptParser.STRING:
         this.match(OmniscriptParser.STRING);
         return {
-          type: 'Expression',
+          type: "Expression",
           kind: ExpressionKind.Literal,
           value: token.text.slice(1, -1),
           line: token.line,
-          column: token.column
+          column: token.column,
         };
 
       case OmniscriptParser.TRUE:
       case OmniscriptParser.FALSE:
         this.match(token.type);
         return {
-          type: 'Expression',
+          type: "Expression",
           kind: ExpressionKind.Literal,
           value: token.type === OmniscriptParser.TRUE,
           line: token.line,
-          column: token.column
+          column: token.column,
         };
 
       case OmniscriptParser.NULL:
         this.match(OmniscriptParser.NULL);
         return {
-          type: 'Expression',
+          type: "Expression",
           kind: ExpressionKind.Literal,
           value: null, // Fixed type
           line: token.line,
-          column: token.column
+          column: token.column,
         };
 
       case OmniscriptParser.LBRACKET:
@@ -621,24 +677,36 @@ export default class OmniscriptParser extends Parser {
         return this.parseMatchExpression();
 
       default:
-        throw new Error(`Unexpected token in expression: ${token.text ?? '<null>'} at line ${token.line ?? '?'}:${token.column ?? '?'}`);
+        throw new Error(
+          `Unexpected token in expression: ${token.text ?? "<null>"} at line ${token.line ?? "?"}:${token.column ?? "?"}`,
+        );
     }
   }
 
   private parseMatchExpression(): Expression {
-    const start = this._input.LT(1); this.match(OmniscriptParser.MATCH);
+    const start = this._input.LT(1);
+    this.match(OmniscriptParser.MATCH);
     const subject = this.expression();
     this.match(OmniscriptParser.LBRACE);
     const arms: any[] = [];
-    while (this._input.LA(1) !== OmniscriptParser.RBRACE && this._input.LA(1) !== OmniscriptParser.EOF) {
+    while (
+      this._input.LA(1) !== OmniscriptParser.RBRACE &&
+      this._input.LA(1) !== OmniscriptParser.EOF
+    ) {
       // pattern
       const patTok = this._input.LT(1);
       let pattern: any;
       if (patTok.type === OmniscriptParser.IDENTIFIER) {
-        if (patTok.text === '_') { this.match(OmniscriptParser.IDENTIFIER); pattern = { kind:'Wildcard' }; }
-        else { this.match(OmniscriptParser.IDENTIFIER); pattern = { kind:'Identifier', name: patTok.text }; }
+        if (patTok.text === "_") {
+          this.match(OmniscriptParser.IDENTIFIER);
+          pattern = { kind: "Wildcard" };
+        } else {
+          this.match(OmniscriptParser.IDENTIFIER);
+          pattern = { kind: "Identifier", name: patTok.text };
+        }
       } else if (patTok.type === OmniscriptParser.NUMBER) {
-        this.match(OmniscriptParser.NUMBER); pattern = { kind:'Number', value: Number(patTok.text) };
+        this.match(OmniscriptParser.NUMBER);
+        pattern = { kind: "Number", value: Number(patTok.text) };
       } else {
         throw new Error(`Invalid match pattern: ${patTok.text}`);
       }
@@ -649,77 +717,83 @@ export default class OmniscriptParser extends Parser {
         guard = this.expression();
       }
       // => value expression
-      if (this._input.LA(1) === OmniscriptParser.ARROW) this.match(OmniscriptParser.ARROW); else {
+      if (this._input.LA(1) === OmniscriptParser.ARROW)
+        this.match(OmniscriptParser.ARROW);
+      else {
         // allow ':' as fallback
-        if (this._input.LA(1) === OmniscriptParser.COLON) this.match(OmniscriptParser.COLON); else throw new Error('Expected => in match arm');
+        if (this._input.LA(1) === OmniscriptParser.COLON)
+          this.match(OmniscriptParser.COLON);
+        else throw new Error("Expected => in match arm");
       }
       const valueExpr = this.expression();
       arms.push({ pattern, guard, value: valueExpr });
-      if (this._input.LA(1) === OmniscriptParser.COMMA) { this.match(OmniscriptParser.COMMA); continue; }
-      else break;
+      if (this._input.LA(1) === OmniscriptParser.COMMA) {
+        this.match(OmniscriptParser.COMMA);
+        continue;
+      } else break;
     }
     this.match(OmniscriptParser.RBRACE);
     return {
-      type: 'Expression',
+      type: "Expression",
       kind: ExpressionKind.Match,
       subject,
       matchArms: arms,
       line: start.line,
-      column: start.column
+      column: start.column,
     } as any;
   }
 
   private getOperatorPrecedence(operator: string): number {
-    const precedenceMap: {[key: string]: number} = {
-      '.': 16,      // Member access
-      '[]': 16,     // Array access
-      '()': 16,     // Function call
-      '!': 15,      // Logical NOT
-      '~': 15,      // Bitwise NOT
-      '*': 14,      // Multiply
-      '/': 14,      // Divide
-      '%': 14,      // Modulo
-      '+': 13,      // Add
-      '-': 13,      // Subtract
-      '<<': 12,     // Bit shift left
-      '>>': 12,     // Bit shift right
-      '<': 11,      // Less than
-      '<=': 11,     // Less than or equal
-      '>': 11,      // Greater than
-      '>=': 11,     // Greater than or equal
-      '==': 10,     // Equal
-      '!=': 10,     // Not equal
-      '&': 9,       // Bitwise AND
-      '^': 8,       // Bitwise XOR
-      '|': 7,       // Bitwise OR
-      '&&': 6,      // Logical AND
-      '||': 5,      // Logical OR
-      '??': 4,      // Nullish coalescing
-      '?:': 3,      // Ternary
-      '=': 2,       // Assignment
-      '+=': 2,      // Add assign
-      '-=': 2,      // Subtract assign
-      '??=': 2      // Nullish assignment
+    const precedenceMap: { [key: string]: number } = {
+      ".": 16, // Member access
+      "[]": 16, // Array access
+      "()": 16, // Function call
+      "!": 15, // Logical NOT
+      "~": 15, // Bitwise NOT
+      "*": 14, // Multiply
+      "/": 14, // Divide
+      "%": 14, // Modulo
+      "+": 13, // Add
+      "-": 13, // Subtract
+      "<<": 12, // Bit shift left
+      ">>": 12, // Bit shift right
+      "<": 11, // Less than
+      "<=": 11, // Less than or equal
+      ">": 11, // Greater than
+      ">=": 11, // Greater than or equal
+      "==": 10, // Equal
+      "!=": 10, // Not equal
+      "&": 9, // Bitwise AND
+      "^": 8, // Bitwise XOR
+      "|": 7, // Bitwise OR
+      "&&": 6, // Logical AND
+      "||": 5, // Logical OR
+      "??": 4, // Nullish coalescing
+      "?:": 3, // Ternary
+      "=": 2, // Assignment
+      "+=": 2, // Add assign
+      "-=": 2, // Subtract assign
+      "??=": 2, // Nullish assignment
     };
     return precedenceMap[operator] || 0;
   }
 
   private getOperatorToken(operator: string): number {
-    const operatorMap: {[key: string]: number} = {
-      '+': OmniscriptParser.PLUS,
-      '-': OmniscriptParser.MINUS,
-      '*': OmniscriptParser.MULTIPLY,
-      '/': OmniscriptParser.DIVIDE,
-      '%': OmniscriptParser.MOD,
-      '==': OmniscriptParser.EQ,
-      '!=': OmniscriptParser.NEQ,
-      '<': OmniscriptParser.LT,
-      '>': OmniscriptParser.GT,
-      '<=': OmniscriptParser.LTE,
-      '>=': OmniscriptParser.GTE,
-      '&&': OmniscriptParser.AND,
-      '||': OmniscriptParser.OR,
-      '!': OmniscriptParser.NOT
+    const operatorMap: { [key: string]: number } = {
+      "+": OmniscriptParser.PLUS,
+      "-": OmniscriptParser.MINUS,
+      "*": OmniscriptParser.MULTIPLY,
+      "/": OmniscriptParser.DIVIDE,
+      "%": OmniscriptParser.MOD,
+      "==": OmniscriptParser.EQ,
+      "!=": OmniscriptParser.NEQ,
+      "<": OmniscriptParser.LT,
+      ">": OmniscriptParser.GT,
+      "<=": OmniscriptParser.LTE,
+      ">=": OmniscriptParser.GTE,
+      "&&": OmniscriptParser.AND,
+      "||": OmniscriptParser.OR,
+      "!": OmniscriptParser.NOT,
     };
     return operatorMap[operator] || 0;
   }
@@ -728,7 +802,7 @@ export default class OmniscriptParser extends Parser {
     const startToken = this._input.LT(1);
     this.match(OmniscriptParser.LBRACKET);
     const elements: Expression[] = [];
-    
+
     while (this._input.LA(1) !== OmniscriptParser.RBRACKET) {
       elements.push(this.expression());
       if (this._input.LA(1) === OmniscriptParser.COMMA) {
@@ -737,49 +811,51 @@ export default class OmniscriptParser extends Parser {
         break;
       }
     }
-    
+
     this.match(OmniscriptParser.RBRACKET);
     return {
-      type: 'Expression',
+      type: "Expression",
       kind: ExpressionKind.ArrayLiteral, // Fixed type
       elements,
       line: startToken.line,
-      column: startToken.column
+      column: startToken.column,
     };
   }
 
   private parseObjectLiteral(): Expression {
     const startToken = this._input.LT(1);
     this.match(OmniscriptParser.LBRACE);
-    const properties: {key: string; value: Expression}[] = [];
-    
+    const properties: { key: string; value: Expression }[] = [];
+
     while (this._input.LA(1) !== OmniscriptParser.RBRACE) {
       const key = this.match(OmniscriptParser.IDENTIFIER).text;
       this.match(OmniscriptParser.COLON);
       const value = this.expression();
       properties.push({ key, value });
-      
+
       if (this._input.LA(1) === OmniscriptParser.COMMA) {
         this.match(OmniscriptParser.COMMA);
       } else {
         break;
       }
     }
-    
+
     this.match(OmniscriptParser.RBRACE);
     return {
-      type: 'Expression',
+      type: "Expression",
       kind: ExpressionKind.ObjectLiteral, // Fixed type
       properties,
       line: startToken.line,
-      column: startToken.column
+      column: startToken.column,
     };
   }
 
   private getCurrentOperator(): string {
     const token = this._input.LT(1);
     if (!token) {
-      throw new OmniscriptError('Unexpected end of input while reading operator');
+      throw new OmniscriptError(
+        "Unexpected end of input while reading operator",
+      );
     }
     return token.text;
   }
@@ -787,9 +863,11 @@ export default class OmniscriptParser extends Parser {
   private isUnaryOperator(type: number): boolean {
     const token = this._input.LT(1);
     if (!token) {
-      throw new OmniscriptError('Unexpected end of input while checking unary operator');
+      throw new OmniscriptError(
+        "Unexpected end of input while checking unary operator",
+      );
     }
-    return ['-', '!', '~'].includes(token.text);
+    return ["-", "!", "~"].includes(token.text);
   }
 
   /**
@@ -800,11 +878,13 @@ export default class OmniscriptParser extends Parser {
     const startToken = this._input.LT(1);
     this.match(OmniscriptParser.FN);
     const name = this.match(OmniscriptParser.IDENTIFIER).text;
-    
+
     // Parse generic parameters if present
-    const generics = this._input.LA(1) === OmniscriptParser.LT ? 
-      this.parseGenericParameters() : undefined;
-    
+    const generics =
+      this._input.LA(1) === OmniscriptParser.LT
+        ? this.parseGenericParameters()
+        : undefined;
+
     this.match(OmniscriptParser.LPAREN);
     const params = this.parameterList();
     this.match(OmniscriptParser.RPAREN);
@@ -813,7 +893,7 @@ export default class OmniscriptParser extends Parser {
     const body = this.block();
 
     return {
-      type: 'FunctionDeclaration',
+      type: "FunctionDeclaration",
       name,
       generics,
       params,
@@ -821,7 +901,7 @@ export default class OmniscriptParser extends Parser {
       body,
       isAsync,
       line: startToken.line,
-      column: startToken.column
+      column: startToken.column,
     };
   }
 
@@ -832,7 +912,7 @@ export default class OmniscriptParser extends Parser {
   private parseGenericParameters(): GenericParameter[] {
     const generics: GenericParameter[] = [];
     this.match(OmniscriptParser.LT);
-    
+
     do {
       const name = this.match(OmniscriptParser.IDENTIFIER).text;
       let constraint, defaultType;
@@ -863,20 +943,20 @@ export default class OmniscriptParser extends Parser {
 
   /**
    * Parses a type reference, including generics and union types.
-   * Examples: 
+   * Examples:
    * - number
    * - Array<T>
    * - string | null
    */
   private parseTypeReference(): TypeReference {
     const name = this.match(OmniscriptParser.IDENTIFIER).text;
-    
+
     // Handle generic type arguments
     let typeArguments;
     if (this._input.LA(1) === OmniscriptParser.LT) {
       this.match(OmniscriptParser.LT);
       typeArguments = [];
-      
+
       do {
         typeArguments.push(this.parseTypeReference());
         if (this._input.LA(1) === OmniscriptParser.COMMA) {
@@ -886,7 +966,7 @@ export default class OmniscriptParser extends Parser {
         }
         // eslint-disable-next-line no-constant-condition
       } while (true);
-      
+
       this.match(OmniscriptParser.GT);
     }
 
@@ -895,30 +975,31 @@ export default class OmniscriptParser extends Parser {
       this.match(OmniscriptParser.PIPE);
       const rightType = this.parseTypeReference();
       return {
-        name: 'Union',
+        name: "Union",
         isUnion: true,
-        unionTypes: [
-          { name, typeArguments, isArray: false },
-          rightType
-        ]
+        unionTypes: [{ name, typeArguments, isArray: false }, rightType],
       };
     }
 
     return {
       name,
       typeArguments,
-      isArray: name === 'Array' || name.endsWith('[]'),
-      isUnion: false
+      isArray: name === "Array" || name.endsWith("[]"),
+      isUnion: false,
     };
   }
 
   private parameterList(): any[] {
     const params: Parameter[] = [];
     while (this._input.LA(1) === OmniscriptParser.IDENTIFIER) {
-      const nameTok = this._input.LT(1); this.match(OmniscriptParser.IDENTIFIER);
+      const nameTok = this._input.LT(1);
+      this.match(OmniscriptParser.IDENTIFIER);
       let optional = false;
-      if (this._input.LA(1) === OmniscriptParser.QUESTION) { this.match(OmniscriptParser.QUESTION); optional = true; }
-      let typeRef: TypeReference = { name: 'any', isUnion: false } as any;
+      if (this._input.LA(1) === OmniscriptParser.QUESTION) {
+        this.match(OmniscriptParser.QUESTION);
+        optional = true;
+      }
+      let typeRef: TypeReference = { name: "any", isUnion: false } as any;
       if (this._input.LA(1) === OmniscriptParser.COLON) {
         this.match(OmniscriptParser.COLON);
         typeRef = this.parseTypeReference();
@@ -928,8 +1009,15 @@ export default class OmniscriptParser extends Parser {
         this.match(OmniscriptParser.ASSIGN);
         defaultValue = this.expression();
       }
-      params.push({ name: nameTok.text, type: typeRef, optional, defaultValue });
-      if (this._input.LA(1) === OmniscriptParser.COMMA) { this.match(OmniscriptParser.COMMA); } else break;
+      params.push({
+        name: nameTok.text,
+        type: typeRef,
+        optional,
+        defaultValue,
+      });
+      if (this._input.LA(1) === OmniscriptParser.COMMA) {
+        this.match(OmniscriptParser.COMMA);
+      } else break;
     }
     return params;
   }
@@ -941,29 +1029,53 @@ export default class OmniscriptParser extends Parser {
       return stmts; // treat empty block if missing
     }
     this.match(OmniscriptParser.LBRACE);
-    while (this._input.LA(1) !== OmniscriptParser.RBRACE && this._input.LA(1) !== OmniscriptParser.EOF) {
+    while (
+      this._input.LA(1) !== OmniscriptParser.RBRACE &&
+      this._input.LA(1) !== OmniscriptParser.EOF
+    ) {
       stmts.push(this.statement());
     }
-    if (this._input.LA(1) === OmniscriptParser.RBRACE) this.match(OmniscriptParser.RBRACE);
+    if (this._input.LA(1) === OmniscriptParser.RBRACE)
+      this.match(OmniscriptParser.RBRACE);
     return stmts;
   }
 
   private returnStatement(): ReturnStatement {
-    const tok = this._input.LT(1); this.match(OmniscriptParser.RETURN);
+    const tok = this._input.LT(1);
+    this.match(OmniscriptParser.RETURN);
     let argument: Expression | null = null;
-    if (this._input.LA(1) !== OmniscriptParser.RBRACE && this._input.LA(1) !== OmniscriptParser.EOF) {
+    if (
+      this._input.LA(1) !== OmniscriptParser.RBRACE &&
+      this._input.LA(1) !== OmniscriptParser.EOF
+    ) {
       argument = this.expression();
     }
-    return { type: 'ReturnStatement', argument, line: tok.line, column: tok.column };
+    return {
+      type: "ReturnStatement",
+      argument,
+      line: tok.line,
+      column: tok.column,
+    };
   }
 
   private ifStatement(): IfStatement {
-    const tok = this._input.LT(1); this.match(OmniscriptParser.IF);
+    const tok = this._input.LT(1);
+    this.match(OmniscriptParser.IF);
     const condition = this.expression();
     const thenBody = this.block();
     let elseBody: Statement[] | undefined;
-    if (this._input.LA(1) === OmniscriptParser.ELSE) { this.match(OmniscriptParser.ELSE); elseBody = this.block(); }
-    return { type:'IfStatement', condition, thenBody, elseBody, line: tok.line, column: tok.column };
+    if (this._input.LA(1) === OmniscriptParser.ELSE) {
+      this.match(OmniscriptParser.ELSE);
+      elseBody = this.block();
+    }
+    return {
+      type: "IfStatement",
+      condition,
+      thenBody,
+      elseBody,
+      line: tok.line,
+      column: tok.column,
+    };
   }
 
   private classDeclaration(decorators: any[] = []): any {
@@ -972,50 +1084,95 @@ export default class OmniscriptParser extends Parser {
     const nameTok = this.match(OmniscriptParser.IDENTIFIER);
     this.match(OmniscriptParser.LBRACE);
     const methods: any[] = [];
-    while (this._input.LA(1) !== OmniscriptParser.RBRACE && this._input.LA(1) !== OmniscriptParser.EOF) {
+    while (
+      this._input.LA(1) !== OmniscriptParser.RBRACE &&
+      this._input.LA(1) !== OmniscriptParser.EOF
+    ) {
       // operator method: identifier 'operator' SYMBOL
       const mDecorators: any[] = [];
-      while (this._input.LA(1) === OmniscriptParser.AT) mDecorators.push(this.decorator());
+      while (this._input.LA(1) === OmniscriptParser.AT)
+        mDecorators.push(this.decorator());
       let isAsync = false;
-      if (this._input.LA(1) === OmniscriptParser.ASYNC) { this.match(OmniscriptParser.ASYNC); isAsync = true; }
-      if (this._input.LA(1) === OmniscriptParser.IDENTIFIER && this._input.LT(1).text === 'operator') {
+      if (this._input.LA(1) === OmniscriptParser.ASYNC) {
+        this.match(OmniscriptParser.ASYNC);
+        isAsync = true;
+      }
+      if (
+        this._input.LA(1) === OmniscriptParser.IDENTIFIER &&
+        this._input.LT(1).text === "operator"
+      ) {
         this.match(OmniscriptParser.IDENTIFIER); // operator keyword
-        const opTok = this._input.LT(1); this.match(this._input.LA(1)); // consume operator symbol token
+        const opTok = this._input.LT(1);
+        this.match(this._input.LA(1)); // consume operator symbol token
         const params = this.parseMethodParams();
         const body = this.block();
-        methods.push({ type:'MethodDeclaration', name:`operator${opTok.text}`, isOperator:true, operatorSymbol: opTok.text, params, body, isAsync, decorators:mDecorators });
+        methods.push({
+          type: "MethodDeclaration",
+          name: `operator${opTok.text}`,
+          isOperator: true,
+          operatorSymbol: opTok.text,
+          params,
+          body,
+          isAsync,
+          decorators: mDecorators,
+        });
         continue;
       }
       // normal method name
       const methodNameTok = this.match(OmniscriptParser.IDENTIFIER);
       const params = this.parseMethodParams();
       const body = this.block();
-      methods.push({ type:'MethodDeclaration', name: methodNameTok.text, params, body, isAsync, decorators:mDecorators });
+      methods.push({
+        type: "MethodDeclaration",
+        name: methodNameTok.text,
+        params,
+        body,
+        isAsync,
+        decorators: mDecorators,
+      });
     }
     this.match(OmniscriptParser.RBRACE);
-    return { type:'ClassDeclaration', name: nameTok.text, methods, decorators, line: start.line, column: start.column };
+    return {
+      type: "ClassDeclaration",
+      name: nameTok.text,
+      methods,
+      decorators,
+      line: start.line,
+      column: start.column,
+    };
   }
 
   private parseMethodParams(): any[] {
     this.match(OmniscriptParser.LPAREN);
     const params: any[] = [];
     while (this._input.LA(1) === OmniscriptParser.IDENTIFIER) {
-      const p = this.match(OmniscriptParser.IDENTIFIER); params.push({ name: p.text });
-      if (this._input.LA(1) === OmniscriptParser.COMMA) { this.match(OmniscriptParser.COMMA); } else break;
+      const p = this.match(OmniscriptParser.IDENTIFIER);
+      params.push({ name: p.text });
+      if (this._input.LA(1) === OmniscriptParser.COMMA) {
+        this.match(OmniscriptParser.COMMA);
+      } else break;
     }
     this.match(OmniscriptParser.RPAREN);
     return params;
   }
 
   private whileStatement(): WhileStatement {
-    const tok = this._input.LT(1); this.match(OmniscriptParser.WHILE);
+    const tok = this._input.LT(1);
+    this.match(OmniscriptParser.WHILE);
     const condition = this.expression();
     const body = this.block();
-    return { type:'WhileStatement', condition, body, line: tok.line, column: tok.column };
+    return {
+      type: "WhileStatement",
+      condition,
+      body,
+      line: tok.line,
+      column: tok.column,
+    };
   }
 
   private forStatement(): ForStatement {
-    const tok = this._input.LT(1); this.match(OmniscriptParser.FOR);
+    const tok = this._input.LT(1);
+    this.match(OmniscriptParser.FOR);
     // Canonical form: for (init; condition; update) { ... }
     this.match(OmniscriptParser.LPAREN);
     // init: may be variable declaration or expression or empty
@@ -1045,25 +1202,57 @@ export default class OmniscriptParser extends Parser {
     this.match(OmniscriptParser.RPAREN);
 
     const body = this.block();
-    return { type:'ForStatement', init, condition, update, body, line: tok.line, column: tok.column };
+    return {
+      type: "ForStatement",
+      init,
+      condition,
+      update,
+      body,
+      line: tok.line,
+      column: tok.column,
+    };
   }
 
   private throwStatement(): ThrowStatement {
-    const tok = this._input.LT(1); this.match(OmniscriptParser.THROW);
+    const tok = this._input.LT(1);
+    this.match(OmniscriptParser.THROW);
     const argument = this.expression();
-    return { type:'ThrowStatement', argument, line: tok.line, column: tok.column };
+    return {
+      type: "ThrowStatement",
+      argument,
+      line: tok.line,
+      column: tok.column,
+    };
   }
 
   private tryStatement(): TryStatement {
-    const tok = this._input.LT(1); this.match(OmniscriptParser.TRY);
+    const tok = this._input.LT(1);
+    this.match(OmniscriptParser.TRY);
     const tryBlock = this.block();
-    let catchVar: string | undefined; let catchBlock: Statement[] | undefined; let finallyBlock: Statement[] | undefined;
+    let catchVar: string | undefined;
+    let catchBlock: Statement[] | undefined;
+    let finallyBlock: Statement[] | undefined;
     if (this._input.LA(1) === OmniscriptParser.CATCH) {
       this.match(OmniscriptParser.CATCH);
-      if (this._input.LA(1) === OmniscriptParser.LPAREN) { this.match(OmniscriptParser.LPAREN); catchVar = this.match(OmniscriptParser.IDENTIFIER).text; this.match(OmniscriptParser.RPAREN); }
+      if (this._input.LA(1) === OmniscriptParser.LPAREN) {
+        this.match(OmniscriptParser.LPAREN);
+        catchVar = this.match(OmniscriptParser.IDENTIFIER).text;
+        this.match(OmniscriptParser.RPAREN);
+      }
       catchBlock = this.block();
     }
-    if (this._input.LA(1) === OmniscriptParser.FINALLY) { this.match(OmniscriptParser.FINALLY); finallyBlock = this.block(); }
-    return { type:'TryStatement', tryBlock, catchVar, catchBlock, finallyBlock, line: tok.line, column: tok.column };
+    if (this._input.LA(1) === OmniscriptParser.FINALLY) {
+      this.match(OmniscriptParser.FINALLY);
+      finallyBlock = this.block();
+    }
+    return {
+      type: "TryStatement",
+      tryBlock,
+      catchVar,
+      catchBlock,
+      finallyBlock,
+      line: tok.line,
+      column: tok.column,
+    };
   }
 }

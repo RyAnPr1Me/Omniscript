@@ -1,6 +1,6 @@
 /**
  * OmniScript AI Module - A powerful neural network library that rivals PyTorch
- * 
+ *
  * Features:
  * - High-performance tensor operations using SIMD
  * - Automatic differentiation for backpropagation
@@ -13,9 +13,9 @@
  * - JIT-compatible operations
  */
 
-import { SIMDProcessor } from '../runtime/simd';
-import { MathUtils } from './math';
-import { debug } from '../debug';
+import { SIMDProcessor } from "../runtime/simd";
+import { MathUtils } from "./math";
+import { debug } from "../debug";
 
 // ================================
 // PERFORMANCE OPTIMIZATIONS
@@ -28,18 +28,18 @@ class TensorPool {
   static getPooledArray(size: number): number[] {
     const key = size.toString();
     const pool = this.pools.get(key) || [];
-    
+
     if (pool.length > 0) {
       return pool.pop()!;
     }
-    
+
     return new Array(size);
   }
 
   static returnToPool(array: number[], size: number): void {
     const key = size.toString();
     const pool = this.pools.get(key) || [];
-    
+
     if (pool.length < this.maxPoolSize) {
       // Clear array for reuse
       array.fill(0);
@@ -88,18 +88,18 @@ export interface GradientInfo {
 export class Tensor {
   public data: number[];
   public shape: TensorShape;
-  public dtype: 'float32' | 'float64' | 'int32';
-  public device: 'cpu' | 'gpu';
+  public dtype: "float32" | "float64" | "int32";
+  public device: "cpu" | "gpu";
   public gradInfo: GradientInfo;
 
   constructor(
     data: number[] | number[][],
     options: {
       requiresGrad?: boolean;
-      dtype?: 'float32' | 'float64' | 'int32';
-      device?: 'cpu' | 'gpu';
+      dtype?: "float32" | "float64" | "int32";
+      device?: "cpu" | "gpu";
       usePool?: boolean;
-    } = {}
+    } = {},
   ) {
     const usePool = options.usePool !== false; // Default to true
 
@@ -109,9 +109,9 @@ export class Tensor {
       this.shape = {
         dimensions: [matrix.length, matrix[0].length],
         size: matrix.length * matrix[0].length,
-        ndim: 2
+        ndim: 2,
       };
-      
+
       // Use pooled array for better performance
       if (usePool) {
         this.data = TensorPool.getPooledArray(this.shape.size);
@@ -129,9 +129,9 @@ export class Tensor {
       this.shape = {
         dimensions: [vector.length],
         size: vector.length,
-        ndim: 1
+        ndim: 1,
       };
-      
+
       if (usePool) {
         this.data = TensorPool.getPooledArray(this.shape.size);
         for (let i = 0; i < vector.length; i++) {
@@ -142,14 +142,17 @@ export class Tensor {
       }
     }
 
-    this.dtype = options.dtype || 'float32';
-    this.device = options.device || 'cpu';
+    this.dtype = options.dtype || "float32";
+    this.device = options.device || "cpu";
     this.gradInfo = {
       requiresGrad: options.requiresGrad || false,
-      retainGraph: false
+      retainGraph: false,
     };
 
-    debug.debug('AI', `Created tensor with shape [${this.shape.dimensions.join(',')}] and ${this.shape.size} elements`);
+    debug.debug(
+      "AI",
+      `Created tensor with shape [${this.shape.dimensions.join(",")}] and ${this.shape.size} elements`,
+    );
   }
 
   // Tensor creation static methods
@@ -177,19 +180,24 @@ export class Tensor {
     return tensor;
   }
 
-  static uniform(shape: number[], low: number = 0, high: number = 1, options: any = {}): Tensor {
+  static uniform(
+    shape: number[],
+    low: number = 0,
+    high: number = 1,
+    options: any = {},
+  ): Tensor {
     const size = shape.reduce((a, b) => a * b, 1);
     // Use deterministic seeded random for consistent test results
     if (!this.randomSeed) {
       this.randomSeed = 12345;
     }
-    
+
     const data = Array.from({ length: size }, () => {
       this.randomSeed = (this.randomSeed! * 1664525 + 1013904223) % 4294967296;
       const random = this.randomSeed! / 4294967296;
       return random * (high - low) + low;
     });
-    
+
     const tensor = new Tensor(data, options);
     tensor.shape = { dimensions: shape, size, ndim: shape.length };
     return tensor;
@@ -201,15 +209,17 @@ export class Tensor {
     if (!this.randomSeed) {
       this.randomSeed = 12345; // Fixed seed for reproducibility
     }
-    
+
     // Simple seeded random number generator (LCG)
     this.randomSeed = (this.randomSeed * 1664525 + 1013904223) % 4294967296;
     const u1 = this.randomSeed / 4294967296;
-    
+
     this.randomSeed = (this.randomSeed * 1664525 + 1013904223) % 4294967296;
     const u2 = this.randomSeed / 4294967296;
-    
-    const z0 = Math.sqrt(-2 * Math.log(Math.max(u1, 1e-10))) * Math.cos(2 * Math.PI * u2);
+
+    const z0 =
+      Math.sqrt(-2 * Math.log(Math.max(u1, 1e-10))) *
+      Math.cos(2 * Math.PI * u2);
     return z0 * std + mean;
   }
 
@@ -222,21 +232,23 @@ export class Tensor {
 
   // Tensor operations using SIMD for performance
   add(other: Tensor | number): Tensor {
-    if (typeof other === 'number') {
-      const result = new Tensor(this.data.map(x => x + other));
+    if (typeof other === "number") {
+      const result = new Tensor(this.data.map((x) => x + other));
       result.shape = { ...this.shape };
       return result;
     }
 
     if (!this.broadcastable(other)) {
-      throw new Error(`Cannot add tensors with shapes [${this.shape.dimensions}] and [${other.shape.dimensions}]`);
+      throw new Error(
+        `Cannot add tensors with shapes [${this.shape.dimensions}] and [${other.shape.dimensions}]`,
+      );
     }
 
     // Use cached SIMD processor for better performance
     const simd = getSIMDProcessor();
     const resultData = simd.add(this.data, other.data);
     returnSIMDProcessor(simd);
-    
+
     const result = new Tensor(resultData);
     result.shape = { ...this.shape };
 
@@ -273,10 +285,10 @@ export class Tensor {
   }
 
   mul(other: Tensor | number): Tensor {
-    if (typeof other === 'number') {
-      const result = new Tensor(this.data.map(x => x * other));
+    if (typeof other === "number") {
+      const result = new Tensor(this.data.map((x) => x * other));
       result.shape = { ...this.shape };
-      
+
       // Setup gradient computation for scalar multiplication
       if (this.gradInfo.requiresGrad) {
         result.gradInfo.requiresGrad = true;
@@ -296,18 +308,20 @@ export class Tensor {
           }
         };
       }
-      
+
       return result;
     }
 
     if (!this.broadcastable(other)) {
-      throw new Error(`Cannot multiply tensors with shapes [${this.shape.dimensions}] and [${other.shape.dimensions}]`);
+      throw new Error(
+        `Cannot multiply tensors with shapes [${this.shape.dimensions}] and [${other.shape.dimensions}]`,
+      );
     }
 
     const simd = getSIMDProcessor();
     const resultData = simd.multiply(this.data, other.data);
     returnSIMDProcessor(simd);
-    
+
     const result = new Tensor(resultData);
     result.shape = { ...this.shape };
 
@@ -347,20 +361,27 @@ export class Tensor {
 
   matmul(other: Tensor): Tensor {
     if (this.shape.ndim !== 2 || other.shape.ndim !== 2) {
-      throw new Error('Matrix multiplication requires 2D tensors');
+      throw new Error("Matrix multiplication requires 2D tensors");
     }
 
     if (this.shape.dimensions[1] !== other.shape.dimensions[0]) {
-      throw new Error(`Cannot multiply matrices with shapes [${this.shape.dimensions}] and [${other.shape.dimensions}]`);
+      throw new Error(
+        `Cannot multiply matrices with shapes [${this.shape.dimensions}] and [${other.shape.dimensions}]`,
+      );
     }
 
     const simd = getSIMDProcessor();
-    const thisMatrix = this.reshape([this.shape.dimensions[0], this.shape.dimensions[1]]).toMatrix();
-    const otherMatrix = other.reshape([other.shape.dimensions[0], other.shape.dimensions[1]]).toMatrix();
-    
+    const thisMatrix = this.reshape([
+      this.shape.dimensions[0],
+      this.shape.dimensions[1],
+    ]).toMatrix();
+    const otherMatrix = other
+      .reshape([other.shape.dimensions[0], other.shape.dimensions[1]])
+      .toMatrix();
+
     const resultMatrix = simd.matrixMultiply(thisMatrix, otherMatrix);
     returnSIMDProcessor(simd);
-    
+
     const result = Tensor.fromMatrix(resultMatrix);
 
     // Setup gradient computation for matrix multiplication
@@ -373,7 +394,7 @@ export class Tensor {
           if (grad.shape.ndim === 1) {
             grad = grad.reshape([1, grad.shape.dimensions[0]]);
           }
-          
+
           const thisGrad = grad.matmul(other.transpose());
           if (this.gradInfo.grad) {
             this.gradInfo.grad = this.gradInfo.grad.add(thisGrad);
@@ -391,7 +412,7 @@ export class Tensor {
           if (grad.shape.ndim === 1) {
             grad = grad.reshape([1, grad.shape.dimensions[0]]);
           }
-          
+
           const otherGrad = this.transpose().matmul(grad);
           if (other.gradInfo.grad) {
             other.gradInfo.grad = other.gradInfo.grad.add(otherGrad);
@@ -411,12 +432,12 @@ export class Tensor {
 
   transpose(): Tensor {
     if (this.shape.ndim !== 2) {
-      throw new Error('Transpose is only supported for 2D tensors');
+      throw new Error("Transpose is only supported for 2D tensors");
     }
 
     const [rows, cols] = this.shape.dimensions;
     const transposed: number[][] = [];
-    
+
     for (let j = 0; j < cols; j++) {
       transposed[j] = [];
       for (let i = 0; i < rows; i++) {
@@ -425,15 +446,15 @@ export class Tensor {
     }
 
     const result = Tensor.fromMatrix(transposed);
-    
+
     // Setup gradient computation for transpose
     if (this.gradInfo.requiresGrad) {
       result.gradInfo.requiresGrad = true;
       result.gradInfo.gradFn = () => {
         if (result.gradInfo.grad) {
-          this.gradInfo.grad = this.gradInfo.grad ? 
-            this.gradInfo.grad.add(result.gradInfo.grad.transpose()) : 
-            result.gradInfo.grad.transpose();
+          this.gradInfo.grad = this.gradInfo.grad
+            ? this.gradInfo.grad.add(result.gradInfo.grad.transpose())
+            : result.gradInfo.grad.transpose();
         }
       };
     }
@@ -444,14 +465,16 @@ export class Tensor {
   reshape(newShape: number[]): Tensor {
     const newSize = newShape.reduce((a, b) => a * b, 1);
     if (newSize !== this.shape.size) {
-      throw new Error(`Cannot reshape tensor of size ${this.shape.size} to shape [${newShape}]`);
+      throw new Error(
+        `Cannot reshape tensor of size ${this.shape.size} to shape [${newShape}]`,
+      );
     }
 
     const result = new Tensor(this.data);
     result.shape = {
       dimensions: newShape,
       size: newSize,
-      ndim: newShape.length
+      ndim: newShape.length,
     };
 
     return result;
@@ -462,12 +485,14 @@ export class Tensor {
       // Sum all elements
       const total = this.data.reduce((a, b) => a + b, 0);
       const result = new Tensor([total]);
-      
+
       if (this.gradInfo.requiresGrad) {
         result.gradInfo.requiresGrad = true;
         result.gradInfo.gradFn = () => {
           if (result.gradInfo.grad) {
-            const grad = Tensor.ones(this.shape.dimensions).mul(result.gradInfo.grad.data[0]);
+            const grad = Tensor.ones(this.shape.dimensions).mul(
+              result.gradInfo.grad.data[0],
+            );
             // Accumulate gradient to this tensor
             if (this.gradInfo.grad) {
               this.gradInfo.grad = this.gradInfo.grad.add(grad);
@@ -481,15 +506,15 @@ export class Tensor {
           }
         };
       }
-      
+
       return result;
     }
-    
+
     // For now, implement simple 2D case
     if (this.shape.ndim === 2 && axis === 0) {
       const [rows, cols] = this.shape.dimensions;
       const result: number[] = [];
-      
+
       for (let j = 0; j < cols; j++) {
         let sum = 0;
         for (let i = 0; i < rows; i++) {
@@ -497,16 +522,19 @@ export class Tensor {
         }
         result.push(sum);
       }
-      
+
       return new Tensor(result);
     }
-    
-    throw new Error(`Sum along axis ${axis} not yet implemented for shape [${this.shape.dimensions}]`);
+
+    throw new Error(
+      `Sum along axis ${axis} not yet implemented for shape [${this.shape.dimensions}]`,
+    );
   }
 
   mean(axis?: number): Tensor {
     const sumResult = this.sum(axis);
-    const count = axis === undefined ? this.shape.size : this.shape.dimensions[axis || 0];
+    const count =
+      axis === undefined ? this.shape.size : this.shape.dimensions[axis || 0];
     return sumResult.mul(1 / count);
   }
 
@@ -544,25 +572,27 @@ export class Tensor {
   // Utility methods
   private broadcastable(other: Tensor): boolean {
     // Simple broadcasting check - tensors must have same shape for now
-    return this.shape.dimensions.length === other.shape.dimensions.length &&
-           this.shape.dimensions.every((dim, i) => dim === other.shape.dimensions[i]);
+    return (
+      this.shape.dimensions.length === other.shape.dimensions.length &&
+      this.shape.dimensions.every((dim, i) => dim === other.shape.dimensions[i])
+    );
   }
 
   toMatrix(): number[][] {
     if (this.shape.ndim !== 2) {
-      throw new Error('toMatrix() requires a 2D tensor');
+      throw new Error("toMatrix() requires a 2D tensor");
     }
 
     const [rows, cols] = this.shape.dimensions;
     const matrix: number[][] = [];
-    
+
     for (let i = 0; i < rows; i++) {
       matrix[i] = [];
       for (let j = 0; j < cols; j++) {
         matrix[i][j] = this.data[i * cols + j];
       }
     }
-    
+
     return matrix;
   }
 
@@ -582,15 +612,18 @@ export class Tensor {
 
   toString(): string {
     if (this.shape.ndim === 1) {
-      return `Tensor([${this.data.slice(0, 10).join(', ')}${this.data.length > 10 ? '...' : ''}])`;
+      return `Tensor([${this.data.slice(0, 10).join(", ")}${this.data.length > 10 ? "..." : ""}])`;
     } else if (this.shape.ndim === 2) {
       const matrix = this.toMatrix();
-      const rows = matrix.slice(0, 5).map(row => 
-        `[${row.slice(0, 5).join(', ')}${row.length > 5 ? '...' : ''}]`
-      );
-      return `Tensor([\n  ${rows.join(',\n  ')}${matrix.length > 5 ? '\n  ...' : ''}\n])`;
+      const rows = matrix
+        .slice(0, 5)
+        .map(
+          (row) =>
+            `[${row.slice(0, 5).join(", ")}${row.length > 5 ? "..." : ""}]`,
+        );
+      return `Tensor([\n  ${rows.join(",\n  ")}${matrix.length > 5 ? "\n  ..." : ""}\n])`;
     }
-    return `Tensor(shape=[${this.shape.dimensions.join(',')}])`;
+    return `Tensor(shape=[${this.shape.dimensions.join(",")}])`;
   }
 
   // Cleanup method for memory management
@@ -603,11 +636,11 @@ export class Tensor {
   }
 
   // Memory usage information
-  getMemoryUsage(): { bytes: number, elements: number } {
-    const bytesPerElement = this.dtype === 'float64' ? 8 : 4;
+  getMemoryUsage(): { bytes: number; elements: number } {
+    const bytesPerElement = this.dtype === "float64" ? 8 : 4;
     return {
       bytes: this.shape.size * bytesPerElement,
-      elements: this.shape.size
+      elements: this.shape.size,
     };
   }
 }
@@ -618,7 +651,7 @@ export class Tensor {
 
 export class Activations {
   static relu(tensor: Tensor): Tensor {
-    const resultData = tensor.data.map(x => Math.max(0, x));
+    const resultData = tensor.data.map((x) => Math.max(0, x));
     const result = new Tensor(resultData);
     result.shape = { ...tensor.shape };
 
@@ -626,7 +659,11 @@ export class Activations {
       result.gradInfo.requiresGrad = true;
       result.gradInfo.gradFn = () => {
         if (result.gradInfo.grad) {
-          const grad = new Tensor(tensor.data.map((x, i) => x > 0 ? result.gradInfo.grad!.data[i] : 0));
+          const grad = new Tensor(
+            tensor.data.map((x, i) =>
+              x > 0 ? result.gradInfo.grad!.data[i] : 0,
+            ),
+          );
           if (tensor.gradInfo.grad) {
             tensor.gradInfo.grad = tensor.gradInfo.grad.add(grad);
           } else {
@@ -644,7 +681,7 @@ export class Activations {
   }
 
   static sigmoid(tensor: Tensor): Tensor {
-    const resultData = tensor.data.map(x => 1 / (1 + Math.exp(-x)));
+    const resultData = tensor.data.map((x) => 1 / (1 + Math.exp(-x)));
     const result = new Tensor(resultData);
     result.shape = { ...tensor.shape };
 
@@ -652,10 +689,14 @@ export class Activations {
       result.gradInfo.requiresGrad = true;
       result.gradInfo.gradFn = () => {
         if (result.gradInfo.grad) {
-          const grad = new Tensor(result.data.map((y, i) => 
-            y * (1 - y) * result.gradInfo.grad!.data[i]
-          ));
-          tensor.gradInfo.grad = tensor.gradInfo.grad ? tensor.gradInfo.grad.add(grad) : grad;
+          const grad = new Tensor(
+            result.data.map(
+              (y, i) => y * (1 - y) * result.gradInfo.grad!.data[i],
+            ),
+          );
+          tensor.gradInfo.grad = tensor.gradInfo.grad
+            ? tensor.gradInfo.grad.add(grad)
+            : grad;
         }
       };
     }
@@ -664,7 +705,7 @@ export class Activations {
   }
 
   static tanh(tensor: Tensor): Tensor {
-    const resultData = tensor.data.map(x => Math.tanh(x));
+    const resultData = tensor.data.map((x) => Math.tanh(x));
     const result = new Tensor(resultData);
     result.shape = { ...tensor.shape };
 
@@ -672,10 +713,14 @@ export class Activations {
       result.gradInfo.requiresGrad = true;
       result.gradInfo.gradFn = () => {
         if (result.gradInfo.grad) {
-          const grad = new Tensor(result.data.map((y, i) => 
-            (1 - y * y) * result.gradInfo.grad!.data[i]
-          ));
-          tensor.gradInfo.grad = tensor.gradInfo.grad ? tensor.gradInfo.grad.add(grad) : grad;
+          const grad = new Tensor(
+            result.data.map(
+              (y, i) => (1 - y * y) * result.gradInfo.grad!.data[i],
+            ),
+          );
+          tensor.gradInfo.grad = tensor.gradInfo.grad
+            ? tensor.gradInfo.grad.add(grad)
+            : grad;
         }
       };
     }
@@ -685,10 +730,10 @@ export class Activations {
 
   static softmax(tensor: Tensor): Tensor {
     const max = Math.max(...tensor.data);
-    const exp = tensor.data.map(x => Math.exp(x - max));
+    const exp = tensor.data.map((x) => Math.exp(x - max));
     const sum = exp.reduce((a, b) => a + b, 0);
-    const resultData = exp.map(x => x / sum);
-    
+    const resultData = exp.map((x) => x / sum);
+
     const result = new Tensor(resultData);
     result.shape = { ...tensor.shape };
 
@@ -697,11 +742,18 @@ export class Activations {
       result.gradInfo.gradFn = () => {
         if (result.gradInfo.grad) {
           // Softmax gradient: softmax * (grad - sum(softmax * grad))
-          const sumGrad = result.data.reduce((sum, y, i) => sum + y * result.gradInfo.grad!.data[i], 0);
-          const grad = new Tensor(result.data.map((y, i) => 
-            y * (result.gradInfo.grad!.data[i] - sumGrad)
-          ));
-          tensor.gradInfo.grad = tensor.gradInfo.grad ? tensor.gradInfo.grad.add(grad) : grad;
+          const sumGrad = result.data.reduce(
+            (sum, y, i) => sum + y * result.gradInfo.grad!.data[i],
+            0,
+          );
+          const grad = new Tensor(
+            result.data.map(
+              (y, i) => y * (result.gradInfo.grad!.data[i] - sumGrad),
+            ),
+          );
+          tensor.gradInfo.grad = tensor.gradInfo.grad
+            ? tensor.gradInfo.grad.add(grad)
+            : grad;
         }
       };
     }
@@ -733,7 +785,7 @@ export abstract class Layer {
   }
 
   zeroGrad(): void {
-    this.parameters.forEach(param => param.zeroGrad());
+    this.parameters.forEach((param) => param.zeroGrad());
   }
 }
 
@@ -741,13 +793,19 @@ export class Linear extends Layer {
   public weight: Tensor;
   public bias: Tensor;
 
-  constructor(inFeatures: number, outFeatures: number, useBias: boolean = true) {
+  constructor(
+    inFeatures: number,
+    outFeatures: number,
+    useBias: boolean = true,
+  ) {
     super();
-    
+
     // Initialize weights with Xavier/Glorot initialization
     const limit = Math.sqrt(6 / (inFeatures + outFeatures));
-    this.weight = Tensor.uniform([inFeatures, outFeatures], -limit, limit, { requiresGrad: true });
-    
+    this.weight = Tensor.uniform([inFeatures, outFeatures], -limit, limit, {
+      requiresGrad: true,
+    });
+
     if (useBias) {
       this.bias = Tensor.zeros([outFeatures], { requiresGrad: true });
       this.parameters = [this.weight, this.bias];
@@ -756,16 +814,16 @@ export class Linear extends Layer {
       this.parameters = [this.weight];
     }
 
-    debug.info('AI', `Created Linear layer: ${inFeatures} -> ${outFeatures}`);
+    debug.info("AI", `Created Linear layer: ${inFeatures} -> ${outFeatures}`);
   }
 
   forward(input: Tensor): Tensor {
     // input: [batch_size, in_features] or [in_features]
     // weight: [in_features, out_features]
     // output: [batch_size, out_features] or [out_features]
-    
+
     let result: Tensor;
-    
+
     if (input.shape.ndim === 1) {
       // Single sample: [in_features] -> [out_features]
       const inputReshaped = input.reshape([1, input.shape.dimensions[0]]);
@@ -783,7 +841,7 @@ export class Linear extends Layer {
         // For batch input [batch_size, out_features], broadcast bias [out_features] across batch dimension
         const batchSize = result.shape.dimensions[0];
         const outFeatures = result.shape.dimensions[1];
-        
+
         // Create a new result by adding bias to each row
         const newData = [];
         for (let i = 0; i < batchSize; i++) {
@@ -792,9 +850,13 @@ export class Linear extends Layer {
             newData.push(result.data[resultIdx] + this.bias.data[j]);
           }
         }
-        
+
         result = new Tensor(newData);
-        result.shape = { dimensions: [batchSize, outFeatures], size: batchSize * outFeatures, ndim: 2 };
+        result.shape = {
+          dimensions: [batchSize, outFeatures],
+          size: batchSize * outFeatures,
+          ndim: 2,
+        };
       } else {
         // For single input, direct addition works
         result = result.add(this.bias);
@@ -802,42 +864,51 @@ export class Linear extends Layer {
     }
 
     // Simplified gradient setup for Linear layer
-    if (input.gradInfo.requiresGrad || this.weight.gradInfo.requiresGrad || this.bias.gradInfo.requiresGrad) {
+    if (
+      input.gradInfo.requiresGrad ||
+      this.weight.gradInfo.requiresGrad ||
+      this.bias.gradInfo.requiresGrad
+    ) {
       result.gradInfo.requiresGrad = true;
       result.gradInfo.gradFn = () => {
         if (result.gradInfo.grad) {
           // Simplified gradient computation - just accumulate unit gradients
           // This is a fallback to ensure training works
           if (this.weight.gradInfo.requiresGrad) {
-            const weightGrad = Tensor.ones(this.weight.shape.dimensions).mul(0.01);
+            const weightGrad = Tensor.ones(this.weight.shape.dimensions).mul(
+              0.01,
+            );
             if (this.weight.gradInfo.grad) {
-              this.weight.gradInfo.grad = this.weight.gradInfo.grad.add(weightGrad);
+              this.weight.gradInfo.grad =
+                this.weight.gradInfo.grad.add(weightGrad);
             } else {
               this.weight.gradInfo.grad = weightGrad;
             }
-            
+
             // Propagate gradient further back for weight
             if (this.weight.gradInfo.gradFn) {
               this.weight.gradInfo.gradFn();
             }
           }
-          
+
           // Bias gradients
           if (this.bias.gradInfo.requiresGrad) {
-            const biasGrad = result.gradInfo.grad.shape.ndim === 2 ? 
-              result.gradInfo.grad.sum(0) : result.gradInfo.grad;
+            const biasGrad =
+              result.gradInfo.grad.shape.ndim === 2
+                ? result.gradInfo.grad.sum(0)
+                : result.gradInfo.grad;
             if (this.bias.gradInfo.grad) {
               this.bias.gradInfo.grad = this.bias.gradInfo.grad.add(biasGrad);
             } else {
               this.bias.gradInfo.grad = biasGrad;
             }
-            
+
             // Propagate gradient further back for bias
             if (this.bias.gradInfo.gradFn) {
               this.bias.gradInfo.gradFn();
             }
           }
-          
+
           // Input gradients - simplified
           if (input.gradInfo.requiresGrad) {
             const inputGrad = Tensor.ones(input.shape.dimensions).mul(0.01);
@@ -846,7 +917,7 @@ export class Linear extends Layer {
             } else {
               input.gradInfo.grad = inputGrad;
             }
-            
+
             // Propagate gradient further back for input
             if (input.gradInfo.gradFn) {
               input.gradInfo.gradFn();
@@ -866,14 +937,14 @@ export class Sequential extends Layer {
   constructor(layers: Layer[]) {
     super();
     this.layers = layers;
-    
+
     // Collect all parameters from all layers
     this.parameters = [];
-    layers.forEach(layer => {
+    layers.forEach((layer) => {
       this.parameters.push(...layer.getParameters());
     });
 
-    debug.info('AI', `Created Sequential model with ${layers.length} layers`);
+    debug.info("AI", `Created Sequential model with ${layers.length} layers`);
   }
 
   forward(input: Tensor): Tensor {
@@ -886,12 +957,12 @@ export class Sequential extends Layer {
 
   train(): void {
     super.train();
-    this.layers.forEach(layer => layer.train());
+    this.layers.forEach((layer) => layer.train());
   }
 
   eval(): void {
     super.eval();
-    this.layers.forEach(layer => layer.eval());
+    this.layers.forEach((layer) => layer.eval());
   }
 }
 
@@ -926,17 +997,19 @@ export class Softmax extends Layer {
 
 export class LossFunctions {
   static mse(predictions: Tensor, targets: Tensor): Tensor {
-    const diff = predictions.add(targets.mul(-1));  // predictions - targets
-    const squared = diff.mul(diff);  // (predictions - targets)^2
-    return squared.mean();  // mean((predictions - targets)^2)
+    const diff = predictions.add(targets.mul(-1)); // predictions - targets
+    const squared = diff.mul(diff); // (predictions - targets)^2
+    return squared.mean(); // mean((predictions - targets)^2)
   }
 
   static crossEntropy(predictions: Tensor, targets: Tensor): Tensor {
     // Apply softmax to predictions
     const softmaxPred = Activations.softmax(predictions);
-    
+
     // Compute -sum(targets * log(predictions))
-    const logPred = new Tensor(softmaxPred.data.map(x => Math.log(Math.max(x, 1e-15))));
+    const logPred = new Tensor(
+      softmaxPred.data.map((x) => Math.log(Math.max(x, 1e-15))),
+    );
     const product = targets.mul(logPred);
     return product.sum().mul(-1);
   }
@@ -945,11 +1018,14 @@ export class LossFunctions {
     // BCE = -[y*log(p) + (1-y)*log(1-p)]
     const sigmoid = Activations.sigmoid(predictions);
     const eps = 1e-15;
-    
-    const term1 = targets.mul(new Tensor(sigmoid.data.map(x => Math.log(Math.max(x, eps)))));
-    const term2 = new Tensor(targets.data.map(x => 1 - x))
-      .mul(new Tensor(sigmoid.data.map(x => Math.log(Math.max(1 - x, eps)))));
-    
+
+    const term1 = targets.mul(
+      new Tensor(sigmoid.data.map((x) => Math.log(Math.max(x, eps)))),
+    );
+    const term2 = new Tensor(targets.data.map((x) => 1 - x)).mul(
+      new Tensor(sigmoid.data.map((x) => Math.log(Math.max(1 - x, eps)))),
+    );
+
     return term1.add(term2).sum().mul(-1);
   }
 }
@@ -970,7 +1046,7 @@ export abstract class Optimizer {
   abstract step(): void;
 
   zeroGrad(): void {
-    this.parameters.forEach(param => param.zeroGrad());
+    this.parameters.forEach((param) => param.zeroGrad());
   }
 }
 
@@ -981,27 +1057,32 @@ export class SGD extends Optimizer {
   constructor(parameters: Tensor[], lr: number = 0.01, momentum: number = 0) {
     super(parameters, lr);
     this.momentum = momentum;
-    
+
     // Initialize velocities for momentum
     if (momentum > 0) {
-      parameters.forEach(param => {
+      parameters.forEach((param) => {
         this.velocities.set(param, Tensor.zeros(param.shape.dimensions));
       });
     }
 
-    debug.info('AI', `Created SGD optimizer with lr=${lr}, momentum=${momentum}`);
+    debug.info(
+      "AI",
+      `Created SGD optimizer with lr=${lr}, momentum=${momentum}`,
+    );
   }
 
   step(): void {
-    this.parameters.forEach(param => {
+    this.parameters.forEach((param) => {
       if (!param.gradInfo.grad) return;
 
       if (this.momentum > 0) {
         // Momentum update: v = momentum * v + lr * grad, param = param - v
         let velocity = this.velocities.get(param)!;
-        velocity = velocity.mul(this.momentum).add(param.gradInfo.grad.mul(this.lr));
+        velocity = velocity
+          .mul(this.momentum)
+          .add(param.gradInfo.grad.mul(this.lr));
         this.velocities.set(param, velocity);
-        
+
         // Update parameter
         for (let i = 0; i < param.data.length; i++) {
           param.data[i] -= velocity.data[i];
@@ -1025,11 +1106,11 @@ export class Adam extends Optimizer {
   private v: Map<Tensor, Tensor> = new Map(); // second moment
 
   constructor(
-    parameters: Tensor[], 
-    lr: number = 0.001, 
-    beta1: number = 0.9, 
-    beta2: number = 0.999, 
-    eps: number = 1e-8
+    parameters: Tensor[],
+    lr: number = 0.001,
+    beta1: number = 0.9,
+    beta2: number = 0.999,
+    eps: number = 1e-8,
   ) {
     super(parameters, lr);
     this.beta1 = beta1;
@@ -1037,18 +1118,21 @@ export class Adam extends Optimizer {
     this.eps = eps;
 
     // Initialize moments
-    parameters.forEach(param => {
+    parameters.forEach((param) => {
       this.m.set(param, Tensor.zeros(param.shape.dimensions));
       this.v.set(param, Tensor.zeros(param.shape.dimensions));
     });
 
-    debug.info('AI', `Created Adam optimizer with lr=${lr}, beta1=${beta1}, beta2=${beta2}`);
+    debug.info(
+      "AI",
+      `Created Adam optimizer with lr=${lr}, beta1=${beta1}, beta2=${beta2}`,
+    );
   }
 
   step(): void {
     this.t += 1;
-    
-    this.parameters.forEach(param => {
+
+    this.parameters.forEach((param) => {
       if (!param.gradInfo.grad) return;
 
       const grad = param.gradInfo.grad;
@@ -1057,21 +1141,21 @@ export class Adam extends Optimizer {
 
       // Update biased first moment estimate
       m = m.mul(this.beta1).add(grad.mul(1 - this.beta1));
-      
+
       // Update biased second raw moment estimate
       const gradSquared = grad.mul(grad);
       v = v.mul(this.beta2).add(gradSquared.mul(1 - this.beta2));
 
       // Compute bias-corrected first moment estimate
       const mHat = m.mul(1 / (1 - Math.pow(this.beta1, this.t)));
-      
+
       // Compute bias-corrected second raw moment estimate
       const vHat = v.mul(1 / (1 - Math.pow(this.beta2, this.t)));
 
       // Update parameters: param = param - lr * mHat / (sqrt(vHat) + eps)
       for (let i = 0; i < param.data.length; i++) {
         const denominator = Math.sqrt(vHat.data[i]) + this.eps;
-        param.data[i] -= this.lr * mHat.data[i] / denominator;
+        param.data[i] -= (this.lr * mHat.data[i]) / denominator;
       }
 
       // Update stored moments
@@ -1089,35 +1173,42 @@ export class ModelUtils {
   static saveModel(model: Layer, path: string): any {
     const state = {
       type: model.constructor.name,
-      parameters: model.getParameters().map(param => ({
+      parameters: model.getParameters().map((param) => ({
         data: param.data,
         shape: param.shape,
-        requiresGrad: param.gradInfo.requiresGrad
-      }))
+        requiresGrad: param.gradInfo.requiresGrad,
+      })),
     };
-    
-    debug.info('AI', `Model saved with ${state.parameters.length} parameters`);
+
+    debug.info("AI", `Model saved with ${state.parameters.length} parameters`);
     return state;
   }
 
   static loadModel(state: any): any {
     // This would need to be expanded to handle different model types
-    debug.info('AI', `Loading model of type ${state.type} with ${state.parameters.length} parameters`);
+    debug.info(
+      "AI",
+      `Loading model of type ${state.type} with ${state.parameters.length} parameters`,
+    );
     return state;
   }
 
   static countParameters(model: Layer): number {
-    return model.getParameters().reduce((total, param) => total + param.shape.size, 0);
+    return model
+      .getParameters()
+      .reduce((total, param) => total + param.shape.size, 0);
   }
 
   static printModelSummary(model: Layer): void {
     const paramCount = this.countParameters(model);
-    console.log('='.repeat(60));
-    console.log('Model Summary');
-    console.log('='.repeat(60));
+    console.log("=".repeat(60));
+    console.log("Model Summary");
+    console.log("=".repeat(60));
     console.log(`Total parameters: ${paramCount.toLocaleString()}`);
-    console.log(`Memory usage: ~${(paramCount * 4 / 1024 / 1024).toFixed(2)} MB (float32)`);
-    console.log('='.repeat(60));
+    console.log(
+      `Memory usage: ~${((paramCount * 4) / 1024 / 1024).toFixed(2)} MB (float32)`,
+    );
+    console.log("=".repeat(60));
   }
 }
 
@@ -1131,25 +1222,25 @@ export class Trainer {
   private lossFunction: (pred: Tensor, target: Tensor) => Tensor;
 
   constructor(
-    model: Layer, 
-    optimizer: Optimizer, 
-    lossFunction: (pred: Tensor, target: Tensor) => Tensor = LossFunctions.mse
+    model: Layer,
+    optimizer: Optimizer,
+    lossFunction: (pred: Tensor, target: Tensor) => Tensor = LossFunctions.mse,
   ) {
     this.model = model;
     this.optimizer = optimizer;
     this.lossFunction = lossFunction;
 
-    debug.info('AI', 'Trainer initialized');
+    debug.info("AI", "Trainer initialized");
   }
 
   train(
-    trainData: { inputs: Tensor[], targets: Tensor[] },
+    trainData: { inputs: Tensor[]; targets: Tensor[] },
     epochs: number = 100,
     batchSize: number = 32,
-    verbose: boolean = true
+    verbose: boolean = true,
   ): number[] {
     const losses: number[] = [];
-    
+
     for (let epoch = 0; epoch < epochs; epoch++) {
       let epochLoss = 0;
       let numBatches = 0;
@@ -1182,14 +1273,19 @@ export class Trainer {
       losses.push(avgLoss);
 
       if (verbose && (epoch + 1) % 10 === 0) {
-        console.log(`Epoch ${epoch + 1}/${epochs}, Loss: ${avgLoss.toFixed(6)}`);
+        console.log(
+          `Epoch ${epoch + 1}/${epochs}, Loss: ${avgLoss.toFixed(6)}`,
+        );
       }
     }
 
     return losses;
   }
 
-  evaluate(testData: { inputs: Tensor[], targets: Tensor[] }): { loss: number, accuracy?: number } {
+  evaluate(testData: { inputs: Tensor[]; targets: Tensor[] }): {
+    loss: number;
+    accuracy?: number;
+  } {
     this.model.eval();
     let totalLoss = 0;
     let correct = 0;
@@ -1202,7 +1298,10 @@ export class Trainer {
 
       // Check if this is classification (targets are one-hot or have multiple classes)
       const target = testData.targets[i];
-      if (target.shape.dimensions[0] > 1 && target.data.some(val => val === 1 || val === 0)) {
+      if (
+        target.shape.dimensions[0] > 1 &&
+        target.data.some((val) => val === 1 || val === 0)
+      ) {
         isClassification = true;
         const predClass = prediction.data.indexOf(Math.max(...prediction.data));
         const targetClass = target.data.indexOf(Math.max(...target.data));
@@ -1211,7 +1310,9 @@ export class Trainer {
     }
 
     const avgLoss = totalLoss / testData.inputs.length;
-    const accuracy = isClassification ? correct / testData.inputs.length : undefined;
+    const accuracy = isClassification
+      ? correct / testData.inputs.length
+      : undefined;
 
     return { loss: avgLoss, accuracy };
   }
@@ -1225,30 +1326,30 @@ export class AIUtils {
   static cleanup(): void {
     TensorPool.clearPools();
     simdCache.length = 0;
-    debug.info('AI', 'AI module cleanup completed');
+    debug.info("AI", "AI module cleanup completed");
   }
 
-  static getMemoryStats(): { pooledArrays: number, simdProcessors: number } {
+  static getMemoryStats(): { pooledArrays: number; simdProcessors: number } {
     const totalPooledArrays = 0;
     // Access private pools through a method if needed
     const simdProcessors = simdCache.length;
-    
+
     return {
       pooledArrays: totalPooledArrays,
-      simdProcessors
+      simdProcessors,
     };
   }
 
   static optimizeMemory(): void {
     // Force garbage collection of unused tensors
     TensorPool.clearPools();
-    
+
     // Trim SIMD cache to reasonable size
     while (simdCache.length > 5) {
       simdCache.pop();
     }
-    
-    debug.info('AI', 'Memory optimization completed');
+
+    debug.info("AI", "Memory optimization completed");
   }
 }
 
@@ -1270,7 +1371,7 @@ export const AI = {
   Adam,
   Trainer,
   ModelUtils,
-  AIUtils
+  AIUtils,
 };
 
 // Default export for convenience

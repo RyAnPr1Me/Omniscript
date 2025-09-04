@@ -3,35 +3,35 @@ export interface ASTNode {
 }
 
 export interface Program extends ASTNode {
-  type: 'Program';
+  type: "Program";
   body: ASTNode[];
 }
 
 export interface FunctionDeclaration extends ASTNode {
-  type: 'FunctionDeclaration';
+  type: "FunctionDeclaration";
   id: { name: string };
   params: Parameter[];
   body: ASTNode[];
 }
 
 export interface Parameter extends ASTNode {
-  type: 'Parameter';
+  type: "Parameter";
   name: string;
   typeAnnotation?: string;
 }
 
 export interface ReturnStatement extends ASTNode {
-  type: 'ReturnStatement';
+  type: "ReturnStatement";
   argument: Expression | null;
 }
 
 export interface Expression extends ASTNode {
-  type: 'Expression';
+  type: "Expression";
   value: any;
 }
 
 export interface ClassDeclaration extends ASTNode {
-  type: 'ClassDeclaration';
+  type: "ClassDeclaration";
   id: { name: string };
   superClass?: { name: string };
   implements?: { name: string }[];
@@ -39,14 +39,14 @@ export interface ClassDeclaration extends ASTNode {
 }
 
 export interface InterfaceDeclaration extends ASTNode {
-  type: 'InterfaceDeclaration';
+  type: "InterfaceDeclaration";
   id: { name: string };
   extends?: { name: string }[];
   body: InterfaceMember[];
 }
 
 export interface MethodDeclaration extends ASTNode {
-  type: 'MethodDeclaration';
+  type: "MethodDeclaration";
   id: { name: string };
   params: Parameter[];
   returnType?: string;
@@ -55,7 +55,7 @@ export interface MethodDeclaration extends ASTNode {
 }
 
 export interface PropertyDeclaration extends ASTNode {
-  type: 'PropertyDeclaration';
+  type: "PropertyDeclaration";
   id: { name: string };
   typeAnnotation?: string;
   initializer?: Expression;
@@ -63,71 +63,71 @@ export interface PropertyDeclaration extends ASTNode {
 }
 
 export interface TypeAnnotation extends ASTNode {
-  type: 'TypeAnnotation';
+  type: "TypeAnnotation";
   typeAnnotation: string | ObjectType | ArrayType | FunctionType;
 }
 
 export interface ClassMember extends ASTNode {
-  type: 'ClassMember';
+  type: "ClassMember";
   modifiers: string[];
   declaration: MethodDeclaration | PropertyDeclaration;
 }
 
 export interface InterfaceMember extends ASTNode {
-  type: 'InterfaceMember';
+  type: "InterfaceMember";
   name: string;
   typeAnnotation: TypeAnnotation;
 }
 
 export interface ObjectType extends ASTNode {
-  type: 'ObjectType';
+  type: "ObjectType";
   properties: { [key: string]: TypeAnnotation };
 }
 
 export interface ArrayType extends ASTNode {
-  type: 'ArrayType';
+  type: "ArrayType";
   elementType: TypeAnnotation;
 }
 
 export interface FunctionType extends ASTNode {
-  type: 'FunctionType';
+  type: "FunctionType";
   parameters: TypeAnnotation[];
   returnType: TypeAnnotation;
 }
 
 export interface GenericParameter extends ASTNode {
-  type: 'GenericParameter';
+  type: "GenericParameter";
   name: string;
   constraint?: TypeAnnotation;
 }
 
 export interface MatchExpression extends ASTNode {
-  type: 'MatchExpression';
+  type: "MatchExpression";
   subject: Expression;
   arms: MatchArm[];
 }
 
 export interface MatchArm extends ASTNode {
-  type: 'MatchArm';
+  type: "MatchArm";
   pattern: Pattern;
   expression: Expression;
 }
 
 export interface Pattern extends ASTNode {
-  type: 'Pattern';
-  kind: 'literal' | 'variable' | 'wildcard' | 'or' | 'object' | 'array';
+  type: "Pattern";
+  kind: "literal" | "variable" | "wildcard" | "or" | "object" | "array";
   value?: any;
   subPatterns?: Pattern[];
 }
 
 export interface Decorator extends ASTNode {
-  type: 'Decorator';
+  type: "Decorator";
   name: string;
   arguments?: Expression[];
 }
 
 export interface OperatorDeclaration extends ASTNode {
-  type: 'OperatorDeclaration';
+  type: "OperatorDeclaration";
   operator: string;
   params: Parameter[];
   returnType?: TypeAnnotation;

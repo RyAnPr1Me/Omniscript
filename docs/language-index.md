@@ -11,6 +11,7 @@ This index provides a quick reference to find any feature, function, keyword, or
 ## Alphabetical Index of All Features
 
 ### A
+
 - [Actor Model](./comprehensive-reference.md#actor-model) - Runtime concurrency primitives
 - [Array Types](./comprehensive-reference.md#array-types) - Type system for arrays
 - [async](./comprehensive-reference.md#async) - Asynchronous function declaration
@@ -24,10 +25,12 @@ This index provides a quick reference to find any feature, function, keyword, or
 - [await](./comprehensive-reference.md#await) - Wait for promise resolution
 
 ### B
+
 - [BinarySearchTree](./comprehensive-reference.md#binarysearchtree) - BST data structure
 - [boolean](./comprehensive-reference.md#boolean) - Boolean primitive type
 
 ### C
+
 - [class](./comprehensive-reference.md#class) - Class declaration keyword
 - [Collections](./comprehensive-reference.md#collections) - List, Map, Set, etc.
 - [Console](./comprehensive-reference.md#console-functions) - Logging and output functions
@@ -36,12 +39,14 @@ This index provides a quick reference to find any feature, function, keyword, or
 - [Crypto](./comprehensive-reference.md#cryptography) - Cryptographic functions
 
 ### D
+
 - [Database](./comprehensive-reference.md#database) - Database operations and ORM
 - [DateTime](./comprehensive-reference.md#datetime) - Date and time utilities
 - [def](./comprehensive-reference.md#def) - Immutable binding declaration
 - [Decorators](./comprehensive-reference.md#decorators) - Metadata and annotations
 
 ### E
+
 - [Either Monad](./comprehensive-reference.md#either-monad) - Error handling monad
 - [else](./comprehensive-reference.md#if--else) - Conditional execution
 - [Error Handling](./comprehensive-reference.md#error-handling) - Result types and exceptions
@@ -49,6 +54,7 @@ This index provides a quick reference to find any feature, function, keyword, or
 - [extends](./comprehensive-reference.md#extends) - Class inheritance
 
 ### F
+
 - [false](./comprehensive-reference.md#true--false) - Boolean literal
 - [finally](./comprehensive-reference.md#try--catch--finally) - Exception cleanup
 - [fn](./comprehensive-reference.md#fn) - Function declaration
@@ -57,27 +63,33 @@ This index provides a quick reference to find any feature, function, keyword, or
 - [Function Composition](./comprehensive-reference.md#function-composition) - Functional programming
 
 ### G
+
 - [Garbage Collection](./comprehensive-reference.md#garbage-collection) - Memory management
 - [Generic Types](./comprehensive-reference.md#generic-types) - Parameterized types
 - [Graph](./comprehensive-reference.md#graph) - Graph data structure
 
 ### H
+
 - [HTTP](./comprehensive-reference.md#network-and-http) - HTTP client and server utilities
 
 ### I
+
 - [if](./comprehensive-reference.md#if--else) - Conditional execution
 - [in](./comprehensive-reference.md#in) - Property existence check
 - [interface](./comprehensive-reference.md#interface) - Interface declaration
 - [Intersection Types](./comprehensive-reference.md#intersection-types) - Type combinations
 
 ### J
+
 - [JIT Compilation](./comprehensive-reference.md#just-in-time-compilation) - Runtime optimization
 
 ### L
+
 - [let](./comprehensive-reference.md#let) - Variable declaration
 - [List](./comprehensive-reference.md#list) - Dynamic array collection
 
 ### M
+
 - [Macros](./comprehensive-reference.md#macros) - Compile-time metaprogramming
 - [Map](./comprehensive-reference.md#map) - Key-value collection
 - [match](./comprehensive-reference.md#match) - Pattern matching
@@ -87,18 +99,21 @@ This index provides a quick reference to find any feature, function, keyword, or
 - [module](./comprehensive-reference.md#module) - Module declaration
 
 ### N
+
 - [Network](./comprehensive-reference.md#network-and-http) - HTTP, WebSocket utilities
 - [new](./comprehensive-reference.md#new) - Instance creation
 - [null](./comprehensive-reference.md#null) - Null literal
 - [number](./comprehensive-reference.md#number) - Numeric primitive type
 
 ### O
+
 - [object](./comprehensive-reference.md#object) - Object declaration
 - [Observable](./comprehensive-reference.md#observable) - Reactive programming
 - [Operators](./comprehensive-reference.md#operators) - All language operators
 - [Option Type](./comprehensive-reference.md#option-type) - Optional value handling
 
 ### P
+
 - [Package Manager](./comprehensive-reference.md#package-manager) - Dependency management
 - [Parallel Execution](./comprehensive-reference.md#parallel-execution) - Concurrent operations
 - [Pattern Matching](./comprehensive-reference.md#pattern-matching) - Advanced control flow
@@ -106,9 +121,11 @@ This index provides a quick reference to find any feature, function, keyword, or
 - [PriorityQueue](./comprehensive-reference.md#priorityqueue) - Priority-based queue
 
 ### Q
+
 - [QueryBuilder](./comprehensive-reference.md#querybuilder) - Database query construction
 
 ### R
+
 - [RandomUtils.choice](./comprehensive-reference.md#randomutilschoicearray--randomutilssamplearray-count) - Pick random from array
 - [RandomUtils.int](./comprehensive-reference.md#randomutilsintmin-max--randomutilsfloatmin-max) - Generate random integers
 - [RandomUtils.password](./comprehensive-reference.md#randomutilspasswordlength-options) - Generate secure passwords
@@ -123,6 +140,7 @@ This index provides a quick reference to find any feature, function, keyword, or
 - [Runtime Features](./comprehensive-reference.md#runtime-features) - Memory, GC, profiling
 
 ### S
+
 - [SecureRandom](./comprehensive-reference.md#securerandom) - Cryptographic randomness
 - [Set](./comprehensive-reference.md#set) - Unique value collection
 - [Signal](./comprehensive-reference.md#signal) - Reactive state
@@ -141,6 +159,7 @@ This index provides a quick reference to find any feature, function, keyword, or
 - [StringUtils.truncate](./comprehensive-reference.md#stringutilstruncatestr-maxlength-suffix) - Truncate with suffix
 
 ### T
+
 - [Testing Framework](./comprehensive-reference.md#testing-framework) - Unit testing tools
 - [Thread](./comprehensive-reference.md#thread) - Threading utilities
 - [throw](./comprehensive-reference.md#throw) - Exception throwing
@@ -150,6 +169,7 @@ This index provides a quick reference to find any feature, function, keyword, or
 - [typeof](./comprehensive-reference.md#typeof) - Type introspection
 
 ### U
+
 - [undefined](./comprehensive-reference.md#undefined) - Undefined literal
 - [Union Types](./comprehensive-reference.md#union-types) - Alternative types
 - [UrlBuilder](./comprehensive-reference.md#urlbuilder) - Builder pattern for URLs
@@ -160,17 +180,20 @@ This index provides a quick reference to find any feature, function, keyword, or
 - [use](./comprehensive-reference.md#use) - Import statement
 
 ### V
+
 - [var](./comprehensive-reference.md#var) - Mutable variable declaration
 - [Vector2D/Vector3D](./comprehensive-reference.md#vector2d--vector3d) - Vector mathematics
 - [void](./comprehensive-reference.md#void) - No return type
 
 ### W
+
 - [WebSocket](./comprehensive-reference.md#websocket) - Real-time communication
 - [while](./comprehensive-reference.md#while) - Loop construct
 
 ## Operators Quick Reference
 
 ### Arithmetic
+
 - `+` - Addition
 - `-` - Subtraction
 - `*` - Multiplication
@@ -178,22 +201,26 @@ This index provides a quick reference to find any feature, function, keyword, or
 - `%` - Modulo
 
 ### Assignment
+
 - `=` - Basic assignment
 - `+=`, `-=`, `*=`, `/=`, `%=` - Compound assignment
 - `??=` - Nullish assignment
 
 ### Comparison
+
 - `==`, `!=` - Equality
 - `===`, `!==` - Strict equality
 - `<`, `>`, `<=`, `>=` - Relational
 
 ### Logical
+
 - `&&` - Logical AND
 - `||` - Logical OR
 - `!` - Logical NOT
 - `??` - Nullish coalescing
 
 ### Special
+
 - `=>` - Arrow function
 - `|>` - Pipeline operator
 - `?` - Ternary conditional
@@ -205,33 +232,43 @@ This index provides a quick reference to find any feature, function, keyword, or
 ## Built-in Functions and Classes Summary
 
 ### Console Functions (12)
+
 log, info, warn, error, debug, time, timeEnd, trace, group, groupEnd, clear, table
 
 ### Collections (6)
+
 List, Map, Set, PriorityQueue, Graph, BinarySearchTree
 
 ### Math (7)
+
 MathUtils (PI, E, factorial, gcd, random), Vector2D, Vector3D, Matrix
 
 ### DateTime (3)
+
 DateTime, DateTimeUtils, Timezone
 
 ### Network (7)
+
 HTTP (get, post, put, delete), HTTPClient, WebSocket, WebSocketClient
 
 ### Database (4)
+
 Database (query, save, findById, findAll), QueryBuilder
 
 ### Crypto (2)
+
 Crypto (hash, encrypt, decrypt, generateKey), SecureRandom
 
 ### Reactive (3)
+
 Stream, Signal, Observable
 
 ### Utilities (4)
+
 sleep, GC, Thread, DOM
 
 ### Runtime (3)
+
 Memory Management, Performance Monitoring, JIT Compilation
 
 ## Total Coverage

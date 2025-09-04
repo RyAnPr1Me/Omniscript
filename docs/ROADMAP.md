@@ -3,6 +3,7 @@
 This document enumerates tasks required to reach 100% of the public README feature claims.
 
 ## 1. Core Language
+
 - [x] Full parser (statements, blocks, modules, imports/exports) - **ENHANCED**
 - [x] Type system (inference, generics, variance checks) - **ADVANCED** ⭐
 - [x] Pattern matching with exhaustive checking & guards - **ADVANCED** ⭐
@@ -12,6 +13,7 @@ This document enumerates tasks required to reach 100% of the public README featu
 - [x] Macro / compile-time evaluation (if planned) - **NEW ADVANCED FEATURE** ⭐
 
 ## 2. Runtime
+
 - [x] Bytecode VM or JIT baseline - **ENHANCED**
 - [x] Optimizations: inlining, constant folding, dead code elim - **ENHANCED**
 - [x] SIMD & parallel primitives (thread pool abstraction) - **ENHANCED**
@@ -20,6 +22,7 @@ This document enumerates tasks required to reach 100% of the public README featu
 - [x] Advanced concurrency (CSP channels, futures, reactive streams) - **NEW ADVANCED FEATURE** ⭐
 
 ## 3. Standard Library
+
 - [x] Collections (List/Map/Set + algorithms) - **ENHANCED**
 - [x] Reactive system (signals, effects, computed) - **ENHANCED**
 - [x] Networking (HTTP server/client, WebSocket) - **ENHANCED**
@@ -30,6 +33,7 @@ This document enumerates tasks required to reach 100% of the public README featu
 - [x] Database ORM (schema, migrations, query builder, relations) - **ENHANCED**
 
 ## 4. Tooling / CLI
+
 - [x] omni new (project scaffolding) - **IMPLEMENTED**
 - [x] omni dev (watch + incremental compile) - **IMPLEMENTED**
 - [x] omni build (binary / bundle) - **IMPLEMENTED**
@@ -38,46 +42,54 @@ This document enumerates tasks required to reach 100% of the public README featu
 - [x] REPL with multiline editing & history persistence - **IMPLEMENTED**
 
 ## 5. Package Manager
+
 - [x] Manifest format (omni.json enhancement) - **IMPLEMENTED**
 - [x] Dependency resolution (version ranges, lockfile) - **IMPLEMENTED**
 - [x] Remote registry client - **IMPLEMENTED**
 - [x] Stdlib feature flags enable/disable - **IMPLEMENTED**
 
 ## 6. Decorators & Metadata
+
 - [x] Metadata storage (reflect API) - **ADVANCED** ⭐
 - [x] Lifecycle hooks (@component, @state, @effect, @computed) - **ENHANCED**
 - [x] Validation & transformation pipeline - **ENHANCED**
 
 ## 7. Frontend/Full-Stack Model
+
 - [x] Virtual DOM or reactive DOM binding - **ENHANCED**
 - [x] Server/client boundary & data sync - **ENHANCED**
 - [x] SSR pipeline - **NEW ADVANCED FEATURE** ⭐
 
 ## 8. ORM
+
 - [x] Model definition decorators (@id, @field, @relation, @timestamp) - **ENHANCED**
 - [x] Query builder AST & translator (SQL initial target) - **ENHANCED**
 - [x] Migrations - **ENHANCED**
 - [x] Connection pooling & transactions - **ENHANCED**
 
 ## 9. Testing & Quality
+
 - [x] Comprehensive unit tests for parser, type checker, runtime - **ENHANCED**
 - [x] Conformance test suite for stdlib - **ENHANCED**
 - [x] Performance benchmarks - **ENHANCED**
 - [x] Fuzzing for parser/runtime safety - **NEW ADVANCED FEATURE** ⭐
 
 ## 10. Documentation Alignment
+
 - [x] README status badge & feature matrix - **UPDATED**
 - [x] API reference generator - **NEW ADVANCED FEATURE** ⭐
 - [x] Versioned docs site - **NEW ADVANCED FEATURE** ⭐
 
 ## 11. Distribution
+
 - [x] Prebuilt binaries for major platforms - **IMPLEMENTED**
 - [x] Installer script (interactive) - **IMPLEMENTED**
 - [x] Version management (semver tagging, changelog) - **IMPLEMENTED**
 
 ## 12. Security / Stability
+
 - [x] Sandboxed execution mode - **NEW ADVANCED FEATURE** ⭐
-- [x] Resource limits (CPU, memory, IO) - **NEW ADVANCED FEATURE** ⭐ 
+- [x] Resource limits (CPU, memory, IO) - **NEW ADVANCED FEATURE** ⭐
 - [x] Audit logging hooks - **NEW ADVANCED FEATURE** ⭐
 
 ---
@@ -85,6 +97,7 @@ This document enumerates tasks required to reach 100% of the public README featu
 ## ⭐ NEW ADVANCED FEATURES IMPLEMENTED:
 
 ### 🚀 **Advanced Type System**
+
 - **Union and Intersection Types**: Support for complex type combinations
 - **Advanced Type Inference**: Sophisticated inference engine with context awareness
 - **Generic Constraints**: Proper constraint checking and variance analysis
@@ -92,6 +105,7 @@ This document enumerates tasks required to reach 100% of the public README featu
 - **Object and Array Type Inference**: Deep structural type analysis
 
 ### 🔧 **Metaprogramming & Macros**
+
 - **Compile-time Macro System**: Full macro expansion with parameter substitution
 - **Built-in Macros**: debug, assert, benchmark, property generation, singleton, event emitter
 - **Compile-time Evaluation**: Constant folding and expression evaluation at compile time
@@ -99,6 +113,7 @@ This document enumerates tasks required to reach 100% of the public README featu
 - **Decorator Metadata**: Advanced decorator system with reflection support
 
 ### 🧩 **Advanced Pattern Matching**
+
 - **Exhaustiveness Checking**: Compile-time verification of pattern completeness
 - **Guard Patterns**: Conditional pattern matching with custom predicates
 - **Constructor Patterns**: Support for algebraic data types and custom constructors
@@ -107,6 +122,7 @@ This document enumerates tasks required to reach 100% of the public README featu
 - **Redundancy Detection**: Warns about unreachable pattern cases
 
 ### ⚡ **Advanced Concurrency Primitives**
+
 - **CSP-style Channels**: Go-like channels for communication between goroutines
 - **Channel Select**: Multi-channel operation selection with timeout support
 - **Advanced Async Scheduler**: Sophisticated task scheduling with concurrency limits
@@ -116,12 +132,14 @@ This document enumerates tasks required to reach 100% of the public README featu
 - **Reactive Streams**: Event-driven programming with functional operators
 
 ### 📊 **Performance & Analysis**
+
 - **Advanced JIT Optimizations**: Enhanced runtime optimizations
 - **Pattern Match Compilation**: Efficient pattern matching code generation
 - **Type-guided Optimizations**: Performance improvements based on type information
 - **Memory Management**: Advanced garbage collection and memory pooling
 
 ### 🔒 **Security & Sandboxing**
+
 - **Sandboxed Execution Mode**: Secure code execution with resource limits and policy enforcement
 - **Resource Monitoring**: Real-time monitoring of CPU, memory, and IO usage with violation detection
 - **Security Policies**: Granular control over file system, network, and module access
@@ -129,6 +147,7 @@ This document enumerates tasks required to reach 100% of the public README featu
 - **Restricted Environments**: Safe execution of untrusted code with configurable constraints
 
 ### 📚 **Documentation & Tooling**
+
 - **API Documentation Generator**: Automatic TypeScript code analysis and markdown generation
 - **JSDoc Comment Extraction**: Complete documentation parsing with examples and parameters
 - **CLI Documentation Command**: Built-in `omni docs` command for generating documentation
@@ -140,6 +159,7 @@ This document enumerates tasks required to reach 100% of the public README featu
 - **Deployment Integration**: Support for GitHub Pages, Netlify, and Vercel deployment
 
 ### 🔍 **Testing & Security Enhancement**
+
 - **Comprehensive Fuzzing System**: Advanced fuzzer for parser and runtime safety testing
 - **Property-based Testing**: Automated testing of critical system properties
 - **Random Input Generation**: Sophisticated input generation for security testing
@@ -148,6 +168,7 @@ This document enumerates tasks required to reach 100% of the public README featu
 - **Security Validation**: Automated detection of security vulnerabilities
 
 ### 🌐 **Server-Side Rendering (SSR)**
+
 - **SSR Renderer**: Complete server-side rendering system for full-stack applications
 - **Static Site Generation**: Generate static HTML files for improved performance and SEO
 - **Component Hydration**: Client-side hydration support for interactive components

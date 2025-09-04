@@ -1,4 +1,4 @@
-import { readFile, writeFile } from 'fs/promises';
+import { readFile, writeFile } from "fs/promises";
 
 interface PackageConfig {
   name: string;
@@ -12,14 +12,14 @@ interface PackageConfig {
 
 export class PackageManager {
   private config: PackageConfig = {
-    name: '',
-    version: '',
+    name: "",
+    version: "",
     dependencies: {},
-    omniscript: {}
+    omniscript: {},
   };
 
-  async loadConfig(path: string = 'package.json'): Promise<void> {
-    const content = await readFile(path, 'utf-8');
+  async loadConfig(path: string = "package.json"): Promise<void> {
+    const content = await readFile(path, "utf-8");
     this.config = JSON.parse(content);
   }
 
@@ -41,8 +41,8 @@ export class PackageManager {
     // Enable debugger support
     this.config.omniscript = this.config.omniscript || {};
     this.config.omniscript.plugins = this.config.omniscript.plugins || [];
-    if (!this.config.omniscript.plugins.includes('debugger')) {
-      this.config.omniscript.plugins.push('debugger');
+    if (!this.config.omniscript.plugins.includes("debugger")) {
+      this.config.omniscript.plugins.push("debugger");
     }
     await this.saveConfig();
   }
@@ -51,8 +51,8 @@ export class PackageManager {
     // Enable profiler support
     this.config.omniscript = this.config.omniscript || {};
     this.config.omniscript.plugins = this.config.omniscript.plugins || [];
-    if (!this.config.omniscript.plugins.includes('profiler')) {
-      this.config.omniscript.plugins.push('profiler');
+    if (!this.config.omniscript.plugins.includes("profiler")) {
+      this.config.omniscript.plugins.push("profiler");
     }
     await this.saveConfig();
   }
@@ -61,8 +61,8 @@ export class PackageManager {
     // Enable autocomplete support
     this.config.omniscript = this.config.omniscript || {};
     this.config.omniscript.plugins = this.config.omniscript.plugins || [];
-    if (!this.config.omniscript.plugins.includes('autocomplete')) {
-      this.config.omniscript.plugins.push('autocomplete');
+    if (!this.config.omniscript.plugins.includes("autocomplete")) {
+      this.config.omniscript.plugins.push("autocomplete");
     }
     await this.saveConfig();
   }
@@ -71,8 +71,8 @@ export class PackageManager {
     // Enable linting support
     this.config.omniscript = this.config.omniscript || {};
     this.config.omniscript.plugins = this.config.omniscript.plugins || [];
-    if (!this.config.omniscript.plugins.includes('linting')) {
-      this.config.omniscript.plugins.push('linting');
+    if (!this.config.omniscript.plugins.includes("linting")) {
+      this.config.omniscript.plugins.push("linting");
     }
     await this.saveConfig();
   }
@@ -81,31 +81,33 @@ export class PackageManager {
     // Enable refactoring tools support
     this.config.omniscript = this.config.omniscript || {};
     this.config.omniscript.plugins = this.config.omniscript.plugins || [];
-    if (!this.config.omniscript.plugins.includes('refactoring-tools')) {
-      this.config.omniscript.plugins.push('refactoring-tools');
+    if (!this.config.omniscript.plugins.includes("refactoring-tools")) {
+      this.config.omniscript.plugins.push("refactoring-tools");
     }
     await this.saveConfig();
   }
 
   async listAvailableLibraries(): Promise<string[]> {
     // Fetch the list of libraries from the registry
-    const response = await fetch('https://registry.omniscript.dev/libraries');
+    const response = await fetch("https://registry.omniscript.dev/libraries");
     return response.json();
   }
 
   async listAvailablePlugins(): Promise<string[]> {
     // Fetch the list of plugins from the registry
-    const response = await fetch('https://registry.omniscript.dev/plugins');
+    const response = await fetch("https://registry.omniscript.dev/plugins");
     return response.json();
   }
 
   async searchRegistry(query: string): Promise<string[]> {
     // Search the registry for libraries or plugins matching the query
-    const response = await fetch(`https://registry.omniscript.dev/search?q=${encodeURIComponent(query)}`);
+    const response = await fetch(
+      `https://registry.omniscript.dev/search?q=${encodeURIComponent(query)}`,
+    );
     return response.json();
   }
 
   private async saveConfig(): Promise<void> {
-    await writeFile('package.json', JSON.stringify(this.config, null, 2));
+    await writeFile("package.json", JSON.stringify(this.config, null, 2));
   }
 }

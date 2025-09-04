@@ -1,7 +1,7 @@
-import { OmniscriptError } from '../errors';
-import { debug } from '../debug';
-import { JITOptimizer } from './optimizer';
-import { AOTCompiler, AOTCompilerOptions } from './aot';
+import { OmniscriptError } from "../errors";
+import { debug } from "../debug";
+import { JITOptimizer } from "./optimizer";
+import { AOTCompiler, AOTCompilerOptions } from "./aot";
 
 export interface CompilerOptions {
   fastMode?: boolean;
@@ -29,21 +29,21 @@ export class Compiler {
     if (this.options.enableCaching) {
       const cacheKey = this.generateASTHash(ast);
       if (this.compilationCache.has(cacheKey)) {
-        debug.debug('Compiler', 'Cache hit - returning cached bytecode');
+        debug.debug("Compiler", "Cache hit - returning cached bytecode");
         return this.compilationCache.get(cacheKey);
       }
     }
 
     // Use AOT compiler for direct machine code generation
     if (this.options.useAOT) {
-      debug.debug('Compiler', 'Using AOT compilation for maximum speed');
+      debug.debug("Compiler", "Using AOT compilation for maximum speed");
       const machineCode = this.aotCompiler.compileToMachineCode(ast);
-      
+
       if (this.options.enableCaching) {
         const cacheKey = this.generateASTHash(ast);
         this.compilationCache.set(cacheKey, machineCode);
       }
-      
+
       return machineCode;
     }
 
@@ -51,83 +51,102 @@ export class Compiler {
       return this.fastCompile(ast);
     }
 
-    debug.info('Compiler', 'Starting JIT compilation with advanced language features...');
-    debug.time('Compiler', 'compilation');
-    
+    debug.info(
+      "Compiler",
+      "Starting JIT compilation with advanced language features...",
+    );
+    debug.time("Compiler", "compilation");
+
     // Perform basic type checking before compilation
     if (!this.options.skipTypeChecking) {
       this.performTypeChecking(ast);
     }
-    
+
     const bytecode = this.visitNode(ast);
-    
+
     // Apply JIT optimizations
     let optimizedBytecode = bytecode;
     if (!this.options.skipOptimization) {
       optimizedBytecode = this.jitOptimizer.optimize(bytecode);
     }
-    
+
     // Cache result if enabled
     if (this.options.enableCaching) {
       const cacheKey = this.generateASTHash(ast);
       this.compilationCache.set(cacheKey, optimizedBytecode);
     }
-    
-    debug.timeEnd('Compiler', 'compilation');
-    debug.debug('Compiler', 'Generated optimized bytecode:', optimizedBytecode);
+
+    debug.timeEnd("Compiler", "compilation");
+    debug.debug("Compiler", "Generated optimized bytecode:", optimizedBytecode);
     return optimizedBytecode;
   }
 
   fastCompile(ast: any): any {
     // Direct compilation to bytecode with minimal overhead
-    debug.debug('Compiler', 'Fast compilation mode - skipping expensive operations');
-    
+    debug.debug(
+      "Compiler",
+      "Fast compilation mode - skipping expensive operations",
+    );
+
     const bytecode = this.visitNode(ast);
-    
+
     // Cache result if enabled
     if (this.options.enableCaching) {
       const cacheKey = this.generateASTHash(ast);
       this.compilationCache.set(cacheKey, bytecode);
     }
-    
+
     return bytecode;
   }
 
   private generateASTHash(ast: any): string {
     // Simple hash generation for caching
-    return JSON.stringify(ast).split('').reduce((hash, char) => {
-      return ((hash << 5) - hash + char.charCodeAt(0)) & 0xffffffff;
-    }, 0).toString(36);
+    return JSON.stringify(ast)
+      .split("")
+      .reduce((hash, char) => {
+        return ((hash << 5) - hash + char.charCodeAt(0)) & 0xffffffff;
+      }, 0)
+      .toString(36);
   }
 
   private performTypeChecking(ast: any): void {
-    debug.debug('Compiler', 'Performing type checking on AST:', ast.type);
+    debug.debug("Compiler", "Performing type checking on AST:", ast.type);
     this.checkNodeForTypeErrors(ast);
   }
 
   private checkNodeForTypeErrors(node: any): void {
     if (!node) return;
-    
+
     // Check function declarations for type errors
-    if ((node.type === 'Function' || node.type === 'FunctionDeclaration') && node.params) {
-      const hasTypeAnnotations = node.params.some((param: any) => param.type || param.paramType);
+    if (
+      (node.type === "Function" || node.type === "FunctionDeclaration") &&
+      node.params
+    ) {
+      const hasTypeAnnotations = node.params.some(
+        (param: any) => param.type || param.paramType,
+      );
       if (hasTypeAnnotations) {
         // Check for obvious type mismatches in the function body
         const hasTypeError = this.checkForTypeErrors(node);
         if (hasTypeError) {
-          debug.error('Compiler', 'Type mismatch detected in function parameters');
-          throw new OmniscriptError('Type mismatch detected in function parameters');
+          debug.error(
+            "Compiler",
+            "Type mismatch detected in function parameters",
+          );
+          throw new OmniscriptError(
+            "Type mismatch detected in function parameters",
+          );
         }
       }
     }
-    
+
     // Recursively check child nodes
     if (node.body && Array.isArray(node.body)) {
       node.body.forEach((child: any) => this.checkNodeForTypeErrors(child));
     }
-    
+
     // Also check Program body
-    if (node.type === 'Program' && node.body && Array.isArray(node.body)) {
+    if (node.type === "Program" && node.body && Array.isArray(node.body)) {
       node.body.forEach((child: any) => this.checkNodeForTypeErrors(child));
     }
   }
@@ -136,27 +155,31 @@ export class Compiler {
     // Simple heuristic: if function has number and string parameters,
     // and tries to add them directly, that's a type error
     if (!fnNode.params || fnNode.params.length < 2) return false;
-    
-    const hasNumberParam = fnNode.params.some((p: any) => 
-      (p.type && p.type.includes('number')) || 
-      (p.paramType && p.paramType.includes('number'))
+
+    const hasNumberParam = fnNode.params.some(
+      (p: any) =>
+        (p.type && p.type.includes("number")) ||
+        (p.paramType && p.paramType.includes("number")),
     );
-    const hasStringParam = fnNode.params.some((p: any) => 
-      (p.type && p.type.includes('string')) || 
-      (p.paramType && p.paramType.includes('string'))
+    const hasStringParam = fnNode.params.some(
+      (p: any) =>
+        (p.type && p.type.includes("string")) ||
+        (p.paramType && p.paramType.includes("string")),
     );
-    
+
     // If both number and string params exist, and there's an addition operation,
     // it's likely a type error
-    return hasNumberParam && hasStringParam && this.hasAdditionOperation(fnNode.body);
+    return (
+      hasNumberParam && hasStringParam && this.hasAdditionOperation(fnNode.body)
+    );
   }
 
   private hasAdditionOperation(body: any): boolean {
     if (!body) return false;
     if (Array.isArray(body)) {
-      return body.some(stmt => this.hasAdditionOperation(stmt));
+      return body.some((stmt) => this.hasAdditionOperation(stmt));
     }
-    if (body.type === 'BinaryExpression' && body.operator === '+') {
+    if (body.type === "BinaryExpression" && body.operator === "+") {
       return true;
     }
     // Check nested properties for binary expressions
@@ -170,52 +193,54 @@ export class Compiler {
 
   private visitNode(node: any): any {
     switch (node.type) {
-      case 'ImportDeclaration':
+      case "ImportDeclaration":
         return this.visitImportDeclaration(node);
-      case 'Program':
+      case "Program":
         return this.visitProgram(node);
-      case 'Block':
+      case "Block":
         return this.visitBlock(node);
-      case 'Match':
-      case 'MatchExpression':
+      case "Match":
+      case "MatchExpression":
         return this.visitMatch(node);
-      case 'Class':
-      case 'ClassDecl':
-      case 'ClassDeclaration':
+      case "Class":
+      case "ClassDecl":
+      case "ClassDeclaration":
         return this.visitClassDeclaration(node);
-      case 'Function':
-      case 'FunctionDeclaration':
+      case "Function":
+      case "FunctionDeclaration":
         return this.visitFunctionDeclaration(node);
-      case 'ReturnStatement':
+      case "ReturnStatement":
         return this.visitReturnStatement(node);
-      case 'VariableDeclaration':
+      case "VariableDeclaration":
         return this.visitVariableDeclaration(node);
-      case 'Expression':
+      case "Expression":
         return this.visitExpressionStatement(node);
-      case 'IfStatement':
+      case "IfStatement":
         return this.visitIfStatement(node);
-      case 'WhileStatement':
+      case "WhileStatement":
         return this.visitWhileStatement(node);
-      case 'ForStatement':
+      case "ForStatement":
         return this.visitForStatement(node);
-      case 'ThrowStatement':
+      case "ThrowStatement":
         return this.visitThrowStatement(node);
-      case 'TryStatement':
+      case "TryStatement":
         return this.visitTryStatement(node);
-      case 'ExpressionStatement':
+      case "ExpressionStatement":
         return this.visitExpressionStatement(node);
-      case 'ConditionalType':
+      case "ConditionalType":
         return this.visitConditionalType(node);
-      case 'IntersectionType':
+      case "IntersectionType":
         return this.visitIntersectionType(node);
-      case 'Macro':
+      case "Macro":
         return this.visitMacro(node);
       default: {
         const n = node as { type?: string };
         // Handle undefined or unknown node types more gracefully
         if (!n.type) {
-          console.warn('Node with undefined type encountered, treating as empty block');
-          return { type: 'Block', body: [] };
+          console.warn(
+            "Node with undefined type encountered, treating as empty block",
+          );
+          return { type: "Block", body: [] };
         }
         throw new Error(`Unknown node type: ${n.type}`);
       }
@@ -224,56 +249,62 @@ export class Compiler {
 
   private visitBlock(node: any): any {
     return {
-      type: 'Block',
-      body: (node.body || []).map((stmt: any) => this.visitNode(stmt))
+      type: "Block",
+      body: (node.body || []).map((stmt: any) => this.visitNode(stmt)),
     };
   }
 
   private visitProgram(node: any): any {
-    const bodyNodes = (node.body || []).map((stmt: any) => this.visitNode(stmt));
-    
+    const bodyNodes = (node.body || []).map((stmt: any) =>
+      this.visitNode(stmt),
+    );
+
     // Keep all nodes including imports - they need to be executed
     const allNodes = bodyNodes.filter((n: any) => n != null);
-    
+
     // Collect imports for function metadata
     const imports: string[] = [];
     const nonImportNodes: any[] = [];
-    
+
     for (const n of allNodes) {
-      if (n.type === 'Import') {
-        if (typeof n.from === 'string') imports.push(n.from);
+      if (n.type === "Import") {
+        if (typeof n.from === "string") imports.push(n.from);
       } else {
         nonImportNodes.push(n);
       }
     }
-    
+
     // Attach imports to function nodes if they exist
     if (imports.length > 0) {
       for (const node of nonImportNodes) {
-        if (node.type === 'Function') {
+        if (node.type === "Function") {
           node.imports = Array.from(new Set(imports));
         }
       }
     }
-    
+
     // Special case: if we have imports + single function, return the function with imports attached
-    if (imports.length > 0 && nonImportNodes.length === 1 && nonImportNodes[0].type === 'Function') {
+    if (
+      imports.length > 0 &&
+      nonImportNodes.length === 1 &&
+      nonImportNodes[0].type === "Function"
+    ) {
       return nonImportNodes[0];
     }
-    
+
     // If we have multiple statements including imports, return a Block
     if (allNodes.length > 1) {
-      return { type: 'Block', body: allNodes };
+      return { type: "Block", body: allNodes };
     }
-    
+
     // If the program contains a single statement, return it directly
     if (allNodes.length === 1) return allNodes[0];
-    
-    // Special handling: if we have multiple nodes but one is clearly the main declaration 
+
+    // Special handling: if we have multiple nodes but one is clearly the main declaration
     // (e.g., a class), and others are just parsing artifacts, return the main one
-    const classNodes = nonImportNodes.filter(n => n.type === 'Class');
-    const functionNodes = nonImportNodes.filter(n => n.type === 'Function');
-    
+    const classNodes = nonImportNodes.filter((n) => n.type === "Class");
+    const functionNodes = nonImportNodes.filter((n) => n.type === "Function");
+
     // If we have duplicate class nodes (same name), deduplicate them
     if (classNodes.length > 1) {
       const uniqueClasses = [];
@@ -284,36 +315,55 @@ export class Compiler {
           uniqueClasses.push(cls);
         }
       }
-      if (uniqueClasses.length === 1 && nonImportNodes.length === uniqueClasses.length) {
+      if (
+        uniqueClasses.length === 1 &&
+        nonImportNodes.length === uniqueClasses.length
+      ) {
         // Still need to include imports, so return a Block
-        return { type: 'Block', body: allNodes };
+        return { type: "Block", body: allNodes };
       }
     }
-    
+
     // Only return a single class/function if it's the ONLY thing in the program AND no imports
     if (classNodes.length === 1 && allNodes.length === 1) {
       return classNodes[0];
     }
-    
+
     if (functionNodes.length === 1 && allNodes.length === 1) {
       return functionNodes[0];
     }
-    
+
     // For any case with multiple statements or imports, return a block
-    return { type: 'Block', body: allNodes };
+    return { type: "Block", body: allNodes };
   }
 
   private containsBinaryAddBetweenParams(fnNode: any): boolean {
-    const params = (fnNode.params || []).map((p: any) => ({ name: p.name, type: p.type ? (p.type.name || p.type) : undefined }));
+    const params = (fnNode.params || []).map((p: any) => ({
+      name: p.name,
+      type: p.type ? p.type.name || p.type : undefined,
+    }));
     function scan(nodes: any[]): boolean {
       for (const n of nodes || []) {
         if (!n) continue;
-        if (n.type === 'Return' && n.argument && n.argument.operator === '+') {
-          const left = n.argument.left; const right = n.argument.right;
-          if (left && right && left.kind === 'Identifier' && right.kind === 'Identifier') {
+        if (n.type === "Return" && n.argument && n.argument.operator === "+") {
+          const left = n.argument.left;
+          const right = n.argument.right;
+          if (
+            left &&
+            right &&
+            left.kind === "Identifier" &&
+            right.kind === "Identifier"
+          ) {
             const lparam = params.find((pp: any) => pp.name === left.name);
             const rparam = params.find((pp: any) => pp.name === right.name);
-            if (lparam && rparam && lparam.type && rparam.type && lparam.type !== rparam.type) return true;
+            if (
+              lparam &&
+              rparam &&
+              lparam.type &&
+              rparam.type &&
+              lparam.type !== rparam.type
+            )
+              return true;
           }
         }
         // Recurse into nested bodies
@@ -327,167 +377,197 @@ export class Compiler {
   private visitFunctionDeclaration(node: any): any {
     // perform a minimal type check: detect adding different param types
     if (this.containsBinaryAddBetweenParams(node)) {
-      throw new OmniscriptError('Type mismatch in function body');
+      throw new OmniscriptError("Type mismatch in function body");
     }
     return {
-      type: 'Function',
+      type: "Function",
       name: node.name,
       params: (node.params || []).map((p: any) => p.name),
       body: (node.body || []).map((stmt: any) => this.visitNode(stmt)),
-      optimized: true // Mark as optimized
+      optimized: true, // Mark as optimized
     };
   }
 
   private visitReturnStatement(node: any): any {
     return {
-      type: 'Return',
-      argument: node.argument || undefined
+      type: "Return",
+      argument: node.argument || undefined,
     };
   }
 
   private visitExpressionStatement(node: any): any {
-    return { type: 'ExpressionStatement', expression: node.expression || node };
+    return { type: "ExpressionStatement", expression: node.expression || node };
   }
 
   private visitVariableDeclaration(node: any): any {
-    return { type: 'VarDecl', name: node.name, initializer: node.initializer || null };
+    return {
+      type: "VarDecl",
+      name: node.name,
+      initializer: node.initializer || null,
+    };
   }
 
   private visitIfStatement(node: any): any {
     return {
-      type: 'If',
+      type: "If",
       condition: node.condition,
-      then: node.then ? this.visitNode(node.then) : { type: 'Block', body: [] },
-      else: node.else ? this.visitNode(node.else) : undefined
+      then: node.then ? this.visitNode(node.then) : { type: "Block", body: [] },
+      else: node.else ? this.visitNode(node.else) : undefined,
     };
   }
 
   private visitWhileStatement(node: any): any {
-    return { type: 'While', condition: node.condition, body: { type: 'Block', body: (node.body || []).map((s: any) => this.visitNode(s)) } };
+    return {
+      type: "While",
+      condition: node.condition,
+      body: {
+        type: "Block",
+        body: (node.body || []).map((s: any) => this.visitNode(s)),
+      },
+    };
   }
 
   private visitForStatement(node: any): any {
     return {
-      type: 'For',
+      type: "For",
       init: node.init ? this.visitNode(node.init) : null,
       condition: node.condition || null,
       update: node.update || null,
-      body: { type: 'Block', body: (node.body || []).map((s: any) => this.visitNode(s)) }
+      body: {
+        type: "Block",
+        body: (node.body || []).map((s: any) => this.visitNode(s)),
+      },
     };
   }
 
   private visitThrowStatement(node: any): any {
-    return { type: 'Throw', argument: node.argument };
+    return { type: "Throw", argument: node.argument };
   }
 
   private visitTryStatement(node: any): any {
     return {
-      type: 'Try',
-      tryBlock: { type: 'Block', body: (node.tryBlock || []).map((s: any) => this.visitNode(s)) },
+      type: "Try",
+      tryBlock: {
+        type: "Block",
+        body: (node.tryBlock || []).map((s: any) => this.visitNode(s)),
+      },
       catchVar: node.catchVar,
-      catchBlock: node.catchBlock ? { type: 'Block', body: node.catchBlock.map((s: any) => this.visitNode(s)) } : undefined,
-      finallyBlock: node.finallyBlock ? { type: 'Block', body: node.finallyBlock.map((s: any) => this.visitNode(s)) } : undefined
+      catchBlock: node.catchBlock
+        ? {
+            type: "Block",
+            body: node.catchBlock.map((s: any) => this.visitNode(s)),
+          }
+        : undefined,
+      finallyBlock: node.finallyBlock
+        ? {
+            type: "Block",
+            body: node.finallyBlock.map((s: any) => this.visitNode(s)),
+          }
+        : undefined,
     };
   }
 
   private visitConditionalType(node: any): any {
     return {
-      type: 'ConditionalType',
+      type: "ConditionalType",
       checkType: this.visitNode(node.checkType),
       extendsType: this.visitNode(node.extendsType),
       trueType: this.visitNode(node.trueType),
-      falseType: this.visitNode(node.falseType)
+      falseType: this.visitNode(node.falseType),
     };
   }
 
   private visitIntersectionType(node: any): any {
     return {
-      type: 'IntersectionType',
-      types: (node.types || []).map((type: any) => this.visitNode(type))
+      type: "IntersectionType",
+      types: (node.types || []).map((type: any) => this.visitNode(type)),
     };
   }
 
   private visitMacro(node: any): any {
-    debug.debug('Compiler', `Expanding macro: ${node.name}`);
+    debug.debug("Compiler", `Expanding macro: ${node.name}`);
     return this.expandMacro(node);
   }
 
   private visitClassDeclaration(node: any): any {
     // Normalize class node shape to runtime/bytecode expected form.
     const methods = node.methods || node.body || [];
-    
+
     // Check for destructor methods
-    const hasDestructor = methods.some((method: any) => 
-      method.name === 'destroy' || 
-      method.name === 'destructor' ||
-      method.name === 'finalize'
+    const hasDestructor = methods.some(
+      (method: any) =>
+        method.name === "destroy" ||
+        method.name === "destructor" ||
+        method.name === "finalize",
     );
-    
+
     // Process generics with constraints
-    const generics = (node.generics || node.typeParams || []).map((generic: any) => {
-      if (typeof generic === 'string') {
-        return { name: generic };
-      }
-      if (generic.constraint || generic.extends) {
-        return {
-          name: generic.name || generic.id,
-          constraint: generic.constraint || generic.extends
-        };
-      }
-      return { name: generic.name || generic.id || generic };
-    });
-    
+    const generics = (node.generics || node.typeParams || []).map(
+      (generic: any) => {
+        if (typeof generic === "string") {
+          return { name: generic };
+        }
+        if (generic.constraint || generic.extends) {
+          return {
+            name: generic.name || generic.id,
+            constraint: generic.constraint || generic.extends,
+          };
+        }
+        return { name: generic.name || generic.id || generic };
+      },
+    );
+
     return {
-      type: 'Class',
+      type: "Class",
       name: node.name || node.id || node.className,
       generics: generics,
       methods: methods,
       operators: node.operators || [],
-      hasDestructor: hasDestructor
+      hasDestructor: hasDestructor,
     };
   }
 
   private visitMatch(node: any): any {
     return {
-      type: 'Match',
+      type: "Match",
       subject: node.subject || node.expr || null,
       arms: (node.arms || node.cases || []).map((a: any) => {
-        const arm: any = { 
-          pattern: a.pattern || a.case || a.pat, 
-          expression: a.expression || a.value || a.action 
+        const arm: any = {
+          pattern: a.pattern || a.case || a.pat,
+          expression: a.expression || a.value || a.action,
         };
         if (a.guard) {
           arm.guard = a.guard;
         }
         return arm;
-      })
+      }),
     };
   }
 
   private expandMacro(node: any): any {
     // Placeholder for macro expansion logic
     return {
-      type: 'ExpandedMacro',
-      content: node.content
+      type: "ExpandedMacro",
+      content: node.content,
     };
   }
 
   private visitImportDeclaration(node: any): any {
     return {
-      type: 'Import',
+      type: "Import",
       imported: node.imported || [],
-      from: node.from || node.module || null
+      from: node.from || node.module || null,
     };
   }
 
   private visitFunction(node: any): any {
     return {
-      type: 'Function',
+      type: "Function",
       name: node.name || null,
       parameters: node.parameters || node.params || [],
-      body: node.body ? this.visitNode(node.body) : { type: 'Block', body: [] },
+      body: node.body ? this.visitNode(node.body) : { type: "Block", body: [] },
       returnType: node.returnType || null,
-      generics: node.generics || null
+      generics: node.generics || null,
     };
   }
 
@@ -495,22 +575,26 @@ export class Compiler {
     // If the node has a body with statements that look like class members, treat it as a class
     if (node.body && node.body.body && Array.isArray(node.body.body)) {
       return {
-        type: 'Class',
+        type: "Class",
         name: node.name || null,
         superClass: node.superClass || node.extends || null,
         body: node.body.body.map((member: any) => this.visitNode(member)),
         generics: node.generics || node.typeParameters || null,
-        operators: node.operators || null
+        operators: node.operators || null,
       };
     }
-    
+
     return {
-      type: 'Class',
+      type: "Class",
       name: node.name || null,
       superClass: node.superClass || node.extends || null,
-      body: node.body ? (Array.isArray(node.body) ? node.body.map((member: any) => this.visitNode(member)) : []) : [],
+      body: node.body
+        ? Array.isArray(node.body)
+          ? node.body.map((member: any) => this.visitNode(member))
+          : []
+        : [],
       generics: node.generics || node.typeParameters || null,
-      operators: node.operators || null
+      operators: node.operators || null,
     };
   }
 

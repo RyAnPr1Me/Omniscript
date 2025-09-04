@@ -38,19 +38,19 @@ console.log(`Best fitness: ${result.bestFitness}`);
 ## Advanced Configuration
 
 ```typescript
-import { GeneticOptimizer, ParameterBounds } from 'stdlib/genetic';
+import { GeneticOptimizer, ParameterBounds } from "stdlib/genetic";
 
 // Define parameter bounds
 const bounds: ParameterBounds[] = [
-  { min: 0.001, max: 0.1, type: 'continuous' },    // learning rate
-  { min: 10, max: 200, type: 'integer' },          // hidden size
-  { min: 16, max: 128, type: 'integer' }           // batch size
+  { min: 0.001, max: 0.1, type: "continuous" }, // learning rate
+  { min: 10, max: 200, type: "integer" }, // hidden size
+  { min: 16, max: 128, type: "integer" }, // batch size
 ];
 
 // Define constraints
 const constraints = [
-  (params: number[]) => params[0] > 0,              // positive learning rate
-  (params: number[]) => params[1] % 2 === 0         // even hidden size
+  (params: number[]) => params[0] > 0, // positive learning rate
+  (params: number[]) => params[1] % 2 === 0, // even hidden size
 ];
 
 const optimizer = new GeneticOptimizer(fitnessFunction, {
@@ -58,14 +58,14 @@ const optimizer = new GeneticOptimizer(fitnessFunction, {
   maxGenerations: 200,
   bounds,
   constraints,
-  selectionStrategy: 'tournament',
-  crossoverStrategy: 'arithmetic',
-  mutationStrategy: 'gaussian',
+  selectionStrategy: "tournament",
+  crossoverStrategy: "arithmetic",
+  mutationStrategy: "gaussian",
   mutationRate: 0.1,
   crossoverRate: 0.8,
   elitismCount: 10,
   adaptiveMutation: true,
-  verbose: true
+  verbose: true,
 });
 
 const result = optimizer.optimize(3);
@@ -98,20 +98,23 @@ console.log(`Objective values: ${result.bestFitness}`);
 ## Parameter Types
 
 ### Continuous Parameters
+
 ```typescript
 { min: 0.0, max: 1.0, type: 'continuous' }
 ```
 
 ### Integer Parameters
+
 ```typescript
 { min: 1, max: 100, type: 'integer' }
 ```
 
 ### Discrete Parameters
+
 ```typescript
-{ 
-  min: 0, 
-  max: 1, 
+{
+  min: 0,
+  max: 1,
   type: 'discrete',
   discreteValues: [0.1, 0.3, 0.5, 0.7, 0.9]
 }
@@ -119,27 +122,28 @@ console.log(`Objective values: ${result.bestFitness}`);
 
 ## Configuration Options
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `populationSize` | number | 50 | Number of individuals in population |
-| `maxGenerations` | number | 100 | Maximum number of generations |
-| `mutationRate` | number | 0.1 | Probability of mutation |
-| `crossoverRate` | number | 0.8 | Probability of crossover |
-| `elitismCount` | number | 10% of population | Number of elite individuals to preserve |
-| `targetFitness` | number | Infinity | Target fitness for early termination |
-| `selectionStrategy` | string | 'tournament' | Selection method ('tournament', 'roulette', 'rank') |
-| `crossoverStrategy` | string | 'uniform' | Crossover method ('uniform', 'arithmetic', 'blend') |
-| `mutationStrategy` | string | 'gaussian' | Mutation method ('gaussian', 'uniform', 'polynomial') |
-| `adaptiveMutation` | boolean | false | Enable adaptive mutation rates |
-| `verbose` | boolean | false | Enable progress logging |
+| Option              | Type    | Default           | Description                                           |
+| ------------------- | ------- | ----------------- | ----------------------------------------------------- |
+| `populationSize`    | number  | 50                | Number of individuals in population                   |
+| `maxGenerations`    | number  | 100               | Maximum number of generations                         |
+| `mutationRate`      | number  | 0.1               | Probability of mutation                               |
+| `crossoverRate`     | number  | 0.8               | Probability of crossover                              |
+| `elitismCount`      | number  | 10% of population | Number of elite individuals to preserve               |
+| `targetFitness`     | number  | Infinity          | Target fitness for early termination                  |
+| `selectionStrategy` | string  | 'tournament'      | Selection method ('tournament', 'roulette', 'rank')   |
+| `crossoverStrategy` | string  | 'uniform'         | Crossover method ('uniform', 'arithmetic', 'blend')   |
+| `mutationStrategy`  | string  | 'gaussian'        | Mutation method ('gaussian', 'uniform', 'polynomial') |
+| `adaptiveMutation`  | boolean | false             | Enable adaptive mutation rates                        |
+| `verbose`           | boolean | false             | Enable progress logging                               |
 
 ## Real-world Examples
 
 ### Hyperparameter Optimization
+
 ```typescript
 const optimizeNeuralNetwork = (params: number[]) => {
   const [lr, hiddenSize, batchSize] = params;
-  
+
   // Simulate training and return validation accuracy
   const model = trainModel({ lr, hiddenSize, batchSize });
   return model.accuracy;
@@ -148,33 +152,34 @@ const optimizeNeuralNetwork = (params: number[]) => {
 const result = optimize(optimizeNeuralNetwork, {
   parameterCount: 3,
   bounds: [
-    { min: 0.001, max: 0.1, type: 'continuous' },
-    { min: 10, max: 500, type: 'integer' },
-    { min: 16, max: 256, type: 'integer' }
+    { min: 0.001, max: 0.1, type: "continuous" },
+    { min: 10, max: 500, type: "integer" },
+    { min: 16, max: 256, type: "integer" },
   ],
   populationSize: 50,
-  maxGenerations: 100
+  maxGenerations: 100,
 });
 ```
 
 ### Portfolio Optimization
+
 ```typescript
 const optimizePortfolio = (weights: number[]) => {
   const returns = calculateReturns(weights);
   const risk = calculateRisk(weights);
-  
+
   // Multi-objective: maximize returns, minimize risk
   return [returns, -risk];
 };
 
 const result = optimize(optimizePortfolio, {
   parameterCount: 10, // 10 assets
-  bounds: Array(10).fill({ min: 0, max: 1, type: 'continuous' }),
+  bounds: Array(10).fill({ min: 0, max: 1, type: "continuous" }),
   constraints: [
-    (weights) => weights.reduce((sum, w) => sum + w, 0) === 1 // sum to 1
+    (weights) => weights.reduce((sum, w) => sum + w, 0) === 1, // sum to 1
   ],
   populationSize: 100,
-  maxGenerations: 200
+  maxGenerations: 200,
 });
 ```
 
@@ -184,24 +189,27 @@ The optimization result includes:
 
 ```typescript
 interface OptimizationResult {
-  bestParams: number[];           // Best parameter values found
+  bestParams: number[]; // Best parameter values found
   bestFitness: number | number[]; // Best fitness value(s)
-  generations: number;            // Number of generations run
+  generations: number; // Number of generations run
   convergenceHistory: GenerationStats[]; // Evolution statistics
-  finalPopulation: Individual[];  // Final population
-  totalEvaluations: number;       // Total function evaluations
+  finalPopulation: Individual[]; // Final population
+  totalEvaluations: number; // Total function evaluations
 }
 ```
 
 ### Convergence Analysis
+
 ```typescript
 // Analyze convergence
 result.convergenceHistory.forEach((gen, i) => {
-  console.log(`Gen ${i}: Best=${gen.bestFitness}, Avg=${gen.averageFitness}, Diversity=${gen.diversity}`);
+  console.log(
+    `Gen ${i}: Best=${gen.bestFitness}, Avg=${gen.averageFitness}, Diversity=${gen.diversity}`,
+  );
 });
 
 // Plot convergence curve
-const bestFitnesses = result.convergenceHistory.map(gen => gen.bestFitness);
+const bestFitnesses = result.convergenceHistory.map((gen) => gen.bestFitness);
 plotConvergence(bestFitnesses);
 ```
 
@@ -228,30 +236,30 @@ plotConvergence(bestFitnesses);
 The genetic algorithm integrates seamlessly with other OmniScript modules:
 
 ```typescript
-import { AI, Genetic, Math } from 'stdlib';
+import { AI, Genetic, Math } from "stdlib";
 
 // Optimize neural network architecture
 const optimizeArchitecture = (params: number[]) => {
   const [layers, neurons, dropout] = params;
-  
+
   const model = new AI.Sequential([
     new AI.Linear(784, neurons),
     new AI.ReLU(),
     // ... build model based on params
   ]);
-  
+
   const trainer = new AI.Trainer(model, new AI.Adam());
   const accuracy = trainer.evaluate(testData).accuracy;
-  
+
   return accuracy;
 };
 
 const result = Genetic.optimize(optimizeArchitecture, {
   parameterCount: 3,
   bounds: [
-    { min: 1, max: 5, type: 'integer' },      // layers
-    { min: 32, max: 512, type: 'integer' },   // neurons
-    { min: 0, max: 0.5, type: 'continuous' }  // dropout
-  ]
+    { min: 1, max: 5, type: "integer" }, // layers
+    { min: 32, max: 512, type: "integer" }, // neurons
+    { min: 0, max: 0.5, type: "continuous" }, // dropout
+  ],
 });
 ```

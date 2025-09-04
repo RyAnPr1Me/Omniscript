@@ -7,7 +7,7 @@ export enum DebugLevel {
   WARN = 1,
   INFO = 2,
   DEBUG = 3,
-  TRACE = 4
+  TRACE = 4,
 }
 
 export class DebugLogger {
@@ -37,13 +37,13 @@ export class DebugLogger {
   }
 
   enableAllComponents(): void {
-    this.enabledComponents.add('*');
+    this.enabledComponents.add("*");
   }
 
   isEnabled(component: string, level: DebugLevel): boolean {
     return (
       level <= this.debugLevel &&
-      (this.enabledComponents.has('*') || this.enabledComponents.has(component))
+      (this.enabledComponents.has("*") || this.enabledComponents.has(component))
     );
   }
 
@@ -99,7 +99,10 @@ export function enableDebugger(): void {
   debug.enableAllComponents();
 }
 
-export function enableComponentDebug(component: string, level: DebugLevel = DebugLevel.DEBUG): void {
+export function enableComponentDebug(
+  component: string,
+  level: DebugLevel = DebugLevel.DEBUG,
+): void {
   debug.setLevel(level);
   debug.enableComponent(component);
 }
@@ -114,8 +117,8 @@ export function configureDebugFromEnv(): void {
   }
 
   if (debugComponents) {
-    const components = debugComponents.split(',');
-    components.forEach(comp => debug.enableComponent(comp.trim()));
+    const components = debugComponents.split(",");
+    components.forEach((comp) => debug.enableComponent(comp.trim()));
   }
 }
 

@@ -1,0 +1,27 @@
+# Build output
+dist/
+coverage/
+node_modules/
+
+# Generated files
+*.log
+.omni/
+
+# Binary files
+*.exe
+*.dmg
+*.pkg
+
+# Documentation that should maintain specific formatting
+docs/api/**/*.md
+docs/examples/**/*.md
+
+# GitHub workflows (maintain existing formatting)
+.github/workflows/
+
+# Large auto-generated files
+benchmarks/
+test-project/
+
+# Legacy files that shouldn't be reformatted
+bin/cli.js

@@ -3,8 +3,8 @@
  * Generates HTML documentation from markdown with version management
  */
 
-import * as fs from 'fs';
-import * as path from 'path';
+import * as fs from "fs";
+import * as path from "path";
 
 export interface DocSiteConfig {
   name: string;
@@ -15,7 +15,7 @@ export interface DocSiteConfig {
   repository?: string;
   outputDir: string;
   sourceDir: string;
-  theme: 'light' | 'dark' | 'auto';
+  theme: "light" | "dark" | "auto";
 }
 
 export interface DocVersion {
@@ -35,7 +35,9 @@ export class StaticDocGenerator {
    * Generate complete static documentation site
    */
   async generateSite(): Promise<void> {
-    console.log(`📖 Generating static documentation site for ${this.config.name}...`);
+    console.log(
+      `📖 Generating static documentation site for ${this.config.name}...`,
+    );
 
     // Create output directory structure
     this.createDirectoryStructure();
@@ -58,13 +60,13 @@ export class StaticDocGenerator {
   private createDirectoryStructure(): void {
     const dirs = [
       this.config.outputDir,
-      path.join(this.config.outputDir, 'css'),
-      path.join(this.config.outputDir, 'js'),
-      path.join(this.config.outputDir, 'api'),
-      path.join(this.config.outputDir, 'guide'),
+      path.join(this.config.outputDir, "css"),
+      path.join(this.config.outputDir, "js"),
+      path.join(this.config.outputDir, "api"),
+      path.join(this.config.outputDir, "guide"),
     ];
 
-    dirs.forEach(dir => {
+    dirs.forEach((dir) => {
       if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true });
       }
@@ -73,7 +75,7 @@ export class StaticDocGenerator {
 
   private async processMarkdownFiles(): Promise<void> {
     const sourceDir = this.config.sourceDir;
-    
+
     if (!fs.existsSync(sourceDir)) {
       console.warn(`Source directory not found: ${sourceDir}`);
       return;
@@ -81,7 +83,7 @@ export class StaticDocGenerator {
 
     // Process all markdown files
     const files = this.getMarkdownFiles(sourceDir);
-    
+
     for (const file of files) {
       await this.convertMarkdownToHtml(file);
     }
@@ -89,61 +91,67 @@ export class StaticDocGenerator {
 
   private getMarkdownFiles(dir: string): string[] {
     const files: string[] = [];
-    
+
     const entries = fs.readdirSync(dir, { withFileTypes: true });
-    
+
     for (const entry of entries) {
       const fullPath = path.join(dir, entry.name);
-      
+
       if (entry.isDirectory()) {
         files.push(...this.getMarkdownFiles(fullPath));
-      } else if (entry.name.endsWith('.md')) {
+      } else if (entry.name.endsWith(".md")) {
         files.push(fullPath);
       }
     }
-    
+
     return files;
   }
 
   private async convertMarkdownToHtml(mdPath: string): Promise<void> {
-    const content = fs.readFileSync(mdPath, 'utf-8');
-    
+    const content = fs.readFileSync(mdPath, "utf-8");
+
     // Simple markdown to HTML conversion (basic implementation)
     let html = this.markdownToHtml(content);
-    
+
     // Get relative path from source
     const relativePath = path.relative(this.config.sourceDir, mdPath);
-    const htmlPath = path.join(this.config.outputDir, relativePath.replace('.md', '.html'));
-    
+    const htmlPath = path.join(
+      this.config.outputDir,
+      relativePath.replace(".md", ".html"),
+    );
+
     // Ensure directory exists
     const htmlDir = path.dirname(htmlPath);
     if (!fs.existsSync(htmlDir)) {
       fs.mkdirSync(htmlDir, { recursive: true });
     }
-    
+
     // Wrap in template
-    html = this.wrapInTemplate(html, path.basename(mdPath, '.md'));
-    
+    html = this.wrapInTemplate(html, path.basename(mdPath, ".md"));
+
     fs.writeFileSync(htmlPath, html);
   }
 
   private markdownToHtml(markdown: string): string {
     // Basic markdown conversion (simplified)
     return markdown
-      .replace(/^# (.+)$/gm, '<h1>$1</h1>')
-      .replace(/^## (.+)$/gm, '<h2>$1</h2>')
-      .replace(/^### (.+)$/gm, '<h3>$1</h3>')
-      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*(.+?)\*/g, '<em>$1</em>')
-      .replace(/`(.+?)`/g, '<code>$1</code>')
-      .replace(/```(\w+)?\n([\s\S]*?)```/g, '<pre><code class="language-$1">$2</code></pre>')
+      .replace(/^# (.+)$/gm, "<h1>$1</h1>")
+      .replace(/^## (.+)$/gm, "<h2>$1</h2>")
+      .replace(/^### (.+)$/gm, "<h3>$1</h3>")
+      .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+      .replace(/\*(.+?)\*/g, "<em>$1</em>")
+      .replace(/`(.+?)`/g, "<code>$1</code>")
+      .replace(
+        /```(\w+)?\n([\s\S]*?)```/g,
+        '<pre><code class="language-$1">$2</code></pre>',
+      )
       .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2">$1</a>')
-      .replace(/^- (.+)$/gm, '<li>$1</li>')
-      .replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>')
-      .replace(/^\n/gm, '<br>')
-      .split('\n')
-      .map(line => line.trim() ? `<p>${line}</p>` : '')
-      .join('\n');
+      .replace(/^- (.+)$/gm, "<li>$1</li>")
+      .replace(/(<li>.*<\/li>)/s, "<ul>$1</ul>")
+      .replace(/^\n/gm, "<br>")
+      .split("\n")
+      .map((line) => (line.trim() ? `<p>${line}</p>` : ""))
+      .join("\n");
   }
 
   private wrapInTemplate(content: string, title: string): string {
@@ -160,7 +168,7 @@ export class StaticDocGenerator {
     <header class="header">
         <div class="container">
             <div class="header-content">
-                ${this.config.logoUrl ? `<img src="${this.config.logoUrl}" alt="${this.config.name}" class="logo">` : ''}
+                ${this.config.logoUrl ? `<img src="${this.config.logoUrl}" alt="${this.config.name}" class="logo">` : ""}
                 <h1 class="site-title">${this.config.name}</h1>
                 <div class="version-selector">
                     <select id="version-select">
@@ -177,7 +185,7 @@ export class StaticDocGenerator {
                 <li><a href="/index.html">Home</a></li>
                 <li><a href="/guide/index.html">Guide</a></li>
                 <li><a href="/api/index.html">API Reference</a></li>
-                ${this.config.repository ? `<li><a href="${this.config.repository}" target="_blank">GitHub</a></li>` : ''}
+                ${this.config.repository ? `<li><a href="${this.config.repository}" target="_blank">GitHub</a></li>` : ""}
             </ul>
         </div>
     </nav>
@@ -202,7 +210,8 @@ export class StaticDocGenerator {
   }
 
   private async generateNavigation(): Promise<void> {
-    const indexHtml = this.wrapInTemplate(`
+    const indexHtml = this.wrapInTemplate(
+      `
         <h1>Welcome to ${this.config.name}</h1>
         <p>${this.config.description}</p>
         
@@ -214,17 +223,20 @@ export class StaticDocGenerator {
         
         <h2>Quick Links</h2>
         <ul>
-            ${this.config.repository ? `<li><a href="${this.config.repository}">Source Code</a></li>` : ''}
+            ${this.config.repository ? `<li><a href="${this.config.repository}">Source Code</a></li>` : ""}
             <li><a href="/api/index.html">Browse API Documentation</a></li>
         </ul>
-    `, 'Home');
+    `,
+      "Home",
+    );
 
-    fs.writeFileSync(path.join(this.config.outputDir, 'index.html'), indexHtml);
+    fs.writeFileSync(path.join(this.config.outputDir, "index.html"), indexHtml);
 
     // Generate guide index if guide dir exists
-    const guideDir = path.join(this.config.outputDir, 'guide');
+    const guideDir = path.join(this.config.outputDir, "guide");
     if (fs.existsSync(guideDir)) {
-      const guideIndexHtml = this.wrapInTemplate(`
+      const guideIndexHtml = this.wrapInTemplate(
+        `
         <h1>User Guide</h1>
         <p>Welcome to the ${this.config.name} user guide.</p>
         
@@ -233,9 +245,11 @@ export class StaticDocGenerator {
             <li><a href="installation.html">Installation</a></li>
             <li><a href="quick-start.html">Quick Start</a></li>
         </ul>
-      `, 'Guide');
-      
-      fs.writeFileSync(path.join(guideDir, 'index.html'), guideIndexHtml);
+      `,
+        "Guide",
+      );
+
+      fs.writeFileSync(path.join(guideDir, "index.html"), guideIndexHtml);
     }
   }
 
@@ -428,7 +442,10 @@ body {
 }
 `;
 
-    fs.writeFileSync(path.join(this.config.outputDir, 'css', 'styles.css'), css);
+    fs.writeFileSync(
+      path.join(this.config.outputDir, "css", "styles.css"),
+      css,
+    );
 
     // Generate JavaScript
     const js = `
@@ -463,7 +480,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 `;
 
-    fs.writeFileSync(path.join(this.config.outputDir, 'js', 'main.js'), js);
+    fs.writeFileSync(path.join(this.config.outputDir, "js", "main.js"), js);
   }
 
   private async generateVersionSelector(): Promise<void> {
@@ -471,52 +488,54 @@ document.addEventListener('DOMContentLoaded', function() {
     const versions: DocVersion[] = [
       {
         version: this.config.version,
-        path: '/',
-        isLatest: true
-      }
+        path: "/",
+        isLatest: true,
+      },
     ];
 
     fs.writeFileSync(
-      path.join(this.config.outputDir, 'versions.json'),
-      JSON.stringify(versions, null, 2)
+      path.join(this.config.outputDir, "versions.json"),
+      JSON.stringify(versions, null, 2),
     );
   }
 
   /**
    * Deploy to a static hosting service (stub for future implementation)
    */
-  async deploy(target: 'github-pages' | 'netlify' | 'vercel'): Promise<void> {
+  async deploy(target: "github-pages" | "netlify" | "vercel"): Promise<void> {
     console.log(`🚀 Deploying to ${target}...`);
-    
+
     switch (target) {
-      case 'github-pages':
-        console.log('GitHub Pages deployment would be implemented here');
+      case "github-pages":
+        console.log("GitHub Pages deployment would be implemented here");
         break;
-      case 'netlify':
-        console.log('Netlify deployment would be implemented here');
+      case "netlify":
+        console.log("Netlify deployment would be implemented here");
         break;
-      case 'vercel':
-        console.log('Vercel deployment would be implemented here');
+      case "vercel":
+        console.log("Vercel deployment would be implemented here");
         break;
     }
-    
-    console.log('✅ Deployment completed');
+
+    console.log("✅ Deployment completed");
   }
 }
 
 /**
  * Convenience function to generate documentation site
  */
-export async function generateDocSite(config: Partial<DocSiteConfig>): Promise<void> {
+export async function generateDocSite(
+  config: Partial<DocSiteConfig>,
+): Promise<void> {
   const defaultConfig: DocSiteConfig = {
-    name: 'Omniscript',
-    description: 'A modern programming language for full-stack development',
-    baseUrl: 'https://omniscript.dev',
-    version: '2.0.0',
-    outputDir: './docs-site',
-    sourceDir: './docs',
-    theme: 'auto',
-    repository: 'https://github.com/RyAnPr1Me/Omniscript'
+    name: "Omniscript",
+    description: "A modern programming language for full-stack development",
+    baseUrl: "https://omniscript.dev",
+    version: "2.0.0",
+    outputDir: "./docs-site",
+    sourceDir: "./docs",
+    theme: "auto",
+    repository: "https://github.com/RyAnPr1Me/Omniscript",
   };
 
   const fullConfig = { ...defaultConfig, ...config };

@@ -1,7 +1,7 @@
-import { Stream, Signal } from '../../src/stdlib/reactive';
+import { Stream, Signal } from "../../src/stdlib/reactive";
 
-describe('Reactive Programming Primitives', () => {
-  test('Stream emits values to subscribers', () => {
+describe("Reactive Programming Primitives", () => {
+  test("Stream emits values to subscribers", () => {
     const stream = new Stream<number>();
     const mockSubscriber = jest.fn();
 
@@ -15,7 +15,7 @@ describe('Reactive Programming Primitives', () => {
     expect(mockSubscriber).toHaveBeenCalledTimes(1);
   });
 
-  test('Signal notifies subscribers on value change', () => {
+  test("Signal notifies subscribers on value change", () => {
     const signal = new Signal<number>(0);
     const mockSubscriber = jest.fn();
 

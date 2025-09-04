@@ -1,10 +1,62 @@
 {
   "name": "omniscript",
   "version": "2.0.0",
+  "description": "A modern programming language for full-stack development with type safety, async/await, pattern matching, and built-in ORM",
   "type": "commonjs",
+  "main": "dist/index.js",
   "bin": {
     "omni": "./bin/cli.js",
     "omniscript-installer": "./dist/bin/installManager.js"
+  },
+  "keywords": [
+    "programming-language",
+    "typescript",
+    "full-stack",
+    "orm",
+    "type-safety",
+    "async-await",
+    "pattern-matching",
+    "jit-compiler",
+    "cli-tool"
+  ],
+  "author": "RyAnPr1Me",
+  "license": "MIT",
+  "homepage": "https://github.com/RyAnPr1Me/Omniscript#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/RyAnPr1Me/Omniscript.git"
+  },
+  "bugs": {
+    "url": "https://github.com/RyAnPr1Me/Omniscript/issues"
+  },
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
+  },
+  "files": [
+    "dist/**/*",
+    "bin/**/*",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md",
+    "CONTRIBUTING.md",
+    "SECURITY.md"
+  ],
+  "scripts": {
+    "prebuild": "rm -rf dist",
+    "build": "tsc",
+    "postbuild": "chmod +x dist/cli.js",
+    "build:exe": "npm run build && pkg dist/cli.js --targets node18-win-x64,node18-linux-x64,node18-macos-x64 --output dist/bin/omniscript-cli && pkg dist/bin/install.js --targets node18-win-x64,node18-linux-x64,node18-macos-x64 --output dist/bin/omniscript-installer",
+    "test": "jest --config jest.config.ts",
+    "test:watch": "jest --watch --config jest.config.ts",
+    "test:coverage": "jest --config jest.config.ts --coverage",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "clean": "rm -rf dist node_modules coverage",
+    "prepare": "npm run build",
+    "prepublishOnly": "npm run test && npm run lint"
   },
   "dependencies": {
     "antlr4": "^4.13.1",
@@ -26,22 +78,5 @@
     "ts-jest": "^29.4.1",
     "ts-node": "^10.9.2",
     "typescript-eslint": "^8.39.1"
-  },
-  "scripts": {
-    "prebuild": "rm -rf dist",
-    "build": "tsc",
-    "postbuild": "chmod +x dist/cli.js",
-    "build:exe": "npm run build && pkg dist/cli.js --targets node18-win-x64,node18-linux-x64,node18-macos-x64 --output dist/bin/omniscript-cli && pkg dist/bin/install.js --targets node18-win-x64,node18-linux-x64,node18-macos-x64 --output dist/bin/omniscript-installer",
-    "test": "jest --config jest.config.ts",
-    "test:watch": "jest --watch --config jest.config.ts",
-    "lint": "eslint .",
-    "format": "prettier --write ."
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/RyAnPr1Me/Omniscript.git"
-  },
-  "bugs": {
-    "url": "https://github.com/RyAnPr1Me/Omniscript/issues"
   }
 }

@@ -1,8 +1,8 @@
-import { debug } from '../debug';
+import { debug } from "../debug";
 
 export interface StringPadOptions {
   character?: string;
-  side?: 'left' | 'right' | 'both';
+  side?: "left" | "right" | "both";
 }
 
 export interface StringCaseOptions {
@@ -40,7 +40,7 @@ export class StringUtils {
       .replace(/(?:^\w|[A-Z]|\b\w)/g, (word, index) => {
         return index === 0 ? word.toLowerCase() : word.toUpperCase();
       })
-      .replace(/\s+/g, '');
+      .replace(/\s+/g, "");
   }
 
   /**
@@ -51,7 +51,7 @@ export class StringUtils {
       .replace(/(?:^\w|[A-Z]|\b\w)/g, (word) => {
         return word.toUpperCase();
       })
-      .replace(/\s+/g, '');
+      .replace(/\s+/g, "");
   }
 
   /**
@@ -59,8 +59,8 @@ export class StringUtils {
    */
   static kebabCase(str: string): string {
     return str
-      .replace(/([a-z])([A-Z])/g, '$1-$2')
-      .replace(/[\s_]+/g, '-')
+      .replace(/([a-z])([A-Z])/g, "$1-$2")
+      .replace(/[\s_]+/g, "-")
       .toLowerCase();
   }
 
@@ -69,8 +69,8 @@ export class StringUtils {
    */
   static snakeCase(str: string): string {
     return str
-      .replace(/([a-z])([A-Z])/g, '$1_$2')
-      .replace(/[\s-]+/g, '_')
+      .replace(/([a-z])([A-Z])/g, "$1_$2")
+      .replace(/[\s-]+/g, "_")
       .toLowerCase();
   }
 
@@ -78,18 +78,20 @@ export class StringUtils {
    * Pad string to specified length
    */
   static pad(str: string, length: number, options?: StringPadOptions): string {
-    const char = options?.character || ' ';
-    const side = options?.side || 'right';
-    
+    const char = options?.character || " ";
+    const side = options?.side || "right";
+
     if (str.length >= length) return str;
-    
+
     const padLength = length - str.length;
-    const padding = char.repeat(Math.ceil(padLength / char.length)).slice(0, padLength);
-    
+    const padding = char
+      .repeat(Math.ceil(padLength / char.length))
+      .slice(0, padLength);
+
     switch (side) {
-      case 'left':
+      case "left":
         return padding + str;
-      case 'both': {
+      case "both": {
         const leftPad = Math.floor(padLength / 2);
         const rightPad = padLength - leftPad;
         return char.repeat(leftPad) + str + char.repeat(rightPad);
@@ -102,7 +104,11 @@ export class StringUtils {
   /**
    * Truncate string to max length with optional suffix
    */
-  static truncate(str: string, maxLength: number, suffix: string = '...'): string {
+  static truncate(
+    str: string,
+    maxLength: number,
+    suffix: string = "...",
+  ): string {
     if (str.length <= maxLength) return str;
     return str.slice(0, maxLength - suffix.length) + suffix;
   }
@@ -110,8 +116,8 @@ export class StringUtils {
   /**
    * Repeat string n times with optional separator
    */
-  static repeat(str: string, count: number, separator: string = ''): string {
-    if (count <= 0) return '';
+  static repeat(str: string, count: number, separator: string = ""): string {
+    if (count <= 0) return "";
     return Array(count).fill(str).join(separator);
   }
 
@@ -119,21 +125,21 @@ export class StringUtils {
    * Remove all whitespace from string
    */
   static removeWhitespace(str: string): string {
-    return str.replace(/\s+/g, '');
+    return str.replace(/\s+/g, "");
   }
 
   /**
    * Normalize whitespace (replace multiple spaces with single space)
    */
   static normalizeWhitespace(str: string): string {
-    return str.replace(/\s+/g, ' ').trim();
+    return str.replace(/\s+/g, " ").trim();
   }
 
   /**
    * Reverse string
    */
   static reverse(str: string): string {
-    return str.split('').reverse().join('');
+    return str.split("").reverse().join("");
   }
 
   /**
@@ -141,7 +147,11 @@ export class StringUtils {
    */
   static count(str: string, search: string): number {
     if (!search) return 0;
-    return (str.match(new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length;
+    return (
+      str.match(
+        new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g"),
+      ) || []
+    ).length;
   }
 
   /**
@@ -204,8 +214,11 @@ export class StringUtils {
   /**
    * Generate random string of specified length
    */
-  static random(length: number, charset: string = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'): string {
-    let result = '';
+  static random(
+    length: number,
+    charset: string = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789",
+  ): string {
+    let result = "";
     for (let i = 0; i < length; i++) {
       result += charset.charAt(Math.floor(Math.random() * charset.length));
     }
@@ -223,32 +236,40 @@ export class StringUtils {
    * Generate random alphabetic string
    */
   static randomAlpha(length: number): string {
-    return this.random(length, 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz');
+    return this.random(
+      length,
+      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz",
+    );
   }
 
   /**
    * Generate random numeric string
    */
   static randomNumeric(length: number): string {
-    return this.random(length, '0123456789');
+    return this.random(length, "0123456789");
   }
 
   /**
    * Generate UUID v4
    */
   static uuid(): string {
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-      const r = Math.random() * 16 | 0;
-      const v = c === 'x' ? r : (r & 0x3 | 0x8);
-      return v.toString(16);
-    });
+    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(
+      /[xy]/g,
+      function (c) {
+        const r = (Math.random() * 16) | 0;
+        const v = c === "x" ? r : (r & 0x3) | 0x8;
+        return v.toString(16);
+      },
+    );
   }
 
   /**
    * Calculate Levenshtein distance between two strings
    */
   static levenshteinDistance(str1: string, str2: string): number {
-    const matrix = Array(str2.length + 1).fill(null).map(() => Array(str1.length + 1).fill(null));
+    const matrix = Array(str2.length + 1)
+      .fill(null)
+      .map(() => Array(str1.length + 1).fill(null));
 
     for (let i = 0; i <= str1.length; i++) {
       matrix[0][i] = i;
@@ -264,7 +285,7 @@ export class StringUtils {
         matrix[j][i] = Math.min(
           matrix[j][i - 1] + 1, // deletion
           matrix[j - 1][i] + 1, // insertion
-          matrix[j - 1][i - 1] + indicator // substitution
+          matrix[j - 1][i - 1] + indicator, // substitution
         );
       }
     }
@@ -278,24 +299,31 @@ export class StringUtils {
   static similarity(str1: string, str2: string): number {
     const distance = this.levenshteinDistance(str1, str2);
     const maxLength = Math.max(str1.length, str2.length);
-    return maxLength === 0 ? 1 : 1 - (distance / maxLength);
+    return maxLength === 0 ? 1 : 1 - distance / maxLength;
   }
 
   /**
    * Split string and trim each part
    */
   static splitAndTrim(str: string, separator: string | RegExp): string[] {
-    return str.split(separator).map(s => s.trim()).filter(s => s.length > 0);
+    return str
+      .split(separator)
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
   }
 
   /**
    * Join array with different separators for last item
    */
-  static joinNatural(items: string[], separator: string = ', ', lastSeparator: string = ' and '): string {
-    if (items.length === 0) return '';
+  static joinNatural(
+    items: string[],
+    separator: string = ", ",
+    lastSeparator: string = " and ",
+  ): string {
+    if (items.length === 0) return "";
     if (items.length === 1) return items[0];
     if (items.length === 2) return items.join(lastSeparator);
-    
+
     const allButLast = items.slice(0, -1);
     const last = items[items.length - 1];
     return allButLast.join(separator) + lastSeparator + last;
@@ -306,11 +334,11 @@ export class StringUtils {
    */
   static escapeHtml(str: string): string {
     const htmlEscapes: { [key: string]: string } = {
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-      '"': '&quot;',
-      "'": '&#39;'
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;",
     };
     return str.replace(/[&<>"']/g, (match) => htmlEscapes[match]);
   }
@@ -320,21 +348,25 @@ export class StringUtils {
    */
   static unescapeHtml(str: string): string {
     const htmlUnescapes: { [key: string]: string } = {
-      '&amp;': '&',
-      '&lt;': '<',
-      '&gt;': '>',
-      '&quot;': '"',
-      '&#39;': "'"
+      "&amp;": "&",
+      "&lt;": "<",
+      "&gt;": ">",
+      "&quot;": '"',
+      "&#39;": "'",
     };
-    return str.replace(/&(amp|lt|gt|quot|#39);/g, (match) => htmlUnescapes[match]);
+    return str.replace(
+      /&(amp|lt|gt|quot|#39);/g,
+      (match) => htmlUnescapes[match],
+    );
   }
 
   /**
    * Convert string to title case
    */
   static titleCase(str: string): string {
-    return str.replace(/\w\S*/g, (txt) => 
-      txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase()
+    return str.replace(
+      /\w\S*/g,
+      (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase(),
     );
   }
 
