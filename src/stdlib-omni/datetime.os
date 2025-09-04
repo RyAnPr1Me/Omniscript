@@ -73,7 +73,7 @@ class DateTime {
   // Arithmetic operations
   add(amount:: number, unit:: TimeUnit):: DateTime {
     def newDate = new Date(this.date);
-    
+
     match unit {
       'milliseconds' => newDate.setMilliseconds(newDate.getMilliseconds() + amount),
       'seconds' => newDate.setSeconds(newDate.getSeconds() + amount),
@@ -85,7 +85,7 @@ class DateTime {
       'years' => newDate.setFullYear(newDate.getFullYear() + amount),
       _ => throw new Error(`Unknown time unit: ${unit}`)
     };
-    
+
     return new DateTime(newDate, this.options);
   }
 
@@ -129,7 +129,7 @@ class DateTime {
   // Duration calculations
   diff(other:: DateTime, unit:: TimeUnit = 'milliseconds'):: number {
     def diff = this.date.getTime() - other.date.getTime();
-    
+
     match unit {
       'milliseconds' => diff,
       'seconds' => Math.floor(diff / 1000),
@@ -145,7 +145,7 @@ class DateTime {
 
   duration(other:: DateTime):: Duration {
     def diff = Math.abs(this.date.getTime() - other.date.getTime());
-    
+
     def years = Math.floor(diff / (1000 * 60 * 60 * 24 * 365.25));
     def months = Math.floor((diff % (1000 * 60 * 60 * 24 * 365.25)) / (1000 * 60 * 60 * 24 * 30.44));
     def weeks = Math.floor((diff % (1000 * 60 * 60 * 24 * 30.44)) / (1000 * 60 * 60 * 24 * 7));
@@ -308,7 +308,7 @@ class DateTime {
   // Utility methods
   startOf(unit:: TimeUnit):: DateTime {
     def newDate = new Date(this.date);
-    
+
     match unit {
       'years' => {
         newDate.setMonth(0, 1);
@@ -357,9 +357,9 @@ class DateTime {
   }
 
   local():: DateTime {
-    return new DateTime(this.date, { 
-      ...this.options, 
-      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone 
+    return new DateTime(this.date, {
+      ...this.options,
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
     });
   }
 
@@ -403,18 +403,18 @@ class DateTime {
   }
 
   static max(...dates:: DateTime[]):: DateTime {
-    def maxDate = dates.reduce((max, current) => 
-      current.isAfter(max) ? current : max
-    );
-    return maxDate;
-  }
+    def maxDate = dates.reduce((max, current) =>
+    current.isAfter(max) ? current : max
+  );
+  return maxDate;
+}
 
-  static min(...dates:: DateTime[]):: DateTime {
-    def minDate = dates.reduce((min, current) => 
-      current.isBefore(min) ? current : min
-    );
-    return minDate;
-  }
+static min(...dates:: DateTime[]):: DateTime {
+  def minDate = dates.reduce((min, current) =>
+  current.isBefore(min) ? current : min
+);
+return minDate;
+}
 }
 
 // Utility functions for working with durations
@@ -433,7 +433,7 @@ class DateTimeUtils {
 
   static formatDuration(duration:: Duration):: string {
     def parts:: string[] = [];
-    
+
     if (duration.years > 0) parts.push(`${duration.years}y`);
     if (duration.months > 0) parts.push(`${duration.months}mo`);
     if (duration.weeks > 0) parts.push(`${duration.weeks}w`);
@@ -473,13 +473,13 @@ class DateTimeUtils {
     def result = fn();
     def end = DateTime.now();
     def elapsed = this.elapsed(start, end);
-    
+
     if (label) {
       console.log(`${label}: ${elapsed}`);
     } else {
       console.log(`Execution time: ${elapsed}`);
     }
-    
+
     return result;
   }
 
@@ -488,13 +488,13 @@ class DateTimeUtils {
     def result = await fn();
     def end = DateTime.now();
     def elapsed = this.elapsed(start, end);
-    
+
     if (label) {
       console.log(`${label}: ${elapsed}`);
     } else {
       console.log(`Async execution time: ${elapsed}`);
     }
-    
+
     return result;
   }
 
@@ -527,14 +527,14 @@ class DateTimeUtils {
     def lastDay = new DateTime(new Date(year, month + 1, 0));
     def startOfWeek = firstDay.startOf('weeks');
     def endOfWeek = lastDay.endOf('weeks');
-    
+
     def allDays = this.dateRange(startOfWeek, endOfWeek);
     def weeks:: DateTime[][] = [];
-    
+
     for (var i = 0; i < allDays.length; i += 7) {
       weeks.push(allDays.slice(i, i + 7));
     }
-    
+
     return weeks;
   }
 
@@ -566,7 +566,7 @@ class Timezone {
     });
     def parts = formatter.formatToParts(testDate.date);
     def offsetPart = parts.find(part => part.type === 'timeZoneName');
-    
+
     if (offsetPart) {
       def offsetStr = offsetPart.value;
       // Parse offset string like "GMT+5" or "GMT-5"
@@ -577,7 +577,7 @@ class Timezone {
         return sign * hours * 60; // Return offset in minutes
       }
     }
-    
+
     return 0; // Default to UTC
   }
 }

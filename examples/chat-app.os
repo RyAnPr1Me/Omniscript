@@ -1022,3 +1022,6 @@ def PORT :: number = parseInt(process.env.PORT) || 3000;
 app.listen(PORT, () => {
   Console.log(`✅ HTTP server listening on port ${PORT}`);
 });
+
+// Export main functionality
+export { app, wsServer, ChatRoomActor, UserPresenceActor, ConnectionManager, User, Room, Message };

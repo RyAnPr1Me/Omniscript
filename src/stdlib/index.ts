@@ -71,6 +71,7 @@ export class HTTP {
 
   static createServer(path: string, handler: (req: any, res: any) => void) {
     // Import HTTPServer here to avoid circular dependencies
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { HTTPServer } = require('./http/server');
     const server = new HTTPServer();
     server.get(path, handler);

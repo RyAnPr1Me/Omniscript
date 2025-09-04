@@ -261,7 +261,8 @@ export class Encoding {
     encoding: string[];
   } {
     const byteLength = new TextEncoder().encode(input).length;
-    const hasUnicode = /[^\x00-\x7F]/.test(input);
+    // eslint-disable-next-line no-control-regex
+    const hasUnicode = /[^\u0000-\u007F]/.test(input);
     const hasSpecialChars = /[&<>"'/]/.test(input);
     
     const possibleEncodings: string[] = [];

@@ -722,9 +722,9 @@ export class Parser {
             }
           });
         }
-      } else if (line.match(/^[A-Za-z_]\w*\s*[+\-*\/]\s*[A-Za-z_]\w*$/)) {
+      } else if (line.match(/^[A-Za-z_]\w*\s*[+\-*/]\s*[A-Za-z_]\w*$/)) {
         // Binary expression like x + y
-        const binaryMatch = line.match(/^([A-Za-z_]\w*)\s*([+\-*\/])\s*([A-Za-z_]\w*)$/);
+        const binaryMatch = line.match(/^([A-Za-z_]\w*)\s*([+\-*/])\s*([A-Za-z_]\w*)$/);
         if (binaryMatch) {
           const left = binaryMatch[1];
           const operator = binaryMatch[2];

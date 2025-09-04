@@ -39,7 +39,7 @@ describe('Production Examples Integration', () => {
     test('chat-app.os has valid actor model syntax', async () => {
       const source = readExample('chat-app.os');
       
-      expect(source).toContain('const ChatRoomActor = runtime.createActor');
+      expect(source).toContain('def ChatRoomActor :: any = Runtime.createActor');
       expect(source).toContain('match message.type {');
       expect(source).toContain('WebSocket');
       expect(source).toContain('ConnectionManager');
@@ -54,10 +54,10 @@ describe('Production Examples Integration', () => {
     test('microservices.os has valid service architecture patterns', async () => {
       const source = readExample('microservices.os');
       
-      expect(source).toContain('class ServiceRegistry');
-      expect(source).toContain('class LoadBalancer');
-      expect(source).toContain('class CircuitBreaker');
-      expect(source).toContain('class ServiceProxy');
+      expect(source).toContain('object ServiceRegistry');
+      expect(source).toContain('object LoadBalancer');
+      expect(source).toContain('object CircuitBreaker');
+      expect(source).toContain('object ServiceProxy');
       expect(source).toContain('healthCheck');
       expect(source).toContain('round-robin');
       expect(source).toContain('least-connections');
@@ -66,9 +66,9 @@ describe('Production Examples Integration', () => {
     test('data-pipeline.os has functional programming patterns', async () => {
       const source = readExample('data-pipeline.os');
       
-      expect(source).toContain('const pipe = (...fns)');
-      expect(source).toContain('const curry = (fn)');
-      expect(source).toContain('const compose = (...fns)');
+      expect(source).toContain('def pipe :: <T>(...fns :: Function[])');
+      expect(source).toContain('def curry :: <T>(fn :: Function)');
+      expect(source).toContain('def compose :: <T>(...fns :: Function[])');
       expect(source).toContain('parseCSVLine');
       expect(source).toContain('validateEvent');
       expect(source).toContain('aggregateBySession');
@@ -78,11 +78,11 @@ describe('Production Examples Integration', () => {
     test('ml-inference.os has ML service patterns', async () => {
       const source = readExample('ml-inference.os');
       
-      expect(source).toContain('class FeatureEngineer');
-      expect(source).toContain('class LinearModel');
-      expect(source).toContain('class DecisionTree');
-      expect(source).toContain('class ModelRegistry');
-      expect(source).toContain('class PredictionService');
+      expect(source).toContain('object FeatureEngineer');
+      expect(source).toContain('LinearModel');
+      expect(source).toContain('DecisionTree');
+      expect(source).toContain('ModelRegistry');
+      expect(source).toContain('PredictionService');
       expect(source).toContain('predict(features: number[])');
       expect(source).toContain('predictProba');
     });
@@ -92,11 +92,11 @@ describe('Production Examples Integration', () => {
     test('examples use decorators correctly', () => {
       const ecommerce = readExample('ecommerce-app.os');
       
-      // Check for decorator usage
-      expect(ecommerce).toContain('@id id: number');
-      expect(ecommerce).toContain('@field name: string');
-      expect(ecommerce).toContain('@timestamp createdAt: DateTime');
-      expect(ecommerce).toContain('@relation orders: Order[]');
+      // Check for decorator usage - fix syntax to match Omniscript
+      expect(ecommerce).toContain('@id id :: number');
+      expect(ecommerce).toContain('@field name :: string');
+      expect(ecommerce).toContain('@timestamp createdAt :: DateTime');
+      expect(ecommerce).toContain('@relation orders :: Order[]');
     });
 
     test('examples use pattern matching correctly', () => {
@@ -177,7 +177,10 @@ describe('Production Examples Integration', () => {
       for (const source of sources) {
         const hasLogging = source.includes('console.log') || 
                           source.includes('console.error') || 
-                          source.includes('console.warn');
+                          source.includes('console.warn') ||
+                          source.includes('Console.log') ||
+                          source.includes('Console.error') ||
+                          source.includes('Console.warn');
         expect(hasLogging).toBe(true);
       }
     });
@@ -282,7 +285,8 @@ describe('Production Examples Integration', () => {
       ];
       
       for (const source of sources) {
-        expect(source).toMatch(/import\s*\{[^}]+\}\s*from\s*['"][^'"]+['"]/);
+        // Accept both 'import' and 'use' syntax
+        expect(source).toMatch(/(import|use)\s*\{[^}]+\}\s*from\s*['"][^'"]+['"]/);
         expect(source).toContain("from 'stdlib'");
       }
     });

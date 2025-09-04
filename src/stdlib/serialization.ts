@@ -156,9 +156,10 @@ export class JsonSerializer extends BaseSerializer {
         switch (value.__type) {
           case 'Date':
             return new Date(value.value);
-          case 'RegExp':
+          case 'RegExp': {
             const match = value.value.match(/^\/(.*)\/([gimuy]*)$/);
             return match ? new RegExp(match[1], match[2]) : new RegExp(value.value);
+          }
           case 'Map':
             return new Map(value.value);
           case 'Set':
@@ -722,27 +723,31 @@ export class BinarySerializer extends BaseSerializer {
         return false;
       case 0x10: // int8
         return new DataView(buffer.buffer, context.offset++, 1).getInt8(0);
-      case 0x11: // int16
+      case 0x11: { // int16
         const int16 = new DataView(buffer.buffer, context.offset, 2).getInt16(0, true);
         context.offset += 2;
         return int16;
-      case 0x12: // float64
+      }
+      case 0x12: { // float64
         const float64 = new DataView(buffer.buffer, context.offset, 8).getFloat64(0, true);
         context.offset += 8;
         return float64;
-      case 0x20: // string
+      }
+      case 0x20: { // string
         const strLength = this.readLength(buffer, context);
         const strBytes = buffer.slice(context.offset, context.offset + strLength);
         context.offset += strLength;
         return new TextDecoder().decode(strBytes);
-      case 0x30: // array
+      }
+      case 0x30: { // array
         const arrLength = this.readLength(buffer, context);
         const array = [];
         for (let i = 0; i < arrLength; i++) {
           array.push(this.readValue(buffer, context));
         }
         return array;
-      case 0x40: // object
+      }
+      case 0x40: { // object
         const objLength = this.readLength(buffer, context);
         const object: any = {};
         for (let i = 0; i < objLength; i++) {
@@ -751,6 +756,7 @@ export class BinarySerializer extends BaseSerializer {
           object[key] = value;
         }
         return object;
+      }
       default:
         throw new Error(`Unknown type marker: 0x${type.toString(16)}`);
     }

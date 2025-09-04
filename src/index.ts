@@ -46,7 +46,8 @@ export class Omniscript {
                                /\b(curry|memoize|just|nothing|left|right|head|tail|cons|flip)\s*\(/.test(source) || // Functional builtins (removed add/inc as they're too common)
                                /\)\s*\(\s*\w+\s*\)/.test(source) || // Curried function calls like add(2)(3)
                                /\blet\s+\w+\s*=.*\bin\b/.test(source) || // Let expressions with 'in' 
-                               /\bmatch\s+\w+\s*\{[\s\S]*?case\s+/.test(source); // Match expressions with cases
+                               /\bmatch\s+\w+\s*\{[\s\S]*?case\s+/.test(source) || // Match expressions with cases
+                               /\b(import|use)\s*\{/.test(source); // Import/use statements
     
     if (hasFunctionalSyntax) {
       // Use functional parser directly for functional syntax

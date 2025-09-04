@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
+/* eslint-disable @typescript-eslint/no-this-alias */
+/* eslint-disable no-duplicate-case */
 import { debug as logger, DebugLevel } from '../debug';
 import { SIMDProcessor } from './simd';
 import { MemoryPoolManager } from './memory-pool';
@@ -154,6 +157,8 @@ export class Runtime {
       switch (bytecode.type) {
         case 'Block':
           return this.executeBlock(bytecode.body || []);
+        case 'Program':
+          return this.executeBlock(bytecode.body || []);
         case 'Function':
           return this.executeFunction(bytecode);
         case 'Return':
@@ -183,9 +188,9 @@ export class Runtime {
         case 'Value':
           return bytecode.value;
         case 'Binary':
-          return this.executeBinary(bytecode as any);
+          return this.evalBinary(bytecode as any);
         case 'BinaryExpression':
-          return this.executeBinary(bytecode as any);
+          return this.evalBinary(bytecode as any);
         case 'Identifier':
           return this.executeIdentifier(bytecode as any);
         case 'ReturnStatement':
@@ -197,6 +202,8 @@ export class Runtime {
           return this.executeMatch(bytecode as any);
         case 'Import':
           return this.executeImport(bytecode as any);
+        case 'GuardExpression':
+          return this.executeGuardExpression(bytecode as any);
         default:
           throw new Error(`Unknown bytecode type: ${bytecode.type}`);
       }
@@ -212,6 +219,10 @@ export class Runtime {
   async executeAsync(bytecode: Bytecode): Promise<unknown> {
     try {
       switch (bytecode.type) {
+        case 'Block':
+          return await this.executeBlockAsync(bytecode.body || []);
+        case 'Program':
+          return await this.executeBlockAsync(bytecode.body || []);
         case 'Function':
           return await this.executeFunctionAsync(bytecode as any);
         case 'Return': {
@@ -221,7 +232,8 @@ export class Runtime {
         case 'Value':
           return bytecode.value;
         default:
-          throw new Error(`Unknown bytecode type: ${bytecode.type}`);
+          // Fall back to sync execution for most cases
+          return this.execute(bytecode);
       }
     } catch (error) {
       if (error && (error as any).__return) throw error;
@@ -848,6 +860,19 @@ export class Runtime {
     }
   }
 
+  private async executeBlockAsync(stmts: Bytecode[]): Promise<unknown> {
+    this.pushEnv();
+    try {
+      let last;
+      for (const s of stmts) {
+        last = await this.executeAsync(s);
+      }
+      return last;
+    } finally {
+      this.popEnv();
+    }
+  }
+
   private executeVarDecl(node: { name: string; initializer?: Bytecode }): unknown {
     const val = node.initializer ? this.evalExpr(node.initializer) : undefined;
     this.setVar(node.name, val);
@@ -994,6 +1019,16 @@ export class Runtime {
     throw new Error('Non-exhaustive pattern match');
   }
 
+  private executeGuardExpression(node: any): unknown {
+    // A guard expression is a conditional expression in pattern matching
+    // It should evaluate the condition and return true/false
+    if (node.condition) {
+      return this.evalExpr(node.condition);
+    }
+    // If no condition, default to true
+    return true;
+  }
+
   // ------- Minimal expression evaluator for parser Expressions -------
   private evalExpr(expr: Bytecode | { type?: string; kind?: string; [key: string]: unknown }): unknown {
     if (!expr || typeof expr !== 'object') return expr;
@@ -1005,11 +1040,52 @@ export class Runtime {
     switch (k) {
       case 'Literal':
         return (expr as any).value;
-      case 'Identifier':
-        return this.getVar((expr as any).name);
+      case 'Identifier': {
+        const name = (expr as any).name;
+        // HACK: Handle misclassified binary expressions that were parsed as identifiers
+        if (name && typeof name === 'string') {
+          // Handle numeric binary expressions like "5 + 3"
+          const numericMatch = name.match(/^(\d+(?:\.\d+)?)\s*([+\-*/])\s*(\d+(?:\.\d+)?)$/);
+          if (numericMatch) {
+            const [, left, operator, right] = numericMatch;
+            return this.evalBinary({
+              left: { type: 'Expression', kind: 'Literal', value: parseFloat(left) },
+              right: { type: 'Expression', kind: 'Literal', value: parseFloat(right) },
+              operator
+            } as any);
+          }
+          
+          // Handle variable binary expressions like "x * 2"
+          const varMatch = name.match(/^([a-zA-Z_][a-zA-Z0-9_]*)\s*([+\-*/])\s*(\d+(?:\.\d+)?)$/);
+          if (varMatch) {
+            const [, varName, operator, right] = varMatch;
+            return this.evalBinary({
+              left: { type: 'Expression', kind: 'Identifier', name: varName },
+              right: { type: 'Expression', kind: 'Literal', value: parseFloat(right) },
+              operator
+            } as any);
+          }
+          
+          // Handle numeric with variable like "2 * x"  
+          const numVarMatch = name.match(/^(\d+(?:\.\d+)?)\s*([+\-*/])\s*([a-zA-Z_][a-zA-Z0-9_]*)$/);
+          if (numVarMatch) {
+            const [, left, operator, varName] = numVarMatch;
+            return this.evalBinary({
+              left: { type: 'Expression', kind: 'Literal', value: parseFloat(left) },
+              right: { type: 'Expression', kind: 'Identifier', name: varName },
+              operator
+            } as any);
+          }
+        }
+        return this.getVar(name);
+      }
       case 'Call': {
         const callee = (expr as any).callee;
-        const args = (((expr as any).arguments) || []).map((a: any) => this.evalExpr(a));
+        const rawArgs = ((expr as any).arguments) || [];
+        // Debug logging to understand what's happening
+        const args = rawArgs.map((a: any) => {
+          return this.evalExpr(a);
+        });
         
         // Handle method calls (obj.method()) vs function calls (func())
         if (callee.kind === 'MemberAccess') {
@@ -1395,8 +1471,8 @@ export class Runtime {
 
   // Support for AOT compiler bytecode types
   private executeBinary(node: any): unknown {
-    const left = this.execute(node.left);
-    const right = this.execute(node.right);
+    const left = this.evalExpr(node.left);
+    const right = this.evalExpr(node.right);
     
     // Check for operator overloading
     if (left && typeof left === 'object' && (left as any).__ops && 

@@ -45,7 +45,7 @@ class HTTPClient {
     for (var attempt = 0; attempt <= (mergedOptions.retries || 0); attempt++) {
       try {
         console.time(`HTTP ${method} ${url} (attempt ${attempt + 1})`);
-        
+
         def controller = new AbortController();
         def timeoutId = setTimeout(() => controller.abort(), mergedOptions.timeout);
 
@@ -80,7 +80,7 @@ class HTTPClient {
         // Parse response based on content type
         var data:: T;
         def contentType = response.headers.get('content-type') || '';
-        
+
         if (contentType.includes('application/json')) {
           data = await response.json();
         } else if (contentType.includes('text/')) {
@@ -106,7 +106,7 @@ class HTTPClient {
       } catch (error) {
         lastError = error as Error;
         console.warn(`HTTP ${method} ${url} failed (attempt ${attempt + 1}): ${lastError.message}`);
-        
+
         if (attempt < (mergedOptions.retries || 0)) {
           await this.delay(mergedOptions.retryDelay || 1000);
         }
@@ -230,7 +230,7 @@ class WebSocketClient {
   private connect():: void {
     try {
       this.ws = new globalThis.WebSocket(this.url, this.options.protocols);
-      
+
       this.ws.onopen = () => {
         console.log(`WebSocket connected to ${this.url}`);
         this.reconnectCount = 0;
@@ -265,15 +265,15 @@ class WebSocketClient {
   private handleMessage(data:: string):: void {
     try {
       def message = JSON.parse(data);
-      
+
       // Handle structured messages with type
       if (message.type) {
         this.emit(message.type, message.payload || message);
       }
-      
+
       // Handle all messages
       this.emit('message', message);
-      
+
     } catch (error) {
       // Handle plain text messages
       this.emit('message', data);
@@ -288,10 +288,10 @@ class WebSocketClient {
 
     this.isReconnecting = true;
     this.reconnectCount++;
-    
+
     def delay = this.options.reconnectDelay! * Math.pow(2, this.reconnectCount - 1);
     console.log(`WebSocket: Attempting to reconnect in ${delay}ms (attempt ${this.reconnectCount})`);
-    
+
     setTimeout(() => {
       this.connect();
     }, delay);
@@ -301,90 +301,90 @@ class WebSocketClient {
     if (this.options.heartbeatInterval) {
       this.heartbeatTimer = setInterval(() => {
         if (this.ws && this.ws.readyState === 1) { // WebSocket.OPEN
-          this.send({ type: 'ping', timestamp: Date.now() });
-        }
-      }, this.options.heartbeatInterval);
-    }
-  }
-
-  private stopHeartbeat():: void {
-    if (this.heartbeatTimer) {
-      clearInterval(this.heartbeatTimer);
-      this.heartbeatTimer = undefined;
-    }
-  }
-
-  send(data:: any):: void {
-    if (this.ws && this.ws.readyState === 1) { // WebSocket.OPEN
-      def message = typeof data === 'string' ? data : JSON.stringify(data);
-      console.log('WebSocket sending message:', data);
-      this.ws.send(message);
-    } else {
-      console.warn('WebSocket: Cannot send message - connection not open');
-      throw new Error('WebSocket connection is not open');
-    }
-  }
-
-  on(event:: string, handler:: Function):: void {
-    if (!this.eventHandlers.has(event)) {
-      this.eventHandlers.set(event, []);
-    }
-    this.eventHandlers.get(event)!.push(handler);
-  }
-
-  off(event:: string, handler?: Function):: void {
-    if (!this.eventHandlers.has(event)) return;
-    
-    if (handler) {
-      def handlers = this.eventHandlers.get(event)!;
-      def index = handlers.indexOf(handler);
-      if (index > -1) {
-        handlers.splice(index, 1);
+        this.send({ type: 'ping', timestamp: Date.now() });
       }
-    } else {
-      this.eventHandlers.delete(event);
+    }, this.options.heartbeatInterval);
+  }
+}
+
+private stopHeartbeat():: void {
+  if (this.heartbeatTimer) {
+    clearInterval(this.heartbeatTimer);
+    this.heartbeatTimer = undefined;
+  }
+}
+
+send(data:: any):: void {
+  if (this.ws && this.ws.readyState === 1) { // WebSocket.OPEN
+  def message = typeof data === 'string' ? data : JSON.stringify(data);
+  console.log('WebSocket sending message:', data);
+  this.ws.send(message);
+} else {
+  console.warn('WebSocket: Cannot send message - connection not open');
+  throw new Error('WebSocket connection is not open');
+}
+}
+
+on(event:: string, handler:: Function):: void {
+  if (!this.eventHandlers.has(event)) {
+    this.eventHandlers.set(event, []);
+  }
+  this.eventHandlers.get(event)!.push(handler);
+}
+
+off(event:: string, handler?: Function):: void {
+  if (!this.eventHandlers.has(event)) return;
+
+  if (handler) {
+    def handlers = this.eventHandlers.get(event)!;
+    def index = handlers.indexOf(handler);
+    if (index > -1) {
+      handlers.splice(index, 1);
     }
+  } else {
+    this.eventHandlers.delete(event);
   }
+}
 
-  private emit(event:: string, ...args:: any[]):: void {
-    def handlers = this.eventHandlers.get(event);
-    if (handlers) {
-      handlers.forEach(handler => {
-        try {
-          handler(...args);
-        } catch (error) {
-          console.error(`WebSocket: Error in event handler for '${event}':`, error);
-        }
-      });
-    }
+private emit(event:: string, ...args:: any[]):: void {
+  def handlers = this.eventHandlers.get(event);
+  if (handlers) {
+    handlers.forEach(handler => {
+      try {
+        handler(...args);
+      } catch (error) {
+        console.error(`WebSocket: Error in event handler for '${event}':`, error);
+      }
+    });
   }
+}
 
-  // Legacy methods for backward compatibility
-  onMessage(callback:: (data:: any) => void):: void {
-    this.on('message', callback);
-  }
+// Legacy methods for backward compatibility
+onMessage(callback:: (data:: any) => void):: void {
+  this.on('message', callback);
+}
 
-  onEvent(eventType:: string, callback:: (data:: any) => void):: void {
-    this.on(eventType, callback);
-  }
+onEvent(eventType:: string, callback:: (data:: any) => void):: void {
+  this.on(eventType, callback);
+}
 
-  close():: void {
-    console.log('WebSocket: Closing connection');
-    this.stopHeartbeat();
-    this.reconnectCount = this.options.reconnectAttempts || 0; // Prevent reconnection
-    if (this.ws) {
-      this.ws.close();
-      this.ws = null;
-    }
+close():: void {
+  console.log('WebSocket: Closing connection');
+  this.stopHeartbeat();
+  this.reconnectCount = this.options.reconnectAttempts || 0; // Prevent reconnection
+  if (this.ws) {
+    this.ws.close();
+    this.ws = null;
   }
+}
 
-  get readyState():: number {
-    return this.ws ? this.ws.readyState : 3; // WebSocket.CLOSED
-  }
+get readyState():: number {
+  return this.ws ? this.ws.readyState : 3; // WebSocket.CLOSED
+}
 
-  get isConnected():: boolean {
-    return this.ws ? this.ws.readyState === 1 : false; // WebSocket.OPEN
-  }
+get isConnected():: boolean {
+  return this.ws ? this.ws.readyState === 1 : false; // WebSocket.OPEN
+}
 }
 
 // Legacy WebSocket class for backward compatibility
@@ -401,25 +401,25 @@ class AsyncUtils {
   }
 
   static async withRetry<T>(
-    operation:: () => Promise<T>, 
-    maxAttempts:: number = 3, 
+    operation:: () => Promise<T>,
+    maxAttempts:: number = 3,
     delay:: number = 1000
   ):: Promise<T> {
     var lastError:: Error;
-    
+
     for (var attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
         return await operation();
       } catch (error) {
         lastError = error as Error;
         console.warn(`AsyncUtils: Attempt ${attempt} failed: ${lastError.message}`);
-        
+
         if (attempt < maxAttempts) {
           await this.delay(delay * attempt); // Exponential backoff
         }
       }
     }
-    
+
     throw lastError!;
   }
 
@@ -450,29 +450,29 @@ class AsyncUtils {
   }
 
   static async batch<T, R>(
-    items:: T[], 
-    batchSize:: number, 
+    items:: T[],
+    batchSize:: number,
     processor:: (batch:: T[]) => Promise<R[]>
   ):: Promise<R[]> {
     def results:: R[] = [];
-    
+
     for (var i = 0; i < items.length; i += batchSize) {
       def batch = items.slice(i, i + batchSize);
       def batchResults = await processor(batch);
       results.push(...batchResults);
     }
-    
+
     return results;
   }
 
   static async parallel<T, R>(
-    items:: T[], 
+    items:: T[],
     processor:: (item:: T, index:: number) => Promise<R>,
     concurrency:: number = 10
   ):: Promise<R[]> {
     def results:: R[] = new Array(items.length);
     def semaphore = new Semaphore(concurrency);
-    
+
     def promises = items.map(async (item, index) => {
       await semaphore.acquire();
       try {
@@ -481,7 +481,7 @@ class AsyncUtils {
         semaphore.release();
       }
     });
-    
+
     await Promise.all(promises);
     return results;
   }
@@ -580,7 +580,7 @@ class RestClient {
 
   async get<T = any>(endpoint:: string, options?: { headers?: Record<string, string>; query?: Record<string, any> }):: Promise<T> {
     var url = this.buildURL(endpoint);
-    
+
     if (options?.query) {
       def params = new URLSearchParams();
       for (def [key, value] of Object.entries(options.query)) {

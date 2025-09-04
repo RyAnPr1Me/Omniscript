@@ -233,7 +233,7 @@ export class SandboxedEnvironment {
     } as Console;
   }
 
-  private createRestrictedFunction(name: string): Function {
+  private createRestrictedFunction(name: string): (...args: any[]) => any {
     return (...args: any[]) => {
       const security = SecurityManager.getInstance();
       try {
@@ -258,7 +258,7 @@ export class SandboxedEnvironment {
     };
   }
 
-  private createRestrictedRequire(): Function {
+  private createRestrictedRequire(): (moduleName: string) => any {
     return (moduleName: string) => {
       const security = SecurityManager.getInstance();
       security.checkResourceAccess('module_import', moduleName, this.context);
@@ -268,7 +268,7 @@ export class SandboxedEnvironment {
     };
   }
 
-  private createRestrictedImport(): Function {
+  private createRestrictedImport(): (moduleName: string) => Promise<any> {
     return async (moduleName: string) => {
       const security = SecurityManager.getInstance();
       security.checkResourceAccess('module_import', moduleName, this.context);

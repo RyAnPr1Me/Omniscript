@@ -199,7 +199,7 @@ omni run src/main.omni
 - **Thread Safety**: Actor model and thread-safe collections
 - **Resource Management**: Memory pools and cleanup hooks
 
-## 🚢 Ready for 1.0 Release
+## 🚢 Ready for 2.0 Release
 
 Omniscript is now production-ready with:
 - ✅ Complete toolchain

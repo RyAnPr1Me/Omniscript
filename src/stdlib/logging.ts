@@ -302,17 +302,21 @@ export class FileOutput implements LogOutput {
   private buffer: string[] = [];
   private lastFlush = Date.now();
   private readonly flushInterval = 5000; // 5 seconds
+  private flushTimer?: NodeJS.Timeout;
 
   constructor(
     private filename: string,
     private formatter: LogFormatter = new JsonFormatter(),
     private maxBufferSize = 100
   ) {
-    // Only set up auto-flush if not in CLI context
+    // Only set up auto-flush if not in CLI or test context
     const isCLI = process.argv.some(arg => arg.includes('cli.js') || arg.includes('bin/cli'));
-    if (!isCLI) {
-      // Auto-flush periodically
-      setInterval(() => this.flush(), this.flushInterval);
+    const isTest = process.env.NODE_ENV === 'test' || process.argv.some(arg => arg.includes('jest'));
+    
+    if (!isCLI && !isTest) {
+      // Auto-flush periodically with unref() to allow process to exit
+      this.flushTimer = setInterval(() => this.flush(), this.flushInterval);
+      this.flushTimer.unref();
     }
   }
 
@@ -339,6 +343,10 @@ export class FileOutput implements LogOutput {
   }
 
   async close(): Promise<void> {
+    if (this.flushTimer) {
+      clearInterval(this.flushTimer);
+      this.flushTimer = undefined;
+    }
     await this.flush();
   }
 }

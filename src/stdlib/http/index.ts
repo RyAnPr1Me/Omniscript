@@ -6,6 +6,7 @@ export { HTTPServer, Server, createHTTPServer } from './server';
 export type { Request, Response, RouteHandler, Middleware } from './server';
 
 // Namespace for backward compatibility with README examples
+// eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace HTTP {
   export const Client = HTTPClient;
   export const Server = HTTPServer;
