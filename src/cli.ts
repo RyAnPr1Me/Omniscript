@@ -7,6 +7,7 @@ import { readFile } from 'node:fs/promises';
 import { Interface as ReadlineInterface, createInterface } from 'node:readline';
 import { Omniscript } from './index';
 import { enableDebugger, enableComponentDebug, DebugLevel } from './debug';
+import { OmniscriptInstaller } from './installManager';
 
 const program = new Command();
 let omniscript: Omniscript;
@@ -16,6 +17,22 @@ function getOmniscript(options?: any): Omniscript {
     omniscript = new Omniscript(options);
   }
   return omniscript;
+}
+
+// Version comparison function (returns -1 if v1 < v2, 0 if equal, 1 if v1 > v2)
+function compareVersions(v1: string, v2: string): number {
+  const parts1 = v1.split('.').map(Number);
+  const parts2 = v2.split('.').map(Number);
+  
+  for (let i = 0; i < Math.max(parts1.length, parts2.length); i++) {
+    const part1 = parts1[i] || 0;
+    const part2 = parts2[i] || 0;
+    
+    if (part1 < part2) return -1;
+    if (part1 > part2) return 1;
+  }
+  
+  return 0;
 }
 
 function startRepl(engine: Omniscript) {
@@ -900,15 +917,22 @@ program
   .command('upgrade')
   .description('Upgrade Omniscript to the latest version')
   .option('--check', 'Check for updates without upgrading')
-  .action(async (options: { check?: boolean }) => {
+  .option('--auto', 'Automatically install updates without confirmation')
+  .option('--user', 'Install to user directory instead of system-wide')
+  .action(async (options: { check?: boolean; auto?: boolean; user?: boolean }) => {
     console.log('🔍 Checking for Omniscript updates...');
     
     try {
       const https = await import('https');
+      const fs = await import('fs');
+      const path = await import('path');
+      const { execSync } = await import('child_process');
+      const { createInterface } = await import('readline');
+      
       const currentVersion = '2.0.0';
       
       // Check latest version from GitHub releases
-      const checkLatest = () => new Promise<string>((resolve, reject) => {
+      const checkLatest = () => new Promise<{ version: string; downloadUrl?: string }>((resolve, reject) => {
         const req = https.request({
           hostname: 'api.github.com',
           path: '/repos/RyAnPr1Me/Omniscript/releases/latest',
@@ -919,38 +943,171 @@ program
           res.on('end', () => {
             try {
               const release = JSON.parse(data);
-              resolve(release.tag_name?.replace(/^v/, '') || currentVersion);
-            } catch {
-              resolve(currentVersion);
+              const version = release.tag_name?.replace(/^v/, '') || currentVersion;
+              const downloadUrl = release.zipball_url;
+              resolve({ version, downloadUrl });
+            } catch (parseError) {
+              // Fallback to known latest version if API is blocked
+              console.log('API blocked, using fallback version check...');
+              // Check against known releases from the repository
+              const knownReleases = ['1.2.1', '1.1.3', '1.1.2', '1.1.0', '1.0.0'];
+              const latestKnownRelease = knownReleases[0];
+              
+              const versionComparison = compareVersions(currentVersion, latestKnownRelease);
+              if (versionComparison < 0) {
+                // Current version is older than known latest
+                resolve({ 
+                  version: latestKnownRelease, 
+                  downloadUrl: `https://api.github.com/repos/RyAnPr1Me/Omniscript/zipball/${latestKnownRelease}` 
+                });
+              } else {
+                // Current version is same or newer (could be development version)
+                resolve({ version: currentVersion });
+              }
             }
           });
         });
-        req.on('error', () => resolve(currentVersion));
+        req.on('error', (error) => {
+          // Fallback when request fails
+          console.log('Request failed, using fallback version check...');
+          const knownReleases = ['1.2.1', '1.1.3', '1.1.2', '1.1.0', '1.0.0'];
+          const latestKnownRelease = knownReleases[0];
+          
+          const versionComparison = compareVersions(currentVersion, latestKnownRelease);
+          if (versionComparison < 0) {
+            resolve({ 
+              version: latestKnownRelease, 
+              downloadUrl: `https://api.github.com/repos/RyAnPr1Me/Omniscript/zipball/${latestKnownRelease}` 
+            });
+          } else {
+            resolve({ version: currentVersion });
+          }
+        });
         req.setTimeout(5000, () => {
           req.destroy();
-          resolve(currentVersion);
+          // Fallback when timeout
+          console.log('Request timeout, using fallback version check...');
+          const knownReleases = ['1.2.1', '1.1.3', '1.1.2', '1.1.0', '1.0.0'];
+          const latestKnownRelease = knownReleases[0];
+          
+          const versionComparison = compareVersions(currentVersion, latestKnownRelease);
+          if (versionComparison < 0) {
+            resolve({ 
+              version: latestKnownRelease, 
+              downloadUrl: `https://api.github.com/repos/RyAnPr1Me/Omniscript/zipball/${latestKnownRelease}` 
+            });
+          } else {
+            resolve({ version: currentVersion });
+          }
         });
         req.end();
       });
       
-      const latestVersion = await checkLatest();
+      const { version: latestVersion, downloadUrl } = await checkLatest();
       
       if (currentVersion === latestVersion) {
         console.log(`✅ You're running the latest version (${currentVersion})`);
-      } else {
-        console.log(`📦 Update available: ${currentVersion} → ${latestVersion}`);
+        return;
+      }
+
+      console.log(`📦 Update available: ${currentVersion} → ${latestVersion}`);
+      
+      if (options.check) {
+        console.log('🚀 To upgrade automatically, run:');
+        console.log('  omni upgrade');
+        console.log('  # or with auto-confirmation:');
+        console.log('  omni upgrade --auto');
+        return;
+      }
+
+      // Detect installation method
+      const isNpmGlobal = process.env.npm_config_global === 'true' || 
+                         process.argv[0].includes('node_modules') ||
+                         __dirname.includes('node_modules');
+
+      let shouldUpgrade = options.auto;
+      
+      if (!shouldUpgrade) {
+        // Ask for user confirmation
+        const rl = createInterface({
+          input: process.stdin,
+          output: process.stdout
+        });
         
-        if (!options.check) {
-          console.log('🚀 To upgrade, run:');
-          console.log('  npm install -g omniscript@latest');
-          console.log('  # or');
-          console.log('  yarn global add omniscript@latest');
+        const answer = await new Promise<string>((resolve) => {
+          rl.question(`Do you want to upgrade to version ${latestVersion}? (y/N): `, (answer) => {
+            rl.close();
+            resolve(answer.toLowerCase());
+          });
+        });
+        
+        shouldUpgrade = answer === 'y' || answer === 'yes';
+      }
+
+      if (!shouldUpgrade) {
+        console.log('❌ Upgrade cancelled');
+        return;
+      }
+
+      console.log(`🚀 Starting upgrade to version ${latestVersion}...`);
+
+      try {
+        if (isNpmGlobal) {
+          // NPM global installation
+          console.log('📦 Detected npm global installation, updating via npm...');
+          try {
+            execSync('npm install -g omniscript@latest', { stdio: 'inherit' });
+            console.log('✅ Successfully upgraded via npm!');
+          } catch (npmError) {
+            console.log('❌ NPM upgrade failed, trying alternative method...');
+            throw npmError;
+          }
+        } else {
+          // Standalone binary or local installation - use installer
+          console.log('🔧 Using built-in installer for upgrade...');
+          
+          // Check if current installation is user-level or system-wide
+          const currentExecutable = process.argv[1];
+          const isUserInstall = currentExecutable.includes(require('os').homedir()) || options.user;
+          
+          await OmniscriptInstaller.install({ 
+            upgrade: true, 
+            userInstall: isUserInstall 
+          });
+          
+          console.log('✅ Successfully upgraded using built-in installer!');
         }
+        
+        // Verify the upgrade
+        try {
+          const newVersionOutput = execSync('omni --version', { encoding: 'utf8' });
+          const installedVersion = newVersionOutput.trim().split(' ').pop();
+          
+          if (installedVersion === latestVersion) {
+            console.log(`🎉 Upgrade successful! Now running version ${installedVersion}`);
+          } else {
+            console.log(`⚠️  Upgrade completed but version mismatch detected`);
+            console.log(`   Expected: ${latestVersion}, Got: ${installedVersion}`);
+          }
+        } catch (verifyError) {
+          console.log('⚠️  Could not verify upgrade, but installation completed');
+        }
+        
+      } catch (upgradeError) {
+        console.log(`❌ Automatic upgrade failed: ${upgradeError}`);
+        console.log('\n🔧 Manual upgrade options:');
+        console.log('  npm install -g omniscript@latest');
+        console.log('  # or');
+        console.log('  yarn global add omniscript@latest');
+        console.log('  # or download from:');
+        console.log('  https://github.com/RyAnPr1Me/Omniscript/releases/latest');
+        process.exit(1);
       }
       
     } catch (error) {
       console.log(`⚠️  Could not check for updates: ${error}`);
       console.log('📖 Visit https://github.com/RyAnPr1Me/Omniscript for the latest version');
+      process.exit(1);
     }
   });
 
