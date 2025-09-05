@@ -53,15 +53,7 @@ begin
     Exit;
   end;
   
-  // Check npm availability
-  if not Exec('cmd.exe', '/c npm --version', '', SW_HIDE, ewWaitUntilTerminated, ErrorCode) or (ErrorCode <> 0) then
-  begin
-    MsgBox('npm is required but not found on your system.' + #13#10 + 
-           'Please ensure Node.js is properly installed and try again.', 
-           mbError, MB_OK);
-    Result := False;
-    Exit;
-  end;
+  // Note: npm is not required since we bundle dependencies
 end;
 
 [Languages]
@@ -78,10 +70,11 @@ Source: "dist\*"; DestDir: "{app}\lib"; Flags: ignoreversion recursesubdirs crea
 Source: "LICENSE"; DestDir: "{app}"; Flags: ignoreversion
 Source: "README.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "package.json"; DestDir: "{app}"; Flags: ignoreversion
-Source: "package-lock.json"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
 Source: "tsconfig.json"; DestDir: "{app}"; Flags: ignoreversion
 Source: "omni.bat"; DestDir: "{app}"; Flags: ignoreversion
 Source: ".npmrc"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
+; Bundle all production dependencies to avoid npm install during installation
+Source: "node_modules\*"; DestDir: "{app}\node_modules"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "*\.git\*,*\.svn\*,*.md,*.txt,CHANGELOG*,CHANGES*,README*,AUTHORS*,CONTRIBUTORS*,LICENSE*,COPYING*,NOTICE*,*.test.js,test\*,tests\*,spec\*,docs\*,doc\*,examples\*,example\*,*.d.ts,*.map,*.min.js.map"
 
 [Icons]
 Name: "{group}\Omniscript CLI"; Filename: "node"; Parameters: """{app}\bin\cli.js"""; WorkingDir: "{app}"; Comment: "Omniscript CLI"
@@ -94,11 +87,8 @@ Name: "{userappdata}\Microsoft\Internet Explorer\Quick Launch\Omniscript"; Filen
 ; Check if Node.js is available
 Filename: "{cmd}"; Parameters: "/c node --version > nul 2>&1 || (echo Node.js is required but not found in PATH. && echo Please install Node.js from https://nodejs.org/ && pause && exit /b 1)"; Flags: runhidden waituntilterminated; StatusMsg: "Checking Node.js installation..."
 
-; Check if npm is available  
-Filename: "{cmd}"; Parameters: "/c npm --version > nul 2>&1 || (echo npm is required but not found in PATH. && echo Please install Node.js from https://nodejs.org/ && pause && exit /b 1)"; Flags: runhidden waituntilterminated; StatusMsg: "Checking npm installation..."
-
-; Install dependencies with better error handling
-Filename: "{cmd}"; Parameters: "/c npm install --omit=dev --silent || (echo Failed to install dependencies. && echo Please check your internet connection and try again. && pause && exit /b 1)"; WorkingDir: "{app}"; Flags: runhidden waituntilterminated; StatusMsg: "Installing dependencies..."
+; Validate bundled dependencies are correctly installed
+Filename: "{cmd}"; Parameters: "/c dir ""{app}\node_modules"" > nul 2>&1 && echo Dependencies installed successfully || echo Warning: Dependencies folder not found"; WorkingDir: "{app}"; Flags: runhidden waituntilterminated; StatusMsg: "Validating bundled dependencies..."
 
 ; Copy batch file to system directory with error handling
 Filename: "{cmd}"; Parameters: "/c copy ""{app}\omni.bat"" ""{sys}\omni.bat"" > nul || (echo Warning: Could not install omni command globally. && echo You may need administrator privileges.)"; Flags: runhidden waituntilterminated; StatusMsg: "Installing omni command globally..."
