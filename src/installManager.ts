@@ -522,7 +522,7 @@ export class OmniscriptInstaller {
     // Copy the JavaScript CLI file as fallback (create a launcher script)
     const jsCliPaths = [
       path.join(process.cwd(), "dist", "cli.js"),
-      path.join(__dirname, "..", "cli.js"),
+      path.join(__dirname, "..", "dist", "cli.js"),
       path.join(__dirname, "cli.js"),
     ];
 
