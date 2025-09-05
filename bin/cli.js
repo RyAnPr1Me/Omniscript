@@ -5,9 +5,9 @@ const { spawn } = require('child_process');
 
 // Detect if we're running from a development environment or installed environment
 // In development: ../dist/cli.js exists
-// In installed environment: ../lib/cli.js exists (dist files copied to lib by installer)
+// In installed environment: ../lib/dist/cli.js exists (dist files copied to lib by installer)
 const devCliPath = path.join(__dirname, '..', 'dist', 'cli.js');
-const installedCliPath = path.join(__dirname, '..', 'lib', 'cli.js');
+const installedCliPath = path.join(__dirname, '..', 'lib', 'dist', 'cli.js');
 
 let cliPath;
 if (fs.existsSync(devCliPath)) {
