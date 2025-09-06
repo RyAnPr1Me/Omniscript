@@ -127,7 +127,7 @@ begin
         begin
           if not ShellExec('open',
                            'https://nodejs.org/dist/v20.11.0/node-v20.11.0-x64.msi',
-                           '', '', 1, ewNoWait) then
+                           '', '', 1) then
           begin
             MsgBox('Failed to open Node.js download page. Please install it manually from https://nodejs.org/', mbError, MB_OK);
           end;
