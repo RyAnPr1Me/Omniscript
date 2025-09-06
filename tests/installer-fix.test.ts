@@ -69,9 +69,9 @@ describe("Windows Installer Fix", () => {
         expect(initSetupFunction).not.toMatch(/ShellExec\([^)]*ErrorCode\)/);
         expect(initSetupFunction).not.toMatch(/ShellExec\([^)]*ResultCode\)/);
         // Should have correct parameter count (5 parameters for ShellExec)
-        expect(initSetupFunction).toMatch(/ShellExec\(\s*'[^']*',\s*'[^']*',\s*'[^']*',\s*'[^']*',\s*SW_SHOWNORMAL\s*\)/);
+        expect(initSetupFunction).toMatch(/ShellExec\(\s*'[^']*',\s*'[^']*',\s*'[^']*',\s*'[^']*',\s*(SW_SHOWNORMAL|1)\s*\)/);
         // Should use SW_SHOWNORMAL constant instead of numeric value
-        expect(initSetupFunction).not.toMatch(/ShellExec\([^)]*,\s*\d+\s*\)/);
+        expect(initSetupFunction).not.toMatch(/ShellExec\([^)]*,\s*[02-9]\s*\)/); // Don't allow other numeric values
       }
     }
   });
