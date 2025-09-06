@@ -71,6 +71,11 @@ junit.xml
 *.omni.cache
 .omniscript/
 
+# VS Code extension artifacts
+vscode-extension/out/
+vscode-extension/node_modules/
+*.vsix
+
 # Binaries and executables
 *.exe
 *.dmg
