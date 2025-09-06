@@ -195,7 +195,12 @@ begin
     try
       ConfigContent.Add('{');
       ConfigContent.Add('  "globalCommand": "' + ConfigPage.Values[0] + '",');
-      ConfigContent.Add('  "defaultProjectDirectory": "' + StringChangeEx(ConfigPage.Values[1], '\', '\\', True) + '",');
+   var
+  ProjectDirEscaped: String;
+begin
+  ProjectDirEscaped := StringChangeEx(ConfigPage.Values[1], '\', '\\', True);
+  ConfigContent.Add('  "defaultProjectDirectory": "' + ProjectDirEscaped + '",');
+
       ConfigContent.Add('  "memoryLimit": ' + ConfigPage.Values[2] + ',');
       ConfigContent.Add('  "version": "2.1.0",');
       ConfigContent.Add('  "installPath": "' + StringChangeEx(ExpandConstant('{app}'), '\', '\\', True) + '",');
