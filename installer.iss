@@ -43,7 +43,7 @@ Name: "spanish"; MessagesFile: "compiler:Languages\Spanish.isl"
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
-Name: "addtopath"; Description: "Add Omniscript to system PATH"; GroupDescription: "System Integration"; Flags: checked
+Name: "addtopath"; Description: "Add Omniscript to system PATH"; GroupDescription: "System Integration"
 
 [Files]
 ; Core application files
