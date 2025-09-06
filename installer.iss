@@ -495,7 +495,7 @@ Filename: "taskkill"; Parameters: "/f /im omniscript-gui.exe"; Flags: runhidden;
 Filename: "node"; Parameters: """{app}\bin\cli.js"" update --unregister"; WorkingDir: "{app}"; Flags: runhidden; RunOnceId: "UnregisterUpdates"
 
 ; Clean up VS Code extension
-Filename: "{cmd}"; Parameters: "/c if exist ""{userprofile}\AppData\Local\Programs\Microsoft VS Code\bin\code.cmd"" (code --uninstall-extension omniscript-vscode --force)"; Flags: runhidden; RunOnceId: "UninstallVSCodeExt"
+Filename: "{cmd}"; Parameters: "/c if exist ""%USERPROFILE%\AppData\Local\Programs\Microsoft VS Code\bin\code.cmd"" (""%USERPROFILE%\AppData\Local\Programs\Microsoft VS Code\bin\code.cmd"" --uninstall-extension omniscript-vscode --force)"; Flags: runhidden; RunOnceId: "UninstallVSCodeExt"
 
 ; Remove development environment hooks
 Filename: "node"; Parameters: """{app}\tools\linter\setup.js"" --remove-hooks"; WorkingDir: "{app}"; Flags: runhidden; RunOnceId: "RemoveDevHooks"; Components: devtools\linter
