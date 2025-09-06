@@ -52,4 +52,22 @@ describe("Windows Installer Fix", () => {
     expect(installerContent).toMatch(/Validating bundled dependencies/);
     expect(installerContent).toMatch(/dir.*node_modules/);
   });
+
+  test("ShellExec calls should use correct parameter variables", () => {
+    const installerPath = path.join(__dirname, "../installer.iss");
+    const installerContent = fs.readFileSync(installerPath, "utf8");
+
+    // In InitializeSetup function, ShellExec should use ErrorCode (not ResultCode)
+    const initSetupMatch = installerContent.match(/function InitializeSetup\(\): Boolean;([\s\S]*?)end;/);
+    expect(initSetupMatch).not.toBeNull();
+    
+    if (initSetupMatch) {
+      const initSetupFunction = initSetupMatch[1];
+      // Should use ErrorCode with ShellExec in InitializeSetup function
+      if (initSetupFunction.includes("ShellExec")) {
+        expect(initSetupFunction).toMatch(/ShellExec\([^)]*ErrorCode\)/);
+        expect(initSetupFunction).not.toMatch(/ShellExec\([^)]*ResultCode\)/);
+      }
+    }
+  });
 });
