@@ -108,14 +108,22 @@ begin
                 'YES: Download and install automatically' + #13#10 +
                 'NO: Continue without Node.js (may fail)' + #13#10 +
                 'CANCEL: Exit setup', mbConfirmation, MB_YESNOCANCEL) of
+var
+  ResultCode: Integer;
+
 IDYES:
 begin
   if MsgBox('Download Node.js LTS now?', mbConfirmation, MB_YESNO) = IDYES then
   begin
-    var ResultCode: Integer;
     if not ShellExec('open',
                      'https://nodejs.org/dist/v20.11.0/node-v20.11.0-x64.msi',
                      '', '', SW_SHOWNORMAL, ResultCode) then
+    begin
+      MsgBox('Failed to open Node.js download page. Please install it manually from https://nodejs.org/', mbError, MB_OK);
+    end;
+  end;
+end;
+
     begin
       MsgBox('Failed to open Node.js download page. Please install it manually from https://nodejs.org/', mbError, MB_OK);
     end;
