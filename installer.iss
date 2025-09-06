@@ -391,8 +391,7 @@ Filename: "{cmd}"; Parameters: "/c copy ""{app}\omni.bat"" ""{localappdata}\Micr
 ; Initialize Omniscript workspace
 Filename: "node"; Parameters: """{app}\bin\cli.js"" init --global --config ""{app}\omni.config.json"""; WorkingDir: "{code:GetProjectDirectory}"; Flags: runhidden waituntilterminated; StatusMsg: "Initializing Omniscript workspace..."; Components: core
 
-; Install VS Code extension if VS Code is detected
-Filename: "{cmd}"; Parameters: "/c if exist ""{userprofile}\AppData\Local\Programs\Microsoft VS Code\bin\code.cmd"" (code --install-extension ""{app}\integrations\vscode\omniscript.vsix"" --force) else (echo VS Code not found, skipping extension install)"; Flags: runhidden waituntilterminated; StatusMsg: "Installing VS Code extension..."; Components: integrations\vscode
+Filename: "{cmd}"; Parameters: "/c if exist ""%USERPROFILE%\AppData\Local\Programs\Microsoft VS Code\bin\code.cmd"" (""%USERPROFILE%\AppData\Local\Programs\Microsoft VS Code\bin\code.cmd"" --install-extension ""{app}\integrations\vscode\omniscript.vsix"" --force) else (echo VS Code not found, skipping extension install)"; Flags: runhidden waituntilterminated; StatusMsg: "Installing VS Code extension..."; Components: integrations\vscode
 
 ; Setup development environment
 Filename: "node"; Parameters: """{app}\tools\linter\setup.js"" --install-hooks"; WorkingDir: "{app}"; Flags: runhidden waituntilterminated; StatusMsg: "Setting up development environment..."; Components: devtools\linter
