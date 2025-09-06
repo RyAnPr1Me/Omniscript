@@ -45,7 +45,7 @@ jobs:
       # Windows Packaging
       - name: Install Inno Setup
         if: matrix.os == 'windows-latest'
-        run: choco install innosetup --yes
+        run: choco upgrade innosetup -y
 
       - name: Build Windows Installer
         if: matrix.os == 'windows-latest'
