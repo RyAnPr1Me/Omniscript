@@ -1,0 +1,95 @@
+// Omniscript Web Server Example
+import { createServer } from 'http';
+import { parse } from 'url';
+
+interface Route {
+    method: string;
+    path: string;
+    handler: (request: any, response: any) => void;
+}
+
+class WebServer {
+    private routes: Route[] = [];
+    private port: number = 3000;
+    
+    constructor(port?: number) {
+        if (port) {
+            this.port = port;
+        }
+    }
+    
+    get(path: string, handler: (req: any, res: any) => void): void {
+        this.routes.push({ method: 'GET', path, handler });
+    }
+    
+    post(path: string, handler: (req: any, res: any) => void): void {
+        this.routes.push({ method: 'POST', path, handler });
+    }
+    
+    listen(): void {
+        const server = createServer((req, res) => {
+            const { pathname } = parse(req.url || '', true);
+            const method = req.method || 'GET';
+            
+            const route = this.routes.find(r => 
+                r.method === method && r.path === pathname
+            );
+            
+            if (route) {
+                route.handler(req, res);
+            } else {
+                res.writeHead(404, { 'Content-Type': 'text/plain' });
+                res.end('Not Found');
+            }
+        });
+        
+        server.listen(this.port, () => {
+            console.log(`Server running at http://localhost:${this.port}/`);
+        });
+    }
+}
+
+// Create and configure server
+const app = new WebServer(8080);
+
+app.get('/', (req, res) => {
+    res.writeHead(200, { 'Content-Type': 'text/html' });
+    res.end(`
+        <html>
+            <body>
+                <h1>Welcome to Omniscript Web Server!</h1>
+                <p>This server is built with Omniscript language.</p>
+                <ul>
+                    <li><a href="/api/users">View Users API</a></li>
+                    <li><a href="/api/status">Server Status</a></li>
+                </ul>
+            </body>
+        </html>
+    `);
+});
+
+app.get('/api/users', (req, res) => {
+    const users = [
+        { id: 1, name: 'Alice', email: 'alice@example.com' },
+        { id: 2, name: 'Bob', email: 'bob@example.com' },
+        { id: 3, name: 'Charlie', email: 'charlie@example.com' }
+    ];
+    
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(users, null, 2));
+});
+
+app.get('/api/status', (req, res) => {
+    const status = {
+        server: 'Omniscript Web Server',
+        version: '1.0.0',
+        uptime: process.uptime(),
+        timestamp: new Date().toISOString()
+    };
+    
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(status, null, 2));
+});
+
+// Start the server
+app.listen();

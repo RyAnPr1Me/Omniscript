@@ -1,0 +1,274 @@
+{
+  "name": "omniscript-vscode",
+  "displayName": "Omniscript Language Support",
+  "description": "VS Code extension for Omniscript programming language with compilation, syntax highlighting, and debugging support",
+  "version": "1.0.0",
+  "publisher": "RyAnPr1Me",
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Debuggers",
+    "Snippets",
+    "Formatters",
+    "Linters"
+  ],
+  "keywords": [
+    "omniscript",
+    "programming-language",
+    "compiler",
+    "typescript",
+    "full-stack"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "omniscript",
+        "aliases": [
+          "Omniscript",
+          "omni"
+        ],
+        "extensions": [
+          ".os",
+          ".omni"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "omniscript",
+        "scopeName": "source.omniscript",
+        "path": "./syntaxes/omniscript.tmLanguage.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "omniscript.compile",
+        "title": "Compile Omniscript File",
+        "category": "Omniscript"
+      },
+      {
+        "command": "omniscript.compileProject",
+        "title": "Compile Omniscript Project",
+        "category": "Omniscript"
+      },
+      {
+        "command": "omniscript.run",
+        "title": "Run Omniscript File",
+        "category": "Omniscript"
+      },
+      {
+        "command": "omniscript.debug",
+        "title": "Debug Omniscript File",
+        "category": "Omniscript"
+      },
+      {
+        "command": "omniscript.checkTypes",
+        "title": "Check Types",
+        "category": "Omniscript"
+      },
+      {
+        "command": "omniscript.format",
+        "title": "Format Document",
+        "category": "Omniscript"
+      },
+      {
+        "command": "omniscript.newProject",
+        "title": "Create New Omniscript Project",
+        "category": "Omniscript"
+      },
+      {
+        "command": "omniscript.installCLI",
+        "title": "Install Omniscript CLI",
+        "category": "Omniscript"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "omniscript.compile",
+        "key": "ctrl+shift+b",
+        "when": "editorLangId == omniscript"
+      },
+      {
+        "command": "omniscript.run",
+        "key": "ctrl+f5",
+        "when": "editorLangId == omniscript"
+      },
+      {
+        "command": "omniscript.debug",
+        "key": "f5",
+        "when": "editorLangId == omniscript"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "when": "editorLangId == omniscript",
+          "command": "omniscript.compile",
+          "group": "omniscript@1"
+        },
+        {
+          "when": "editorLangId == omniscript",
+          "command": "omniscript.run",
+          "group": "omniscript@2"
+        },
+        {
+          "when": "editorLangId == omniscript",
+          "command": "omniscript.debug",
+          "group": "omniscript@3"
+        },
+        {
+          "when": "editorLangId == omniscript",
+          "command": "omniscript.checkTypes",
+          "group": "omniscript@4"
+        },
+        {
+          "when": "editorLangId == omniscript",
+          "command": "omniscript.format",
+          "group": "omniscript@5"
+        }
+      ],
+      "explorer/context": [
+        {
+          "when": "resourceExtname == .os || resourceExtname == .omni",
+          "command": "omniscript.compile",
+          "group": "omniscript@1"
+        },
+        {
+          "when": "resourceExtname == .os || resourceExtname == .omni",
+          "command": "omniscript.run",
+          "group": "omniscript@2"
+        }
+      ]
+    },
+    "configuration": {
+      "type": "object",
+      "title": "Omniscript",
+      "properties": {
+        "omniscript.compiler.path": {
+          "type": "string",
+          "default": "",
+          "description": "Path to the Omniscript compiler. If empty, will use globally installed omni command."
+        },
+        "omniscript.compiler.outputDirectory": {
+          "type": "string",
+          "default": "dist",
+          "description": "Output directory for compiled files"
+        },
+        "omniscript.compiler.target": {
+          "type": "string",
+          "default": "ES2020",
+          "enum": [
+            "ES5",
+            "ES2015",
+            "ES2017",
+            "ES2018",
+            "ES2019",
+            "ES2020",
+            "ES2021",
+            "ES2022"
+          ],
+          "description": "JavaScript target version"
+        },
+        "omniscript.compiler.strictMode": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable strict type checking"
+        },
+        "omniscript.format.enable": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable automatic formatting"
+        },
+        "omniscript.debug.enable": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable debugging support"
+        },
+        "omniscript.linting.enable": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable linting and error checking"
+        }
+      }
+    },
+    "problemMatchers": [
+      {
+        "name": "omniscript",
+        "owner": "omniscript",
+        "fileLocation": [
+          "relative",
+          "${workspaceFolder}"
+        ],
+        "pattern": {
+          "regexp": "^(.*):(\\d+):(\\d+):\\s+(warning|error):\\s+(.*)$",
+          "file": 1,
+          "line": 2,
+          "column": 3,
+          "severity": 4,
+          "message": 5
+        }
+      }
+    ],
+    "taskDefinitions": [
+      {
+        "type": "omniscript",
+        "required": [
+          "task"
+        ],
+        "properties": {
+          "task": {
+            "type": "string",
+            "description": "The Omniscript task to execute"
+          },
+          "file": {
+            "type": "string",
+            "description": "The file to compile or run"
+          }
+        }
+      }
+    ]
+  },
+  "activationEvents": [
+    "onLanguage:omniscript",
+    "onCommand:omniscript.compile",
+    "onCommand:omniscript.compileProject",
+    "onCommand:omniscript.run",
+    "onCommand:omniscript.debug",
+    "onCommand:omniscript.newProject",
+    "onCommand:omniscript.installCLI",
+    "workspaceContains:**/*.os",
+    "workspaceContains:**/*.omni"
+  ],
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js",
+    "package": "npx @vscode/vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "16.x",
+    "@types/vscode": "^1.74.0",
+    "@typescript-eslint/eslint-plugin": "^5.45.0",
+    "@typescript-eslint/parser": "^5.45.0",
+    "@vscode/test-electron": "^2.2.0",
+    "@vscode/vsce": "^3.6.0",
+    "eslint": "^8.28.0",
+    "typescript": "^4.9.4",
+    "vsce": "^2.15.0"
+  },
+  "dependencies": {
+    "node-pty": "^0.10.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/RyAnPr1Me/Omniscript.git"
+  },
+  "license": "MIT"
+}
