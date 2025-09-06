@@ -1,2 +1,8 @@
  M changes.txt
- M tests/installer-fix.test.ts
+ M vscode-extension/.eslintrc.js
+ M vscode-extension/INSTALL.md
+ M vscode-extension/README.md
+ M vscode-extension/language-configuration.json
+ M vscode-extension/src/extension.ts
+ M vscode-extension/syntaxes/omniscript.tmLanguage.json
+ M vscode-extension/tsconfig.json

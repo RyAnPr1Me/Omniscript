@@ -9,10 +9,11 @@
    - File size: ~14KB
 
 2. **Install in VS Code**
+
    ```bash
    # Option A: Command line installation
    code --install-extension omniscript-vscode-1.0.0.vsix
-   
+
    # Option B: Via VS Code UI
    # 1. Open VS Code
    # 2. Press Ctrl+Shift+P (Cmd+Shift+P on macOS)
@@ -85,6 +86,7 @@ touch hello.os
 ```
 
 Add this content:
+
 ```omniscript
 function main(): void {
     console.log("Hello, Omniscript!");
@@ -119,6 +121,7 @@ Go to VS Code Settings (`Ctrl+,`) and search for "omniscript":
 ## Features Overview
 
 ### Language Support
+
 - ✅ Syntax highlighting for `.os` and `.omni` files
 - ✅ Error detection and type checking
 - ✅ Code completion and IntelliSense
@@ -126,12 +129,14 @@ Go to VS Code Settings (`Ctrl+,`) and search for "omniscript":
 - ✅ Code formatting
 
 ### Build & Run
+
 - ✅ Compile individual files or entire projects
 - ✅ Run scripts directly from editor
 - ✅ Debug with breakpoint support
 - ✅ Integrated terminal output
 
 ### Project Management
+
 - ✅ Create new Omniscript projects
 - ✅ Multi-target compilation
 - ✅ Configurable build settings
@@ -142,20 +147,24 @@ Go to VS Code Settings (`Ctrl+,`) and search for "omniscript":
 ### Common Issues
 
 **"Omniscript CLI not found"**
+
 - Install the CLI: `npm install -g omniscript`
 - Set custom path in settings: `omniscript.compiler.path`
 
 **Syntax highlighting not working**
+
 - Check file extension is `.os` or `.omni`
 - Restart VS Code
 - Reinstall extension
 
 **Compilation errors**
+
 - Verify Omniscript CLI is working: `omni --version`
 - Check TypeScript compilation errors
 - Ensure all dependencies are installed
 
 **Commands not showing**
+
 - Check if extension is enabled
 - Look for errors in Output panel
 - Try reloading window: `Ctrl+Shift+P` → "Developer: Reload Window"
@@ -169,6 +178,7 @@ Go to VS Code Settings (`Ctrl+,`) and search for "omniscript":
 ## Version History
 
 ### 1.0.0 (Current)
+
 - Initial release
 - Full language support
 - Compilation and debugging
