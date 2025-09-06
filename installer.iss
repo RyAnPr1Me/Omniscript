@@ -22,7 +22,7 @@ SolidCompression=yes
 InternalCompressLevel=ultra64
 CompressionThreads=auto
 PrivilegesRequired=admin
-PrivilegesRequiredOverridesAllowed=dialog commandline
+PrivilegesRequiredOverridesAllowed=dialog,commandline
 ArchitecturesAllowed=x64 arm64
 ArchitecturesInstallIn64BitMode=x64 arm64
 UsePreviousAppDir=yes
@@ -142,12 +142,15 @@ begin
 end;
 
 function ShouldSkipPage(PageID: Integer): Boolean;
+var
+  ErrorCode: Integer;
 begin
   Result := False;
   // Skip Node.js page if Node.js is already in PATH
   if (PageID = NodeJSPage.ID) then
   begin
-    Result := (Exec('cmd.exe', '/c node --version', '', SW_HIDE, ewWaitUntilTerminated, ErrorCode) and (ErrorCode = 0));
+    Result := Exec('cmd.exe', '/c node --version', '', SW_HIDE, ewWaitUntilTerminated, ErrorCode);
+    Result := Result and (ErrorCode = 0);
   end;
 end;
 
@@ -344,7 +347,7 @@ Source: "integrations\vim\*"; DestDir: "{app}\integrations\vim"; Flags: ignoreve
 Source: "dist\gui\*"; DestDir: "{app}\gui"; Flags: ignoreversion recursesubdirs createallsubdirs skipifsourcedoesntexist; Components: optional\gui
 
 ; Bundle production dependencies (optimized)
-Source: "node_modules\*"; DestDir: "{app}\node_modules"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "*\.git\*,*\.svn\*,*.md,*.txt,CHANGELOG*,CHANGES*,README*,AUTHORS*,CONTRIBUTORS*,LICENSE*,COPYING*,NOTICE*,*.test.js,test\*,tests\*,spec\*,docs\*,doc\*,examples\*,example\*,*.d.ts,*.map,*.min.js.map,node_modules\typescript\*,node_modules\@types\*,node_modules\jest\*,node_modules\eslint\*"; Components: core
+Source: "node_modules\*"; DestDir: "{app}\node_modules"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "*.git\*,*.svn\*,*.md,*.txt,CHANGELOG*,CHANGES*,README*,AUTHORS*,CONTRIBUTORS*,LICENSE*,COPYING*,NOTICE*,*.test.js,test\*,tests\*,spec\*,docs\*,doc\*,examples\*,example\*,*.d.ts,*.map,*.min.js.map,node_modules\typescript\*,node_modules\@types\*,node_modules\jest\*,node_modules\eslint\*"; Components: core
 
 ; Configuration files
 Source: "omni.json"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist; Components: core
@@ -493,7 +496,7 @@ Filename: "taskkill"; Parameters: "/f /im omniscript-gui.exe"; Flags: runhidden;
 Filename: "node"; Parameters: """{app}\bin\cli.js"" update --unregister"; WorkingDir: "{app}"; Flags: runhidden; RunOnceId: "UnregisterUpdates"
 
 ; Clean up VS Code extension
-Filename: "{cmd}"; Parameters: "/c if exist ""{%USERPROFILE%}\AppData\Local\Programs\Microsoft VS Code\bin\code.cmd"" (code --uninstall-extension omniscript-vscode --force)"; Flags: runhidden; RunOnceId: "UninstallVSCodeExt"
+Filename: "{cmd}"; Parameters: "/c if exist ""{userprofile}\AppData\Local\Programs\Microsoft VS Code\bin\code.cmd"" (code --uninstall-extension omniscript-vscode --force)"; Flags: runhidden; RunOnceId: "UninstallVSCodeExt"
 
 ; Remove development environment hooks
 Filename: "node"; Parameters: """{app}\tools\linter\setup.js"" --remove-hooks"; WorkingDir: "{app}"; Flags: runhidden; RunOnceId: "RemoveDevHooks"; Components: devtools\linter
