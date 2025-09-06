@@ -109,8 +109,11 @@ begin
                 'NO: Continue without Node.js (may fail)' + #13#10 +
                 'CANCEL: Exit setup', mbConfirmation, MB_YESNOCANCEL) of
       IDYES:
-        if MsgBox('Download Node.js LTS now?', mbConfirmation, MB_YESNO) = IDYES then
-  OpenURL('https://nodejs.org/dist/v20.11.0/node-v20.11.0-x64.msi');
+       if MsgBox('Download Node.js LTS now?', mbConfirmation, MB_YESNO) = IDYES then
+begin
+  if not ShellExec('open', 'https://nodejs.org/dist/v20.11.0/node-v20.11.0-x64.msi', '', '', SW_SHOWNORMAL) then
+    MsgBox('Failed to open Node.js download page. Please install it manually from https://nodejs.org/', mbError, MB_OK);
+end;
           begin
             MsgBox('Download failed. Install manually from https://nodejs.org/', mbError, MB_OK);
             Result := False;
