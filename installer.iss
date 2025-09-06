@@ -25,7 +25,6 @@ PrivilegesRequired=admin
 PrivilegesRequiredOverridesAllowed=dialog commandline
 ArchitecturesAllowed=x64 arm64
 ArchitecturesInstallIn64BitMode=x64 arm64
-DisableProgramGroupPage=no
 UsePreviousAppDir=yes
 UsePreviousGroup=yes
 UninstallDisplayIcon={app}\bin\cli.js
