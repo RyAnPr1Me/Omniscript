@@ -1,252 +1,88 @@
+; Omniscript Installer (Slim Version)
 
 [Setup]
-AppId={{B8C313D5-2D75-4555-A999-5ECBBDF90A09}}
 AppName=Omniscript
 AppVersion=2.1.0
-AppVerName=Omniscript 2.1.0
 AppPublisher=RyAnPr1Me
 AppPublisherURL=https://github.com/RyAnPr1Me/Omniscript
 AppSupportURL=https://github.com/RyAnPr1Me/Omniscript/issues
 AppUpdatesURL=https://github.com/RyAnPr1Me/Omniscript/releases
-AppCopyright=Copyright (C) 2024 RyAnPr1Me
 DefaultDirName={autopf}\Omniscript
 DefaultGroupName=Omniscript
-AllowNoIcons=yes
-LicenseFile=LICENSE
-InfoBeforeFile=README.md
-InfoAfterFile=CHANGELOG.md
 OutputDir=Output
-OutputBaseFilename=OmniscriptSetup-{#SetupSetting("AppVersion")}
+OutputBaseFilename=OmniscriptSetup
 SetupIconFile=compiler:SetupClassicIcon.ico
 Compression=lzma2/ultra64
 SolidCompression=yes
-InternalCompressLevel=ultra64
-CompressionThreads=auto
 PrivilegesRequired=admin
-PrivilegesRequiredOverridesAllowed=dialog commandline
 ArchitecturesAllowed=x64 arm64
 ArchitecturesInstallIn64BitMode=x64 arm64
-UsePreviousAppDir=yes
-UsePreviousGroup=yes
-UninstallDisplayIcon={app}\bin\cli.js
-UninstallDisplayName=Omniscript Programming Language
-UninstallFilesDir={app}\uninst
-VersionInfoVersion=2.1.0
-VersionInfoCompany=RyAnPr1Me
-VersionInfoDescription=Modern programming language for full-stack development
-VersionInfoCopyright=Copyright (C) 2024 RyAnPr1Me
-VersionInfoProductName=Omniscript
-VersionInfoProductVersion=2.1.0
-WizardStyle=modern
-WizardResizable=yes
-WizardSizePercent=120
-DisableWelcomePage=no
-DisableReadyPage=no
-DisableFinishedPage=no
-DisableDirPage=no
-DisableProgramGroupPage=no
-ShowLanguageDialog=yes
-ShowUndisplayableLanguages=no
-AppendDefaultDirName=no
-UsePreviousSetupType=yes
-UsePreviousLanguage=yes
-UsePreviousPrivileges=yes
-AlwaysShowDirOnReadyPage=yes
-AlwaysShowGroupOnReadyPage=yes
-AlwaysShowComponentsList=yes
-FlatComponentsList=no
-ShowComponentSizes=yes
-ExtraDiskSpaceRequired=52428800
-CloseApplications=yes
-RestartApplications=yes
-CloseApplicationsFilter=*.exe,*.bat,*omni*
-SetupLogging=yes
 ChangesEnvironment=yes
 ChangesAssociations=yes
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
-Name: "brazilianportuguese"; MessagesFile: "compiler:Languages\BrazilianPortuguese.isl"
-Name: "catalan"; MessagesFile: "compiler:Languages\Catalan.isl"
-Name: "corsican"; MessagesFile: "compiler:Languages\Corsican.isl"
-Name: "czech"; MessagesFile: "compiler:Languages\Czech.isl"
-Name: "danish"; MessagesFile: "compiler:Languages\Danish.isl"
-Name: "dutch"; MessagesFile: "compiler:Languages\Dutch.isl"
-Name: "finnish"; MessagesFile: "compiler:Languages\Finnish.isl"
-Name: "french"; MessagesFile: "compiler:Languages\French.isl"
-Name: "german"; MessagesFile: "compiler:Languages\German.isl"
-Name: "hebrew"; MessagesFile: "compiler:Languages\Hebrew.isl"
-Name: "icelandic"; MessagesFile: "compiler:Languages\Icelandic.isl"
-Name: "italian"; MessagesFile: "compiler:Languages\Italian.isl"
-Name: "japanese"; MessagesFile: "compiler:Languages\Japanese.isl"
-Name: "norwegian"; MessagesFile: "compiler:Languages\Norwegian.isl"
-Name: "polish"; MessagesFile: "compiler:Languages\Polish.isl"
-Name: "portuguese"; MessagesFile: "compiler:Languages\Portuguese.isl"
-Name: "russian"; MessagesFile: "compiler:Languages\Russian.isl"
-Name: "slovak"; MessagesFile: "compiler:Languages\Slovak.isl"
-Name: "slovenian"; MessagesFile: "compiler:Languages\Slovenian.isl"
-Name: "spanish"; MessagesFile: "compiler:Languages\Spanish.isl"
-Name: "turkish"; MessagesFile: "compiler:Languages\Turkish.isl"
-Name: "ukrainian"; MessagesFile: "compiler:Languages\Ukrainian.isl"
 
 [Files]
 Source: "dist\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "node_modules\*"; DestDir: "{app}\node_modules"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "bin\*"; DestDir: "{app}\bin"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "LICENSE"; DestDir: "{app}"; Flags: ignoreversion
-Source: "README.md"; DestDir: "{app}"; Flags: ignoreversion
-Source: "CHANGELOG.md"; DestDir: "{app}"; Flags: ignoreversion
+Source: "cli.js"; DestDir: "{app}"; Flags: ignoreversion
+Source: "omniscript.cmd"; DestDir: "{app}"; Flags: ignoreversion
+
+[Icons]
+Name: "{group}\Omniscript"; Filename: "{app}\Omniscript.exe"
+
+[Registry]
+; --- .os file association ---
+Root: HKCR; Subkey: ".os"; ValueType: string; ValueData: "OmniscriptFile"; Flags: uninsdeletevalue
+Root: HKCR; Subkey: "OmniscriptFile"; ValueType: string; ValueData: "Omniscript Source File"; Flags: uninsdeletekey
+Root: HKCR; Subkey: "OmniscriptFile\DefaultIcon"; ValueType: string; ValueData: "{app}\Omniscript.exe,0"
+Root: HKCR; Subkey: "OmniscriptFile\Shell\Open\Command"; ValueType: string; ValueData: """{app}\Omniscript.exe"" ""%1"""
+
+; --- Add Omniscript folder to PATH ---
+Root: HKCU; Subkey: "Environment"; ValueType: expandsz; ValueName: "Path"; ValueData: "{olddata};{app}"; Check: NeedsAddPath; Flags: preservestringtype
 
 [Run]
-Filename: "{cmd}"; Parameters: "/c echo Validating bundled dependencies..."; StatusMsg: "Validating bundled dependencies..."; Flags: runhidden
-Filename: "{cmd}"; Parameters: "/c dir ""{app}\node_modules"" >nul 2>&1 && echo Dependencies validated successfully || echo Warning: Some dependencies may be missing"; StatusMsg: "Checking node_modules..."; Flags: runhidden
+Filename: "{app}\Omniscript.exe"; Description: "Launch Omniscript"; Flags: nowait postinstall skipifsilent
 
 [Code]
+function NeedsAddPath(): Boolean;
 var
-  NodeJSPage: TInputDirWizardPage;
-  ConfigPage: TInputQueryWizardPage;
-  ComponentsInstalled: Boolean;
+  OrigPath: string;
+begin
+  if not RegQueryStringValue(HKCU, 'Environment', 'Path', OrigPath) then
+    Result := True
+  else
+    Result := Pos(ExpandConstant('{app}'), OrigPath) = 0;
+end;
 
 function InitializeSetup(): Boolean;
 var
   ErrorCode: Integer;
-  ResultCode: Integer;
 begin
   Result := True;
-  ComponentsInstalled := False;
 
-  { Check Node.js }
+  { Check for Node.js }
   if not Exec('cmd.exe', '/c node --version', '', SW_HIDE, ewWaitUntilTerminated, ErrorCode) or (ErrorCode <> 0) then
   begin
     case MsgBox(
       'Node.js is required but not found.' + #13#10 +
-      'YES: Download and install automatically' + #13#10 +
-      'NO: Continue without Node.js (may fail)' + #13#10 +
+      'YES: Download Node.js LTS automatically' + #13#10 +
+      'NO: Continue anyway (may fail)' + #13#10 +
       'CANCEL: Exit setup',
       mbConfirmation, MB_YESNOCANCEL) of
 
       IDYES:
-        begin
-          ShellExec('open',
-                    'https://nodejs.org/dist/v20.11.0/node-v20.11.0-x64.msi',
-                    '', '', SW_SHOWNORMAL, ResultCode);
-          if ResultCode <> 0 then
-            MsgBox('Failed to launch browser. Error code: ' + IntToStr(ResultCode), mbError, MB_OK);
-        end;
+        ShellExec('open',
+                  'https://nodejs.org/dist/v20.11.0/node-v20.11.0-x64.msi',
+                  '', '', SW_SHOWNORMAL);
 
       IDNO:
-        begin
-          MsgBox('Warning: Omniscript may not work without Node.js. Install later from https://nodejs.org/', mbInformation, MB_OK);
-        end;
+        MsgBox('Omniscript may not work without Node.js. Install later from https://nodejs.org/', mbInformation, MB_OK);
 
       IDCANCEL:
-        begin
-          Result := False;
-        end;
+        Result := False;
     end;
   end
   else
     Log('Node.js detected.');
-end;
-
-procedure InitializeWizard();
-begin
-  NodeJSPage := CreateInputDirPage(wpSelectDir,
-    'Node.js Installation', 'Where is Node.js installed?',
-    'Select Node.js installation folder.', False, '');
-  NodeJSPage.Add('Node.js installation folder:');
-  NodeJSPage.Values[0] := 'C:\Program Files\nodejs';
-
-  ConfigPage := CreateInputQueryPage(wpSelectComponents,
-    'Configuration Options', 'Customize Omniscript installation',
-    'Specify configuration options for Omniscript.');
-  ConfigPage.Add('Global command name (default: omni):', False);
-  ConfigPage.Add('Default project directory:', False);
-  ConfigPage.Add('Maximum memory limit (MB):', False);
-  ConfigPage.Values[0] := 'omni';
-  ConfigPage.Values[1] := ExpandConstant('{userdocs}\OmniscriptProjects');
-  ConfigPage.Values[2] := '512';
-end;
-
-function ShouldSkipPage(PageID: Integer): Boolean;
-var
-  ErrorCode: Integer;
-begin
-  Result := False;
-  if (PageID = NodeJSPage.ID) then
-  begin
-    Result := Exec('cmd.exe', '/c node --version', '', SW_HIDE, ewWaitUntilTerminated, ErrorCode);
-    Result := Result and (ErrorCode = 0);
-  end;
-end;
-
-procedure RegisterPreviousData(PreviousDataKey: Integer);
-begin
-  SetPreviousData(PreviousDataKey, 'GlobalCommand', ConfigPage.Values[0]);
-  SetPreviousData(PreviousDataKey, 'ProjectDir', ConfigPage.Values[1]);
-  SetPreviousData(PreviousDataKey, 'MemoryLimit', ConfigPage.Values[2]);
-end;
-
-function GetGlobalCommandName(Param: String): String;
-begin
-  Result := ConfigPage.Values[0];
-end;
-
-function GetProjectDirectory(Param: String): String;
-begin
-  Result := ConfigPage.Values[1];
-end;
-
-function GetMemoryLimit(Param: String): String;
-begin
-  Result := ConfigPage.Values[2];
-end;
-
-function ShouldRemoveProjectData(): Boolean;
-begin
-  Result := (MsgBox('Remove project templates and user data?', mbConfirmation, MB_YESNO) = IDYES);
-end;
-
-procedure CurStepChanged(CurStep: TSetupStep);
-var
-  ConfigFile: String;
-  ConfigContent: TStringList;
-  ProjectDirEscaped: String;
-begin
-  if CurStep = ssPostInstall then
-  begin
-    ConfigFile := ExpandConstant('{app}\omni.config.json');
-    ConfigContent := TStringList.Create;
-    try
-      ProjectDirEscaped := StringChangeEx(ConfigPage.Values[1], '\', '\\', True);
-      ConfigContent.Add('{');
-      ConfigContent.Add('  "globalCommand": "' + ConfigPage.Values[0] + '",');
-      ConfigContent.Add('  "defaultProjectDirectory": "' + ProjectDirEscaped + '",');
-      ConfigContent.Add('  "memoryLimit": ' + ConfigPage.Values[2] + ',');
-      ConfigContent.Add('  "version": "2.1.0",');
-      ConfigContent.Add('  "installPath": "' + StringChangeEx(ExpandConstant('{app}'), '\', '\\', True) + '",');
-      ConfigContent.Add('  "installDate": "' + FormatDateTime('yyyy-mm-dd hh:nn:ss', Now) + '"');
-      ConfigContent.Add('}');
-      ConfigContent.SaveToFile(ConfigFile);
-    finally
-      ConfigContent.Free;
-    end;
-
-    if not DirExists(ConfigPage.Values[1]) then
-      if MsgBox('Create default project directory at "' + ConfigPage.Values[1] + '"?', mbConfirmation, MB_YESNO) = IDYES then
-        ForceDirectories(ConfigPage.Values[1]);
-
-    ComponentsInstalled := True;
-  end;
-end;
-
-function PrepareToInstall(var NeedsRestart: Boolean): String;
-var
-  ResultCode: Integer;
-begin
-  Result := '';
-  NeedsRestart := False;
-  if not Exec('cmd.exe', '/c node --version', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) or (ResultCode <> 0) then
-    if MsgBox('Node.js not accessible. Continue installation?', mbConfirmation, MB_YESNO) = IDNO then
-      Result := 'Node.js is required for Omniscript.';
 end;
