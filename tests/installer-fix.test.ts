@@ -52,4 +52,28 @@ describe("Windows Installer Fix", () => {
     expect(installerContent).toMatch(/Validating bundled dependencies/);
     expect(installerContent).toMatch(/dir.*node_modules/);
   });
+
+  test("ShellExec calls should have correct number of parameters", () => {
+    const installerPath = path.join(__dirname, "../installer.iss");
+    const installerContent = fs.readFileSync(installerPath, "utf8");
+
+    // In InitializeSetup function, ShellExec should not include ErrorCode parameter
+    // ShellExec signature: ShellExec(Verb, FileName, Parameters, Directory, ShowCmd)
+    const initSetupMatch = installerContent.match(/function InitializeSetup\(\): Boolean;([\s\S]*?)end;/);
+    expect(initSetupMatch).not.toBeNull();
+    
+    if (initSetupMatch) {
+      const initSetupFunction = initSetupMatch[1];
+      // Should not use ErrorCode with ShellExec (unlike Exec which does use it)
+      if (initSetupFunction.includes("ShellExec")) {
+        expect(initSetupFunction).not.toMatch(/ShellExec\([^)]*ErrorCode\)/);
+        expect(initSetupFunction).not.toMatch(/ShellExec\([^)]*ResultCode\)/);
+        // Should have correct parameter count (5 parameters for ShellExec)
+        // Accept both SW_SHOWNORMAL constant and numeric value 1 for compatibility
+        expect(initSetupFunction).toMatch(/ShellExec\(\s*'[^']*',[\s\S]*?,\s*'[^']*',\s*'[^']*',\s*(SW_SHOWNORMAL|1)\s*\)/);
+        // Don't allow invalid numeric values (but allow 1 for SW_SHOWNORMAL)
+        expect(initSetupFunction).not.toMatch(/ShellExec\([^)]*,\s*[02-9]\s*\)/); // Don't allow other numeric values except 1
+      }
+    }
+  });
 });

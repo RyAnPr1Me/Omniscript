@@ -1,88 +1,112 @@
-; Omniscript Installer (Slim Version)
+; Omniscript Programming Language Installer
+; Simple, focused installer for the Omniscript language
+; Version: 2.1.0
 
 [Setup]
+AppId={{B8C313D5-2D75-4555-A999-5ECBBDF90A09}}
 AppName=Omniscript
 AppVersion=2.1.0
+AppVerName=Omniscript 2.1.0
 AppPublisher=RyAnPr1Me
 AppPublisherURL=https://github.com/RyAnPr1Me/Omniscript
 AppSupportURL=https://github.com/RyAnPr1Me/Omniscript/issues
 AppUpdatesURL=https://github.com/RyAnPr1Me/Omniscript/releases
+AppCopyright=Copyright (C) 2024 RyAnPr1Me
 DefaultDirName={autopf}\Omniscript
 DefaultGroupName=Omniscript
+AllowNoIcons=yes
+LicenseFile=LICENSE
 OutputDir=Output
-OutputBaseFilename=OmniscriptSetup
-SetupIconFile=compiler:SetupClassicIcon.ico
-Compression=lzma2/ultra64
+OutputBaseFilename=OmniscriptSetup-2.1.0
+Compression=lzma
 SolidCompression=yes
 PrivilegesRequired=admin
 ArchitecturesAllowed=x64 arm64
 ArchitecturesInstallIn64BitMode=x64 arm64
+UninstallDisplayIcon={app}\bin\cli.js
+UninstallDisplayName=Omniscript Programming Language
+VersionInfoVersion=2.1.0
+VersionInfoCompany=RyAnPr1Me
+VersionInfoDescription=Modern programming language for full-stack development
+VersionInfoCopyright=Copyright (C) 2024 RyAnPr1Me
+VersionInfoProductName=Omniscript
+VersionInfoProductVersion=2.1.0
+WizardStyle=modern
 ChangesEnvironment=yes
-ChangesAssociations=yes
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
+Name: "french"; MessagesFile: "compiler:Languages\French.isl"
+Name: "german"; MessagesFile: "compiler:Languages\German.isl"
+Name: "italian"; MessagesFile: "compiler:Languages\Italian.isl"
+Name: "spanish"; MessagesFile: "compiler:Languages\Spanish.isl"
+
+[Tasks]
+Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
+Name: "addtopath"; Description: "Add Omniscript to system PATH"; GroupDescription: "System Integration"
 
 [Files]
-Source: "dist\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "cli.js"; DestDir: "{app}"; Flags: ignoreversion
-Source: "omniscript.cmd"; DestDir: "{app}"; Flags: ignoreversion
+; Core application files
+Source: "dist\*"; DestDir: "{app}\dist"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "bin\*"; DestDir: "{app}\bin"; Flags: ignoreversion
+Source: "package.json"; DestDir: "{app}"; Flags: ignoreversion
+Source: "LICENSE"; DestDir: "{app}"; Flags: ignoreversion
+Source: "README.md"; DestDir: "{app}"; Flags: ignoreversion
+Source: "CHANGELOG.md"; DestDir: "{app}"; Flags: ignoreversion
+
+; Copy node_modules if they exist (for bundled distributions)
+Source: "node_modules\*"; DestDir: "{app}\node_modules"; Flags: ignoreversion recursesubdirs createallsubdirs skipifsourcedoesntexist
 
 [Icons]
-Name: "{group}\Omniscript"; Filename: "{app}\Omniscript.exe"
+Name: "{group}\Omniscript CLI"; Filename: "cmd.exe"; Parameters: "/k cd /d ""{app}"" && echo Omniscript Programming Language v2.1.0 && echo Type 'omni --help' to get started"; WorkingDir: "{app}"
+Name: "{autodesktop}\Omniscript CLI"; Filename: "cmd.exe"; Parameters: "/k cd /d ""{app}"" && echo Omniscript Programming Language v2.1.0 && echo Type 'omni --help' to get started"; WorkingDir: "{app}"; Tasks: desktopicon
 
 [Registry]
-; --- .os file association ---
-Root: HKCR; Subkey: ".os"; ValueType: string; ValueData: "OmniscriptFile"; Flags: uninsdeletevalue
-Root: HKCR; Subkey: "OmniscriptFile"; ValueType: string; ValueData: "Omniscript Source File"; Flags: uninsdeletekey
-Root: HKCR; Subkey: "OmniscriptFile\DefaultIcon"; ValueType: string; ValueData: "{app}\Omniscript.exe,0"
-Root: HKCR; Subkey: "OmniscriptFile\Shell\Open\Command"; ValueType: string; ValueData: """{app}\Omniscript.exe"" ""%1"""
-
-; --- Add Omniscript folder to PATH ---
-Root: HKCU; Subkey: "Environment"; ValueType: expandsz; ValueName: "Path"; ValueData: "{olddata};{app}"; Check: NeedsAddPath; Flags: preservestringtype
+; Add to PATH if requested
+Root: HKLM; Subkey: "SYSTEM\CurrentControlSet\Control\Session Manager\Environment"; ValueType: expandsz; ValueName: "Path"; ValueData: "{olddata};{app}\bin"; Tasks: addtopath; Check: NeedsAddPath('{app}\bin')
 
 [Run]
-Filename: "{app}\Omniscript.exe"; Description: "Launch Omniscript"; Flags: nowait postinstall skipifsilent
+; Display completion message and basic instructions
+Filename: "{cmd}"; Parameters: "/c echo Installation completed successfully! && echo. && echo To use Omniscript, open a new command prompt and type: omni --help && pause"; Description: "Show installation instructions"; Flags: nowait postinstall skipifsilent
 
 [Code]
-function NeedsAddPath(): Boolean;
+function NeedsAddPath(Param: String): Boolean;
 var
-  OrigPath: string;
+  OrigPath: String;
 begin
-  if not RegQueryStringValue(HKCU, 'Environment', 'Path', OrigPath) then
-    Result := True
-  else
-    Result := Pos(ExpandConstant('{app}'), OrigPath) = 0;
+  if not RegQueryStringValue(HKEY_LOCAL_MACHINE,
+    'SYSTEM\CurrentControlSet\Control\Session Manager\Environment',
+    'Path', OrigPath)
+  then begin
+    Result := True;
+    exit;
+  end;
+  { look for the path with leading and trailing semicolon }
+  { Pos() returns 0 if not found }
+  Result := Pos(';' + Param + ';', ';' + OrigPath + ';') = 0;
 end;
 
 function InitializeSetup(): Boolean;
-var
-  ErrorCode: Integer;
 begin
   Result := True;
-
-  { Check for Node.js }
-  if not Exec('cmd.exe', '/c node --version', '', SW_HIDE, ewWaitUntilTerminated, ErrorCode) or (ErrorCode <> 0) then
+  
+  { Simple Node.js check without problematic ShellExec }
+  if MsgBox('Omniscript requires Node.js 16+ to run.' + #13#10 + #13#10 +
+            'If you don''t have Node.js installed, please download it from:' + #13#10 +
+            'https://nodejs.org/' + #13#10 + #13#10 +
+            'Continue with installation?', mbConfirmation, MB_YESNO) = IDNO then
   begin
-    case MsgBox(
-      'Node.js is required but not found.' + #13#10 +
-      'YES: Download Node.js LTS automatically' + #13#10 +
-      'NO: Continue anyway (may fail)' + #13#10 +
-      'CANCEL: Exit setup',
-      mbConfirmation, MB_YESNOCANCEL) of
+    Result := False;
+  end;
+end;
 
-      IDYES:
-        ShellExec('open',
-                  'https://nodejs.org/dist/v20.11.0/node-v20.11.0-x64.msi',
-                  '', '', SW_SHOWNORMAL);
-
-      IDNO:
-        MsgBox('Omniscript may not work without Node.js. Install later from https://nodejs.org/', mbInformation, MB_OK);
-
-      IDCANCEL:
-        Result := False;
-    end;
-  end
-  else
-    Log('Node.js detected.');
+procedure CurStepChanged(CurStep: TSetupStep);
+begin
+  if CurStep = ssPostInstall then
+  begin
+    { Create a simple batch file for easier access }
+    SaveStringToFile(ExpandConstant('{app}\omni.bat'), 
+      '@echo off' + #13#10 +
+      'node "%~dp0bin\cli.js" %*' + #13#10, False);
+  end;
 end;
