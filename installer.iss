@@ -377,7 +377,7 @@ Filename: "{cmd}"; Parameters: "/c node --version > ""{tmp}\nodeversion.txt"" 2>
 Filename: "{cmd}"; Parameters: "/c for /f ""tokens=1"" %i in ('node --version 2^>nul') do if ""%i"" GEQ ""v16.0.0"" (echo Compatible Node.js version: %i) else (echo Warning: Node.js version %i may not be compatible. Recommended: v16+)"; Flags: runhidden waituntilterminated; StatusMsg: "Validating Node.js version compatibility..."
 
 ; Validate bundled dependencies
-Filename: "{cmd}"; Parameters: "/c dir ""{app}\node_modules"" >nul 2>&1 && echo Bundled dependencies validated successfully || echo Warning: node_modules directory not found"; Flags: runhidden waituntilterminated; StatusMsg: "Validating bundled dependencies..."
+Filename: "{cmd}"; Parameters: "/c if exist ""{app}\node_modules"" (echo Bundled dependencies validated successfully) else (echo Warning: node_modules directory not found)"; Flags: runhidden waituntilterminated; StatusMsg: "Validating bundled dependencies..."
 
 ; Create symbolic links for better CLI integration  
 Filename: "{cmd}"; Parameters: "/c mklink ""{sys}\{code:GetGlobalCommandName}.bat"" ""{app}\omni.bat"""; Flags: runhidden waituntilterminated; StatusMsg: "Creating command aliases..."; Tasks: addtopath; Check: IsAdminInstallMode
