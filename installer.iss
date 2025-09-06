@@ -1,3 +1,4 @@
+
 [Setup]
 AppId={{B8C313D5-2D75-4555-A999-5ECBBDF90A09}}
 AppName=Omniscript
@@ -117,28 +118,31 @@ begin
   { Check Node.js }
   if not Exec('cmd.exe', '/c node --version', '', SW_HIDE, ewWaitUntilTerminated, ErrorCode) or (ErrorCode <> 0) then
   begin
-    case MsgBox('Node.js is required but not found.' + #13#10 +
-                'YES: Download and install automatically' + #13#10 +
-                'NO: Continue without Node.js (may fail)' + #13#10 +
-                'CANCEL: Exit setup', mbConfirmation, MB_YESNOCANCEL) of
-IDYES:
-var
-  ResultCode: Integer;
-begin
-  if MsgBox('Download Node.js LTS now?', mbConfirmation, MB_YESNO) = IDYES then
-  begin
-    ShellExec('open',
-              'https://nodejs.org/dist/v20.11.0/node-v20.11.0-x64.msi',
-              '', '', SW_SHOWNORMAL, ResultCode);
-    if ResultCode <> 0 then
-      MsgBox('Failed to launch browser. Error code: ' + IntToStr(ResultCode), mbError, MB_OK);
-  end;
-end;
+    case MsgBox(
+      'Node.js is required but not found.' + #13#10 +
+      'YES: Download and install automatically' + #13#10 +
+      'NO: Continue without Node.js (may fail)' + #13#10 +
+      'CANCEL: Exit setup',
+      mbConfirmation, MB_YESNOCANCEL) of
+
+      IDYES:
+        begin
+          ShellExec('open',
+                    'https://nodejs.org/dist/v20.11.0/node-v20.11.0-x64.msi',
+                    '', '', SW_SHOWNORMAL, ResultCode);
+          if ResultCode <> 0 then
+            MsgBox('Failed to launch browser. Error code: ' + IntToStr(ResultCode), mbError, MB_OK);
+        end;
 
       IDNO:
-        MsgBox('Warning: Omniscript may not work without Node.js. Install later from https://nodejs.org/', mbInformation, MB_OK);
+        begin
+          MsgBox('Warning: Omniscript may not work without Node.js. Install later from https://nodejs.org/', mbInformation, MB_OK);
+        end;
+
       IDCANCEL:
-        Result := False;
+        begin
+          Result := False;
+        end;
     end;
   end
   else
