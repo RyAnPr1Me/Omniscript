@@ -121,18 +121,20 @@ begin
                 'YES: Download and install automatically' + #13#10 +
                 'NO: Continue without Node.js (may fail)' + #13#10 +
                 'CANCEL: Exit setup', mbConfirmation, MB_YESNOCANCEL) of
-      IDYES:
-      begin
-        if MsgBox('Download Node.js LTS now?', mbConfirmation, MB_YESNO) = IDYES then
-        begin
-          if not ShellExec('open',
-                           'https://nodejs.org/dist/v20.11.0/node-v20.11.0-x64.msi',
-                           '', '', SW_SHOWNORMAL, ResultCode) then
-          begin
-            MsgBox('Failed to open Node.js download page. Please install it manually from https://nodejs.org/', mbError, MB_OK);
-          end;
-        end;
-      end;
+IDYES:
+var
+  ResultCode: Integer;
+begin
+  if MsgBox('Download Node.js LTS now?', mbConfirmation, MB_YESNO) = IDYES then
+  begin
+    ShellExec('open',
+              'https://nodejs.org/dist/v20.11.0/node-v20.11.0-x64.msi',
+              '', '', SW_SHOWNORMAL, ResultCode);
+    if ResultCode <> 0 then
+      MsgBox('Failed to launch browser. Error code: ' + IntToStr(ResultCode), mbError, MB_OK);
+  end;
+end;
+
       IDNO:
         MsgBox('Warning: Omniscript may not work without Node.js. Install later from https://nodejs.org/', mbInformation, MB_OK);
       IDCANCEL:
