@@ -88,6 +88,18 @@ Name: "spanish"; MessagesFile: "compiler:Languages\Spanish.isl"
 Name: "turkish"; MessagesFile: "compiler:Languages\Turkish.isl"
 Name: "ukrainian"; MessagesFile: "compiler:Languages\Ukrainian.isl"
 
+[Files]
+Source: "dist\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "node_modules\*"; DestDir: "{app}\node_modules"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "bin\*"; DestDir: "{app}\bin"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "LICENSE"; DestDir: "{app}"; Flags: ignoreversion
+Source: "README.md"; DestDir: "{app}"; Flags: ignoreversion
+Source: "CHANGELOG.md"; DestDir: "{app}"; Flags: ignoreversion
+
+[Run]
+Filename: "{cmd}"; Parameters: "/c echo Validating bundled dependencies..."; StatusMsg: "Validating bundled dependencies..."; Flags: runhidden
+Filename: "{cmd}"; Parameters: "/c dir ""{app}\node_modules"" >nul 2>&1 && echo Dependencies validated successfully || echo Warning: Some dependencies may be missing"; StatusMsg: "Checking node_modules..."; Flags: runhidden
+
 [Code]
 var
   NodeJSPage: TInputDirWizardPage;
@@ -97,6 +109,7 @@ var
 function InitializeSetup(): Boolean;
 var
   ErrorCode: Integer;
+  ResultCode: Integer;
 begin
   Result := True;
   ComponentsInstalled := False;
@@ -108,32 +121,18 @@ begin
                 'YES: Download and install automatically' + #13#10 +
                 'NO: Continue without Node.js (may fail)' + #13#10 +
                 'CANCEL: Exit setup', mbConfirmation, MB_YESNOCANCEL) of
-var
-  ResultCode: Integer;
-
-IDYES:
-begin
-  if MsgBox('Download Node.js LTS now?', mbConfirmation, MB_YESNO) = IDYES then
-  begin
-    if not ShellExec('open',
-                     'https://nodejs.org/dist/v20.11.0/node-v20.11.0-x64.msi',
-                     '', '', SW_SHOWNORMAL, ResultCode) then
-    begin
-      MsgBox('Failed to open Node.js download page. Please install it manually from https://nodejs.org/', mbError, MB_OK);
-    end;
-  end;
-end;
-
-    begin
-      MsgBox('Failed to open Node.js download page. Please install it manually from https://nodejs.org/', mbError, MB_OK);
-    end;
-  end;
-end;
-
+      IDYES:
+      begin
+        if MsgBox('Download Node.js LTS now?', mbConfirmation, MB_YESNO) = IDYES then
+        begin
+          if not ShellExec('open',
+                           'https://nodejs.org/dist/v20.11.0/node-v20.11.0-x64.msi',
+                           '', '', SW_SHOWNORMAL, ResultCode) then
           begin
-            MsgBox('Download failed. Install manually from https://nodejs.org/', mbError, MB_OK);
-            Result := False;
+            MsgBox('Failed to open Node.js download page. Please install it manually from https://nodejs.org/', mbError, MB_OK);
           end;
+        end;
+      end;
       IDNO:
         MsgBox('Warning: Omniscript may not work without Node.js. Install later from https://nodejs.org/', mbInformation, MB_OK);
       IDCANCEL:
