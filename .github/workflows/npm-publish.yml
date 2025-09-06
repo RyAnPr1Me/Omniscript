@@ -5,15 +5,21 @@ on:
     types: [created]
 
 jobs:
-  build:
+  build-and-test:
     runs-on: ubuntu-latest
+    outputs:
+      cache-hit: ${{ steps.cache.outputs.cache-hit }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 20
 
       - name: Cache Node modules
+        id: cache
         uses: actions/cache@v3
         with:
           path: ~/.npm
@@ -27,32 +33,48 @@ jobs:
       - name: Build project
         run: npm run build
 
-      - run: npm test
+      - name: Run tests
+        run: npm test
+
+      - name: Verify package contents
+        run: npm pack --dry-run
+
+      - name: Cache build artifacts
+        uses: actions/cache@v3
+        with:
+          path: |
+            dist/
+            node_modules/
+          key: ${{ runner.os }}-build-${{ github.sha }}
 
   publish-npm:
-    needs: build
+    needs: build-and-test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js for publishing
+        uses: actions/setup-node@v4
         with:
           node-version: 20
           registry-url: https://registry.npmjs.org/
 
-      - name: Cache Node modules
+      - name: Restore build artifacts
         uses: actions/cache@v3
         with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
+          path: |
+            dist/
+            node_modules/
+          key: ${{ runner.os }}-build-${{ github.sha }}
 
-      - name: Install dependencies
-        run: npm install
+      - name: Install dependencies (if cache miss)
+        run: npm install --production
 
-      - name: Build project
+      - name: Build project (if cache miss)
         run: npm run build
 
-      - run: npm publish
+      - name: Publish to npm
+        run: npm publish
         env:
           NODE_AUTH_TOKEN: ${{ vars.NPM_KEY }}
