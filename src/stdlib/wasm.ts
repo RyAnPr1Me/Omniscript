@@ -393,7 +393,7 @@ export class WASMUtils {
    */
   static async benchmarkFunction(
     functionName: string,
-    jsFunction: Function,
+    jsFunction: (...args: any[]) => any,
     wasmCode: string,
     testInputs: any[],
     iterations = 1000,
