@@ -10,6 +10,7 @@ A modern, production-ready programming language for full-stack development with 
 ## ✨ Features
 
 ### Language Features
+
 - **🔒 Advanced Type System** - Strong typing with inference, generics, and union/intersection types
 - **⚡ Async/Await** - First-class asynchronous programming support
 - **🎯 Pattern Matching** - Powerful pattern matching and destructuring
@@ -18,6 +19,7 @@ A modern, production-ready programming language for full-stack development with 
 - **🔄 Reactive Programming** - Built-in reactive features for modern UIs
 
 ### Developer Experience
+
 - **📦 Complete CLI Toolchain** - `new`, `build`, `dev`, `run`, `repl` commands
 - **🔧 VS Code Extension** - Full IDE support with syntax highlighting and debugging
 - **🏗️ Project Scaffolding** - Professional project structure generation
@@ -25,12 +27,14 @@ A modern, production-ready programming language for full-stack development with 
 - **📚 Comprehensive Documentation** - Extensive guides and API references
 
 ### Runtime & Performance
+
 - **⚡ JIT Compilation** - Optimized execution with just-in-time compilation
 - **🚀 SIMD Operations** - Hardware-accelerated mathematical computations
 - **💾 Memory Management** - Efficient pooling and garbage collection
 - **🔀 Parallel Execution** - Multi-threading and concurrent processing
 
 ### Standard Library
+
 - **🗄️ Database ORM** - Type-safe database queries (PostgreSQL, SQLite)
 - **🌐 Networking & HTTP** - Built-in HTTP client and server utilities
 - **🔐 Cryptography** - Security and encryption functions
@@ -80,11 +84,11 @@ omni repl
 @component
 class UserService {
   @state users: User[] = []
-  
+
   async getUser(id: number): User | null {
     return await db.users.findOne({ id })
   }
-  
+
   @computed
   get activeUsers(): User[] {
     return this.users.filter(u => u.active)

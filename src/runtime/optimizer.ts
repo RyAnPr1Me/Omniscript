@@ -399,7 +399,10 @@ export class InlineCache {
     evictions: 0,
   };
 
-  lookupMethod(object: any, methodName: string): ((...args: any[]) => any) | null {
+  lookupMethod(
+    object: any,
+    methodName: string,
+  ): ((...args: any[]) => any) | null {
     const objectType = this.getObjectType(object);
     const cacheKey = `${objectType}::${methodName}`;
     const cached = this.methodCache.get(cacheKey);
