@@ -1,5 +1,24 @@
 import { debug } from "../../debug";
 import { getMetadata } from "./decorators";
+import { Pool, PoolClient } from "pg";
+import sqlite3 from "sqlite3";
+
+export type DatabaseType = "postgres" | "sqlite" | "memory";
+
+export interface DatabaseConfig {
+  type: DatabaseType;
+  // PostgreSQL config
+  host?: string;
+  port?: number;
+  database?: string;
+  user?: string;
+  password?: string;
+  // SQLite config
+  filename?: string;
+  // Connection pooling
+  max?: number;
+  min?: number;
+}
 
 export type WhereCondition<T> = (entity: T) => boolean;
 export type OrderByField<T> = keyof T | ((entity: T) => any);
@@ -197,54 +216,111 @@ export class QueryBuilder<T> {
   }
 }
 
-// Database utility class with enhanced functionality
+// Database utility class with real database support
 export class Database {
   private static _instance: Database;
+  private config: DatabaseConfig;
+  private pgPool?: Pool;
+  private sqliteDb?: sqlite3.Database;
   private mockData: Map<string, any[]> = new Map();
 
-  private constructor() {
-    // Don't initialize mock data by default - let tests set up their own data
+  private constructor(config?: DatabaseConfig) {
+    this.config = config || { type: "memory" };
+    if (this.config.type === "postgres") {
+      this.initializePostgres();
+    } else if (this.config.type === "sqlite") {
+      this.initializeSQLite();
+    }
   }
 
-  static getInstance(): Database {
+  private initializePostgres(): void {
+    if (!this.config.host || !this.config.database) {
+      throw new Error(
+        "PostgreSQL requires host and database in configuration",
+      );
+    }
+    this.pgPool = new Pool({
+      host: this.config.host,
+      port: this.config.port || 5432,
+      database: this.config.database,
+      user: this.config.user,
+      password: this.config.password,
+      max: this.config.max || 10,
+      min: this.config.min || 2,
+    });
+    debug.info("Database", "PostgreSQL connection pool initialized");
+  }
+
+  private initializeSQLite(): void {
+    const filename = this.config.filename || ":memory:";
+    this.sqliteDb = new sqlite3.Database(filename, (err) => {
+      if (err) {
+        debug.error("Database", `SQLite initialization error: ${err.message}`);
+        throw err;
+      }
+      debug.info("Database", `SQLite database opened: ${filename}`);
+    });
+  }
+
+  static getInstance(config?: DatabaseConfig): Database {
     if (!Database._instance) {
-      Database._instance = new Database();
+      Database._instance = new Database(config);
     }
     return Database._instance;
   }
 
-  private initializeMockData(): void {
-    // Initialize with some mock data for testing
-    this.mockData.set("user", [
-      {
-        id: 1,
-        name: "John Doe",
-        email: "john@example.com",
-        createdAt: new Date().toISOString(),
-      },
-      {
-        id: 2,
-        name: "Jane Smith",
-        email: "jane@example.com",
-        createdAt: new Date().toISOString(),
-      },
-    ]);
-    this.mockData.set("post", [
-      {
-        id: 1,
-        title: "Hello World",
-        content: "First post",
-        userId: 1,
-        createdAt: new Date().toISOString(),
-      },
-      {
-        id: 2,
-        title: "TypeScript Tips",
-        content: "Some TypeScript tips",
-        userId: 1,
-        createdAt: new Date().toISOString(),
-      },
-    ]);
+  static configure(config: DatabaseConfig): void {
+    Database._instance = new Database(config);
+  }
+
+  async executeQuery(
+    sql: string,
+    params: any[] = [],
+  ): Promise<{ rows: any[] }> {
+    if (this.config.type === "postgres") {
+      return await this.executePostgresQuery(sql, params);
+    } else if (this.config.type === "sqlite") {
+      return await this.executeSQLiteQuery(sql, params);
+    } else {
+      // Memory mode - use mock data
+      throw new Error(
+        "Memory mode does not support SQL queries. Use ORM methods instead.",
+      );
+    }
+  }
+
+  private async executePostgresQuery(
+    sql: string,
+    params: any[],
+  ): Promise<{ rows: any[] }> {
+    if (!this.pgPool) {
+      throw new Error("PostgreSQL pool not initialized");
+    }
+    const client: PoolClient = await this.pgPool.connect();
+    try {
+      const result = await client.query(sql, params);
+      return { rows: result.rows };
+    } finally {
+      client.release();
+    }
+  }
+
+  private async executeSQLiteQuery(
+    sql: string,
+    params: any[],
+  ): Promise<{ rows: any[] }> {
+    if (!this.sqliteDb) {
+      throw new Error("SQLite database not initialized");
+    }
+    return new Promise((resolve, reject) => {
+      this.sqliteDb!.all(sql, params, (err, rows) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve({ rows: rows || [] });
+        }
+      });
+    });
   }
 
   static query<T>(entityClass: new () => T): QueryBuilder<T> {
@@ -259,9 +335,22 @@ export class Database {
     const tableName = entity?.constructor.name.toLowerCase();
     if (!tableName) throw new Error("Invalid entity: no constructor name");
 
-    const data = instance.mockData.get(tableName) || [];
+    // Use in-memory storage for memory mode or if no real database configured
+    if (instance.config.type === "memory") {
+      return instance.saveToMemory(entity, tableName);
+    }
 
-    // Modify entity in place to maintain reference equality
+    // For real databases, we would need proper ORM mapping
+    // For now, fall back to memory mode
+    debug.warn(
+      "Database",
+      "Real database save not fully implemented, using memory mode",
+    );
+    return instance.saveToMemory(entity, tableName);
+  }
+
+  private saveToMemory<T>(entity: T, tableName: string): T {
+    const data = this.mockData.get(tableName) || [];
     const entityData = entity as any;
 
     if (entityData.id) {
@@ -278,7 +367,7 @@ export class Database {
         entityData.createdAt = new Date().toISOString();
       }
       data.push({ ...entityData });
-      instance.mockData.set(tableName, data);
+      this.mockData.set(tableName, data);
     }
 
     return entity;
@@ -294,13 +383,20 @@ export class Database {
     const tableName = entity?.constructor.name.toLowerCase();
     if (!tableName) throw new Error("Invalid entity: no constructor name");
 
-    const data = instance.mockData.get(tableName) || [];
-    const entityData = entity as any;
+    if (instance.config.type === "memory") {
+      const data = instance.mockData.get(tableName) || [];
+      const entityData = entity as any;
 
-    const index = data.findIndex((item) => item.id === entityData.id);
-    if (index >= 0) {
-      data.splice(index, 1);
-      instance.mockData.set(tableName, data);
+      const index = data.findIndex((item) => item.id === entityData.id);
+      if (index >= 0) {
+        data.splice(index, 1);
+        instance.mockData.set(tableName, data);
+      }
+    } else {
+      debug.warn(
+        "Database",
+        "Real database delete not fully implemented, using memory mode",
+      );
     }
   }
 
@@ -311,8 +407,18 @@ export class Database {
     const tableName = entityClass.name.toLowerCase();
     if (!tableName) throw new Error("Invalid entity class: no name");
 
-    const data = instance.mockData.get(tableName) || [];
+    if (instance.config.type === "memory") {
+      const data = instance.mockData.get(tableName) || [];
+      const found = data.find((item) => item.id === id);
+      return found ? (found as T) : null;
+    }
 
+    // For real databases, fall back to memory for now
+    debug.warn(
+      "Database",
+      "Real database find not fully implemented, using memory mode",
+    );
+    const data = instance.mockData.get(tableName) || [];
     const found = data.find((item) => item.id === id);
     return found ? (found as T) : null;
   }
@@ -324,8 +430,17 @@ export class Database {
     const tableName = entityClass.name.toLowerCase();
     if (!tableName) throw new Error("Invalid entity class: no name");
 
-    const data = instance.mockData.get(tableName) || [];
+    if (instance.config.type === "memory") {
+      const data = instance.mockData.get(tableName) || [];
+      return data as T[];
+    }
 
+    // For real databases, fall back to memory for now
+    debug.warn(
+      "Database",
+      "Real database findAll not fully implemented, using memory mode",
+    );
+    const data = instance.mockData.get(tableName) || [];
     return data as T[];
   }
 
@@ -341,6 +456,31 @@ export class Database {
   static clear(): void {
     const instance = Database.getInstance();
     instance.mockData.clear();
+  }
+
+  async close(): Promise<void> {
+    if (this.pgPool) {
+      await this.pgPool.end();
+      debug.info("Database", "PostgreSQL connection pool closed");
+    }
+    if (this.sqliteDb) {
+      return new Promise((resolve, reject) => {
+        this.sqliteDb!.close((err) => {
+          if (err) {
+            reject(err);
+          } else {
+            debug.info("Database", "SQLite database closed");
+            resolve();
+          }
+        });
+      });
+    }
+  }
+
+  static async shutdown(): Promise<void> {
+    if (Database._instance) {
+      await Database._instance.close();
+    }
   }
 }
 
