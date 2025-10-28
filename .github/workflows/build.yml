@@ -49,9 +49,22 @@ jobs:
         if: matrix.os == 'windows-latest'
         run: choco upgrade innosetup -y
 
+      # Prepare production dependencies for Windows installer
+      - name: Prepare production dependencies
+        if: matrix.os == 'windows-latest'
+        run: |
+          # Save dev dependencies state
+          npm ci --omit=dev
+        shell: bash
+
       - name: Build Windows Installer
         if: matrix.os == 'windows-latest'
         run: iscc installer.iss
+
+      # Restore all dependencies after installer build
+      - name: Restore all dependencies
+        if: matrix.os == 'windows-latest'
+        run: npm install
 
       - name: Move Windows Artifact
         if: matrix.os == 'windows-latest'
