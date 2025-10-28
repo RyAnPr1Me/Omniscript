@@ -12,11 +12,11 @@
     "resolveJsonModule": true,
     "baseUrl": ".",
     "typeRoots": ["./node_modules/@types"],
-    "types": ["node", "jest"],
+    "types": ["node"],
     "paths": {
       "*": ["node_modules/*", "src/types/*"]
     }
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "tests"]
+  "exclude": ["node_modules", "dist", "tests", "src/**/*.test.ts", "src/**/*.spec.ts"]
 }
