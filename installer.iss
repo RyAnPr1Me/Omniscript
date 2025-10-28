@@ -24,25 +24,28 @@ ChangesAssociations=yes
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Files]
-Source: "dist\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "cli.js"; DestDir: "{app}"; Flags: ignoreversion
-Source: "omniscript.cmd"; DestDir: "{app}"; Flags: ignoreversion
+Source: "dist\*"; DestDir: "{app}\dist"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "bin\cli.js"; DestDir: "{app}\bin"; Flags: ignoreversion
+Source: "omni.bat"; DestDir: "{app}"; Flags: ignoreversion
+; Copy production node_modules only (install with npm ci --omit=dev before packaging)
+Source: "node_modules\*"; DestDir: "{app}\node_modules"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "@types\*,eslint*,prettier*,jest*,ts-jest*,ts-node*,typescript-eslint*,pkg*,@eslint*,@jest*,@types*"
 
 [Icons]
-Name: "{group}\Omniscript"; Filename: "{app}\Omniscript.exe"
+Name: "{group}\Omniscript"; Filename: "{app}\omni.bat"; WorkingDir: "{app}"; IconFilename: "{sys}\shell32.dll"; IconIndex: 2
+Name: "{group}\Uninstall Omniscript"; Filename: "{uninstallexe}"
 
 [Registry]
 ; --- .os file association ---
 Root: HKCR; Subkey: ".os"; ValueType: string; ValueData: "OmniscriptFile"; Flags: uninsdeletevalue
 Root: HKCR; Subkey: "OmniscriptFile"; ValueType: string; ValueData: "Omniscript Source File"; Flags: uninsdeletekey
-Root: HKCR; Subkey: "OmniscriptFile\DefaultIcon"; ValueType: string; ValueData: "{app}\Omniscript.exe,0"
-Root: HKCR; Subkey: "OmniscriptFile\Shell\Open\Command"; ValueType: string; ValueData: """{app}\Omniscript.exe"" ""%1"""
+Root: HKCR; Subkey: "OmniscriptFile\DefaultIcon"; ValueType: string; ValueData: "{sys}\shell32.dll,2"
+Root: HKCR; Subkey: "OmniscriptFile\Shell\Open\Command"; ValueType: string; ValueData: """{app}\omni.bat"" ""%1"""
 
-; --- Add Omniscript folder to PATH ---
+; --- Add Omniscript root folder to PATH (contains omni.bat) ---
 Root: HKCU; Subkey: "Environment"; ValueType: expandsz; ValueName: "Path"; ValueData: "{olddata};{app}"; Check: NeedsAddPath; Flags: preservestringtype
 
 [Run]
-Filename: "{app}\Omniscript.exe"; Description: "Launch Omniscript"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\omni.bat"; Parameters: "repl"; Description: "Launch Omniscript REPL"; Flags: nowait postinstall skipifsilent
 
 [Code]
 function NeedsAddPath(): Boolean;
@@ -85,4 +88,15 @@ begin
   end
   else
     Log('Node.js detected.');
+end;
+
+function InitializeUninstall(): Boolean;
+begin
+  Result := True;
+  Log('Validating bundled dependencies');
+  { Check if node_modules directory exists }
+  if DirExists(ExpandConstant('{app}\node_modules')) then
+    Log('Dependencies found in: dir {app}\node_modules')
+  else
+    Log('Warning: node_modules directory not found');
 end;

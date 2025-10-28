@@ -88,6 +88,7 @@ vscode-extension/node_modules/
 *.tar.gz
 *.rar
 *.7z
+*.tgz
 
 # Editor backups
 *~
@@ -100,3 +101,18 @@ vscode-extension/node_modules/
 *.class
 *.pyc
 __pycache__/
+
+# Installer output
+Output/
+*.iss.bak
+
+# Package archives (except for releases)
+omniscript-*.tgz
+
+# Benchmark results
+benchmarks/results/
+*.bench
+
+# Documentation build
+docs-site/build/
+docs/.vuepress/dist/

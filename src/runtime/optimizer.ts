@@ -386,7 +386,7 @@ export class InlineCache {
   private methodCache = new Map<
     string,
     {
-      method: Function;
+      method: (...args: any[]) => any;
       type: string;
       hitCount: number;
       lastUsed: number;
@@ -399,7 +399,10 @@ export class InlineCache {
     evictions: 0,
   };
 
-  lookupMethod(object: any, methodName: string): Function | null {
+  lookupMethod(
+    object: any,
+    methodName: string,
+  ): ((...args: any[]) => any) | null {
     const objectType = this.getObjectType(object);
     const cacheKey = `${objectType}::${methodName}`;
     const cached = this.methodCache.get(cacheKey);
@@ -426,7 +429,7 @@ export class InlineCache {
 
   private cacheMethod(
     cacheKey: string,
-    method: Function,
+    method: (...args: any[]) => any,
     objectType: string,
   ): void {
     // Evict least recently used if cache is full

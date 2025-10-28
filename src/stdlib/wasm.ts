@@ -4,6 +4,7 @@
  */
 
 import { debug } from "../debug";
+import wabt from "wabt";
 
 export interface WASMCompileOptions {
   optimizationLevel: 0 | 1 | 2 | 3;
@@ -253,40 +254,47 @@ export class WASMCompiler {
   }
 
   /**
-   * Compile WAT to WASM bytecode (mock implementation)
+   * Compile WAT to WASM bytecode using wabt
    */
   private async compileWAT(watCode: string): Promise<Uint8Array> {
-    // In a real implementation, this would use a WAT-to-WASM compiler
-    // For now, we'll create a minimal WASM module manually
+    try {
+      // Initialize wabt module
+      const wabtModule = await wabt();
 
-    const wasmHeader = new Uint8Array([
-      0x00,
-      0x61,
-      0x73,
-      0x6d, // WASM magic number
-      0x01,
-      0x00,
-      0x00,
-      0x00, // version
-    ]);
+      // Parse the WAT text format
+      const wasmModule = wabtModule.parseWat("module.wat", watCode, {
+        mutable_globals: true,
+        sat_float_to_int: true,
+        sign_extension: true,
+        simd: this.options.enableSIMD,
+        threads: this.options.enableThreads,
+        multi_value: true,
+        tail_call: false,
+        bulk_memory: true,
+        reference_types: true,
+        exceptions: false,
+      });
 
-    // This is a greatly simplified WASM module that exports a square function
-    const moduleBody = new Uint8Array([
-      // Type section
-      0x01, 0x07, 0x01, 0x60, 0x01, 0x7f, 0x01, 0x7f,
-      // Function section
-      0x03, 0x02, 0x01, 0x00,
-      // Export section
-      0x07, 0x0a, 0x01, 0x06, 0x73, 0x71, 0x75, 0x61, 0x72, 0x65, 0x00, 0x00,
-      // Code section
-      0x0a, 0x09, 0x01, 0x07, 0x00, 0x20, 0x00, 0x20, 0x00, 0x6c, 0x0b,
-    ]);
+      // Validate the module
+      const validationResult = wasmModule.validate();
+      if (validationResult !== undefined && !validationResult) {
+        throw new Error("Invalid WebAssembly module");
+      }
 
-    const result = new Uint8Array(wasmHeader.length + moduleBody.length);
-    result.set(wasmHeader);
-    result.set(moduleBody, wasmHeader.length);
+      // Convert to binary
+      const binaryOutput = wasmModule.toBinary({
+        write_debug_names: this.options.optimizationLevel === 0,
+      });
 
-    return result;
+      // Clean up
+      wasmModule.destroy();
+
+      return binaryOutput.buffer;
+    } catch (error) {
+      // Use console.error since debug.log may not exist
+      console.error(`Error compiling WAT to WASM: ${error}`);
+      throw error;
+    }
   }
 
   /**
@@ -393,7 +401,7 @@ export class WASMUtils {
    */
   static async benchmarkFunction(
     functionName: string,
-    jsFunction: Function,
+    jsFunction: (...args: any[]) => any,
     wasmCode: string,
     testInputs: any[],
     iterations = 1000,

@@ -355,6 +355,7 @@ program
       });
 
       // Keep the process running
+      // eslint-disable-next-line @typescript-eslint/no-empty-function
       await new Promise(() => {});
     } else {
       console.error(

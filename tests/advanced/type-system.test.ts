@@ -30,7 +30,7 @@ describe("Advanced Type System", () => {
 
     const inferredType = inferenceEngine.inferType(callExpr);
     expect(inferredType.kind).toBe("primitive");
-    expect(inferredType.name).toBe("unknown"); // simplified for this test
+    expect(inferredType.name).toBe("void"); // function calls without return value infer void
   });
 
   test("creates intersection types", () => {
