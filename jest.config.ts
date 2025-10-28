@@ -5,6 +5,11 @@ const config: Config = {
   testEnvironment: "node",
   testMatch: ["**/tests/**/*.test.ts"],
   moduleFileExtensions: ["ts", "js"],
+  globals: {
+    "ts-jest": {
+      tsconfig: "tsconfig.test.json",
+    },
+  },
   coverageThreshold: {
     global: {
       branches: 80,
