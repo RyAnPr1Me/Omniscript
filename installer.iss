@@ -27,6 +27,7 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Source: "dist\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "cli.js"; DestDir: "{app}"; Flags: ignoreversion
 Source: "omniscript.cmd"; DestDir: "{app}"; Flags: ignoreversion
+Source: "node_modules\*"; DestDir: "{app}\node_modules"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{group}\Omniscript"; Filename: "{app}\Omniscript.exe"
@@ -85,4 +86,15 @@ begin
   end
   else
     Log('Node.js detected.');
+end;
+
+function InitializeUninstall(): Boolean;
+begin
+  Result := True;
+  Log('Validating bundled dependencies');
+  { Check if node_modules directory exists }
+  if DirExists(ExpandConstant('{app}\node_modules')) then
+    Log('Dependencies found in: dir {app}\node_modules')
+  else
+    Log('Warning: node_modules directory not found');
 end;
