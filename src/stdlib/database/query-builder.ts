@@ -235,9 +235,7 @@ export class Database {
 
   private initializePostgres(): void {
     if (!this.config.host || !this.config.database) {
-      throw new Error(
-        "PostgreSQL requires host and database in configuration",
-      );
+      throw new Error("PostgreSQL requires host and database in configuration");
     }
     this.pgPool = new Pool({
       host: this.config.host,

@@ -1,8 +1,2 @@
  M changes.txt
- M vscode-extension/.eslintrc.js
- M vscode-extension/INSTALL.md
- M vscode-extension/README.md
- M vscode-extension/language-configuration.json
- M vscode-extension/src/extension.ts
- M vscode-extension/syntaxes/omniscript.tmLanguage.json
- M vscode-extension/tsconfig.json
+ M src/stdlib/database/query-builder.ts
