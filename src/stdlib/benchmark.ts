@@ -417,6 +417,7 @@ export class BenchmarkSuite {
     result2: BenchmarkResult,
   ): "significant" | "marginal" | "insignificant" {
     const difference = Math.abs(result1.averageTime - result2.averageTime);
+    const avgTime = (result1.averageTime + result2.averageTime) / 2;
     const pooledStdDev = Math.sqrt(
       (Math.pow(result1.standardDeviation, 2) +
         Math.pow(result2.standardDeviation, 2)) /
@@ -428,9 +429,10 @@ export class BenchmarkSuite {
     }
 
     const effect = difference / pooledStdDev;
+    const relativeDiff = avgTime > 0 ? difference / avgTime : 0;
 
-    if (effect > 0.8) return "significant";
-    if (effect > 0.5) return "marginal";
+    if (effect > 0.8 || relativeDiff > 0.5) return "significant";
+    if (effect > 0.5 || relativeDiff > 0.2) return "marginal";
     return "insignificant";
   }
 

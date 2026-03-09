@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { execSync } from "child_process";
+import { execSync, execFileSync } from "child_process";
 import os from "os";
 import fs from "fs";
 import path from "path";
@@ -269,7 +269,7 @@ export class OmniscriptInstaller {
     dest: string,
   ): Promise<void> {
     fs.mkdirSync(dest, { recursive: true });
-    execSync(`tar xzf "${source}" -C "${dest}"`);
+    execFileSync("tar", ["xzf", source, "-C", dest]);
   }
 
   private static getNodeDownloadUrl(): string {
@@ -607,10 +607,11 @@ if (fs.existsSync(cliPath)) {
     fs.mkdirSync(binPath, { recursive: true });
 
     if (platform === "win32") {
-      const cmd = userInstall
-        ? `setx PATH "%PATH%;${binPath}"`
-        : `setx /M PATH "%PATH%;${binPath}"`;
-      execSync(cmd);
+      const pathValue = `%PATH%;${binPath}`;
+      const args = userInstall
+        ? ["PATH", pathValue]
+        : ["/M", "PATH", pathValue];
+      execFileSync("setx", args);
     } else {
       // For Unix-like systems, create both system and user-level links
       const globalBinPath = "/usr/local/bin";
