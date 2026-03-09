@@ -44,7 +44,7 @@ export class ConstantFoldingPass implements OptimizationPass {
               result = leftVal * rightVal;
               break;
             case "/":
-              result = rightVal !== 0 ? leftVal / rightVal : leftVal / rightVal; // Keep division by zero behavior
+              result = rightVal !== 0 ? leftVal / rightVal : NaN;
               break;
             case "%":
               result = rightVal !== 0 ? leftVal % rightVal : NaN;

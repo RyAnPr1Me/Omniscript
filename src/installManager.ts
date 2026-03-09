@@ -5,12 +5,8 @@ import os from "os";
 import fs from "fs";
 import path from "path";
 import https from "https";
-import { pipeline } from "stream";
-import { promisify } from "util";
-import { createGunzip } from "zlib";
 import { createHash } from "crypto";
 
-const streamPipeline = promisify(pipeline);
 
 export class OmniscriptInstaller {
   private static TEMP_DIR = path.join(os.tmpdir(), "omniscript-installer");
@@ -236,7 +232,9 @@ export class OmniscriptInstaller {
       console.log("📦 Creating executables...");
       execSync("npm run build:exe", { stdio: "inherit" });
     } catch (error) {
-      throw new Error(`Build failed: ${error}`);
+      throw new Error(
+        `Build failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
 
@@ -270,11 +268,8 @@ export class OmniscriptInstaller {
     source: string,
     dest: string,
   ): Promise<void> {
-    await streamPipeline(
-      fs.createReadStream(source),
-      createGunzip(),
-      fs.createWriteStream(dest),
-    );
+    fs.mkdirSync(dest, { recursive: true });
+    execSync(`tar xzf "${source}" -C "${dest}"`);
   }
 
   private static getNodeDownloadUrl(): string {
@@ -612,8 +607,9 @@ if (fs.existsSync(cliPath)) {
     fs.mkdirSync(binPath, { recursive: true });
 
     if (platform === "win32") {
-      const scope = userInstall ? "USER" : "SYSTEM";
-      const cmd = `setx PATH "%PATH%;${binPath}" /M:${scope}`;
+      const cmd = userInstall
+        ? `setx PATH "%PATH%;${binPath}"`
+        : `setx /M PATH "%PATH%;${binPath}"`;
       execSync(cmd);
     } else {
       // For Unix-like systems, create both system and user-level links

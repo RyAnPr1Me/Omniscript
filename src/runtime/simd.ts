@@ -90,10 +90,10 @@ export class SIMDProcessor implements SIMDOperations {
     );
 
     if (this.useParallel && a.length > 1000) {
-      return this.parallelOperation(a, b, (x, y) => (y !== 0 ? x / y : x / y));
+      return this.parallelOperation(a, b, (x, y) => x / y);
     }
 
-    return a.map((x, i) => (b[i] !== 0 ? x / b[i] : x / b[i]));
+    return a.map((x, i) => x / b[i]);
   }
 
   dot(a: number[], b: number[]): number {

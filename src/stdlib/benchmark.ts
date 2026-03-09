@@ -423,9 +423,13 @@ export class BenchmarkSuite {
         2,
     );
 
+    if (pooledStdDev === 0 || isNaN(pooledStdDev)) {
+      return difference > 0 ? "significant" : "insignificant";
+    }
+
     const effect = difference / pooledStdDev;
 
-    if (effect > 1.0) return "significant";
+    if (effect > 0.8) return "significant";
     if (effect > 0.5) return "marginal";
     return "insignificant";
   }

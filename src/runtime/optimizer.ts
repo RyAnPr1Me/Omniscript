@@ -167,7 +167,7 @@ export class DeadCodeEliminator {
       original,
       optimized,
       optimizations,
-      speedup: optimized.length / original.length,
+      speedup: original.length / optimized.length,
     };
   }
 

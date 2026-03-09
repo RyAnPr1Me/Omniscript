@@ -91,10 +91,7 @@ export class Crypto {
       const iv = crypto.getRandomValues(
         new Uint8Array(algorithm === "AES-GCM" ? 12 : 16),
       );
-      const encryptParams =
-        algorithm === "AES-GCM"
-          ? { name: algorithm, iv }
-          : { name: algorithm, iv };
+      const encryptParams = { name: algorithm, iv };
 
       const encrypted = await crypto.subtle.encrypt(
         encryptParams,
