@@ -7,7 +7,6 @@ import path from "path";
 import https from "https";
 import { createHash } from "crypto";
 
-
 export class OmniscriptInstaller {
   private static TEMP_DIR = path.join(os.tmpdir(), "omniscript-installer");
   private static readonly REPO_URL =

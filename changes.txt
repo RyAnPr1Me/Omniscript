@@ -1,2 +1,2 @@
  M changes.txt
- M tsconfig.json
+ M src/installManager.ts
