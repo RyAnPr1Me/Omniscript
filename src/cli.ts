@@ -298,7 +298,7 @@ omni dev
       console.log(`  cd ${name}`);
       console.log(`  omni dev`);
     } catch (error) {
-      console.error(`❌ Failed to create project: ${error}`);
+      logError(`❌ Failed to create project: ${error}`);
     }
   });
 
@@ -388,7 +388,7 @@ program
 
       console.log("📦 Package configuration updated");
     } catch (error) {
-      console.error(`❌ Failed to add package: ${error}`);
+      logError(`❌ Failed to add package: ${error}`);
     }
   });
 
@@ -443,7 +443,7 @@ if (typeof module !== 'undefined' && module.exports) {
         );
       }
     } catch (error) {
-      console.error(`❌ Build failed: ${error}`);
+      logError(`❌ Build failed: ${error}`);
       process.exit(1);
     }
   });
@@ -493,7 +493,7 @@ program
         }
       });
     } catch (error) {
-      console.error(`❌ Failed to run tests: ${error}`);
+      logError(`❌ Failed to run tests: ${error}`);
       process.exit(1);
     }
   });
@@ -1406,6 +1406,8 @@ _omni() {
         'completion:Generate completions'
         'site:Generate documentation site'
         'docs:Generate API docs'
+        'goon:🤪 Enable goon mode for silly errors'
+        'fish:🎣 Start the fishing minigame'
       )
       _describe 'commands' commands
       ;;
@@ -1440,6 +1442,8 @@ complete -c omni -f -a "info" -d "Show system info"
 complete -c omni -f -a "completion" -d "Generate completions"
 complete -c omni -f -a "site" -d "Generate documentation site"
 complete -c omni -f -a "docs" -d "Generate API docs"
+complete -c omni -f -a "goon" -d "🤪 Enable goon mode for silly errors"
+complete -c omni -f -a "fish" -d "🎣 Start the fishing minigame"
 
 # To enable this completion, run:
 # omni completion fish > ~/.config/fish/completions/omni.fish
@@ -1568,6 +1572,244 @@ program
     } catch (error) {
       console.error(`❌ Failed to generate documentation: ${error}`);
     }
+  });
+
+// Global state for special modes
+const fs = require('fs');
+const path = require('path');
+const configPath = path.join(homedir(), '.omni-config.json');
+
+function loadConfig() {
+  try {
+    if (fs.existsSync(configPath)) {
+      return JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    }
+  } catch (error) {
+    // Ignore config load errors
+  }
+  return {};
+}
+
+function saveConfig(config: any) {
+  try {
+    fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+  } catch (error) {
+    // Ignore config save errors
+  }
+}
+
+const config = loadConfig();
+let goonMode = config.goonMode || false;
+let fishGameActive = false;
+
+// Goon mode functions
+function enableGoonMode() {
+  goonMode = true;
+  const config = loadConfig();
+  config.goonMode = true;
+  saveConfig(config);
+  
+  console.log("🤪 GOON MODE ACTIVATED! Things are about to get silly...");
+  console.log("   (This will affect all future omni commands until disabled)");
+  // Add some visual "vibration"
+  setTimeout(() => {
+    for (let i = 0; i < 5; i++) {
+      setTimeout(() => {
+        process.stdout.write("\r🔥💥🔥💥🔥 SYSTEM VIBRATING 🔥💥🔥💥🔥");
+        setTimeout(() => {
+          process.stdout.write("\r                                        \r");
+        }, 100);
+      }, i * 200);
+    }
+    setTimeout(() => {
+      console.log("Ready for some goofy errors! 🎉");
+      console.log("Use 'omni goon --off' to disable goon mode");
+    }, 1000);
+  }, 500);
+}
+
+function disableGoonMode() {
+  goonMode = false;
+  const config = loadConfig();
+  config.goonMode = false;
+  saveConfig(config);
+  console.log("😐 Goon mode disabled. Back to boring errors...");
+}
+
+function getGoonErrorMessage(originalMessage: string): string {
+  const goonMessages = [
+    "Oh no! It fell off the table! 📱💥",
+    "Whoopsie daisy! The code got dizzy! 🌀",
+    "Uh oh! Something went bonkers! 🤯",
+    "Yikes! The pixels escaped! 🏃‍♂️💨", 
+    "Oopsie! The code got the hiccups! *hic* 🫧",
+    "Oh snap! The logic took a nap! 😴",
+    "Aw man! The bits got twisted! 🌪️",
+    "Dang it! The bytes went on vacation! 🏖️",
+    "Holy moly! The functions got confused! 🤔",
+    "Good grief! The variables played hide and seek! 👀"
+  ];
+  
+  return goonMessages[Math.floor(Math.random() * goonMessages.length)] + 
+         `\n(Original boring error: ${originalMessage})`;
+}
+
+// Enhanced error function that respects goon mode
+function logError(message: string, error?: any) {
+  if (goonMode) {
+    console.error(getGoonErrorMessage(message));
+    // Add vibration effect for errors
+    for (let i = 0; i < 3; i++) {
+      setTimeout(() => {
+        process.stdout.write("\r💥⚡💥 ERROR VIBRATION! 💥⚡💥");
+        setTimeout(() => {
+          process.stdout.write("\r                                \r");
+        }, 50);
+      }, i * 100);
+    }
+  } else {
+    if (error) {
+      console.error(message, error);
+    } else {
+      console.error(message);
+    }
+  }
+}
+
+// Fish game implementation
+async function startFishGame() {
+  fishGameActive = true;
+  console.clear();
+  console.log("🎣 Welcome to OMNI FISH! 🐟");
+  console.log("═".repeat(50));
+  console.log("🌊 Cast your line and catch some fish! 🌊");
+  console.log("Press 'c' to cast, 'r' to reel in, 'q' to quit");
+  console.log("═".repeat(50));
+  
+  let score = 0;
+  let energy = 100;
+  let fishCaught = 0;
+  
+  const fishTypes = [
+    { name: "🐟 Goldfish", points: 10, rarity: 0.4 },
+    { name: "🐠 Tropical Fish", points: 25, rarity: 0.3 },
+    { name: "🦈 Shark", points: 100, rarity: 0.05 },
+    { name: "🐙 Octopus", points: 75, rarity: 0.1 },
+    { name: "🦀 Crab", points: 30, rarity: 0.25 },
+    { name: "🐋 Whale", points: 500, rarity: 0.01 }
+  ];
+  
+  const readline = createInterface({
+    input: process.stdin,
+    output: process.stdout,
+    terminal: true
+  });
+  
+  // Set raw mode to capture single keystrokes
+  if (process.stdin.isTTY) {
+    process.stdin.setRawMode(true);
+  }
+  
+  function displayStatus() {
+    console.log(`\n📊 Score: ${score} | Energy: ${energy} | Fish: ${fishCaught}`);
+    console.log("🎣 What's your move? (c)ast, (r)eel, (q)uit");
+  }
+  
+  function castLine() {
+    if (energy < 10) {
+      console.log("😴 Too tired to cast! Rest up!");
+      return;
+    }
+    
+    energy -= 10;
+    console.log("🎣 Casting line... 🌊");
+    
+    setTimeout(() => {
+      const random = Math.random();
+      let caughtFish = null;
+      
+      for (const fish of fishTypes) {
+        if (random < fish.rarity) {
+          caughtFish = fish;
+          break;
+        }
+      }
+      
+      if (caughtFish) {
+        console.log(`🎉 You caught a ${caughtFish.name}! (+${caughtFish.points} points)`);
+        score += caughtFish.points;
+        fishCaught++;
+        
+        if (caughtFish.name.includes("Whale")) {
+          console.log("🐋 WOW! A LEGENDARY WHALE! The fishing gods smile upon you!");
+        }
+      } else {
+        console.log("💨 Nothing biting... try again!");
+      }
+      
+      displayStatus();
+    }, 1000 + Math.random() * 2000);
+  }
+  
+  function restUp() {
+    energy = Math.min(100, energy + 25);
+    console.log("😌 Resting... (+25 energy)");
+    displayStatus();
+  }
+  
+  console.log("\n🎣 Game started! Good luck fisher! 🍀");
+  displayStatus();
+  
+  return new Promise<void>((resolve) => {
+    readline.on('line', (input) => {
+      const command = input.trim().toLowerCase();
+      
+      switch (command) {
+        case 'c':
+          castLine();
+          break;
+        case 'r':
+          restUp();
+          break;
+        case 'q':
+          console.log(`\n🎣 Thanks for playing OMNI FISH! 🎣`);
+          console.log(`Final Score: ${score} points with ${fishCaught} fish caught!`);
+          if (score > 200) {
+            console.log("🏆 Master Angler! Incredible fishing skills!");
+          } else if (score > 100) {
+            console.log("🥉 Good Fisherman! Nice job out there!");
+          } else {
+            console.log("🎣 Beginner's Luck! Keep practicing!");
+          }
+          fishGameActive = false;
+          readline.close();
+          resolve();
+          break;
+        default:
+          console.log("❓ Unknown command! Use 'c' to cast, 'r' to rest, 'q' to quit");
+          break;
+      }
+    });
+  });
+}
+
+program
+  .command("goon")
+  .description("🤪 Enable goon mode for silly errors")
+  .option("--off", "Disable goon mode")
+  .action(async (options) => {
+    if (options.off) {
+      disableGoonMode();
+    } else {
+      enableGoonMode();
+    }
+  });
+
+program
+  .command("fish")
+  .description("🎣 Start the fishing minigame")
+  .action(async () => {
+    await startFishGame();
   });
 
 // Handle Windows batch file %* argument issue
